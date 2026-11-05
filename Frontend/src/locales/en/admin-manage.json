@@ -1,0 +1,189 @@
+{
+  "products": {
+    "title": "Teaching Aids Management",
+    "description": "Manage handmade aids made of felt, fabric, and laminated cardstock, their prices, and platform commissions.",
+    "addAid": "Add Teaching Aid",
+    "searchPlaceholder": "Search by aid name, felt or fabric materials...",
+    "allSellers": "All",
+    "seller1": "First Seller",
+    "seller2": "Second Seller",
+    "allCategories": "All Categories",
+    "filterByStatus": "Status",
+    "statusAll": "All Statuses",
+    "statusPublished": "Published in Store",
+    "statusDraft": "Draft / Unpublished",
+    "stats": {
+      "totalAids": "Total Teaching Aids",
+      "activeAids": "Published Aids",
+      "lowStock": "Low Stock (< 5 pcs)",
+      "monthlySales": "Estimated Monthly Sales",
+      "platformCommission": "Platform Commission 20%"
+    },
+    "table": {
+      "aid": "Teaching Aid",
+      "seller": "Responsible Seller",
+      "category": "Category",
+      "price": "Price",
+      "commission": "Commission (20%)",
+      "sellerNet": "Seller Net",
+      "stock": "Stock",
+      "status": "Publish Status",
+      "actions": "Actions"
+    },
+    "published": "Published",
+    "draft": "Draft",
+    "outOfStock": "Out of Stock",
+    "pieces": "pcs",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Confirm Delete Teaching Aid",
+    "deleteConfirmMessage": "Are you sure you want to permanently delete this teaching aid from the catalog? This action cannot be undone.",
+    "deleteConfirmBtn": "Yes, Delete Aid",
+    "cancel": "Cancel",
+    "togglePublishSuccess": "Aid publication status updated successfully",
+    "deleteSuccess": "Teaching aid deleted successfully",
+    "emptyTitle": "No matching teaching aids found",
+    "emptyMessage": "Try adjusting your search terms or filter selections",
+    "errorLoading": "Failed to load teaching aids, please try again later"
+  },
+  "productForm": {
+    "addTitle": "Add New Teaching Aid",
+    "editTitle": "Edit Teaching Aid",
+    "description": "Manage aid specifications, craft materials, and assign it to one of the two artisan sellers.",
+    "backToList": "Back to Products List",
+    "saveSuccess": "Teaching aid saved successfully",
+    "saveError": "An error occurred while saving the teaching aid"
+  },
+  "customers": {
+    "title": "Customers & Nurseries Database",
+    "description": "Directory of nursery managers and kindergarten teachers registered on the platform and their order history.",
+    "searchPlaceholder": "Search by teacher name, nursery name, phone, or email...",
+    "allGovernorates": "All Governorates",
+    "stats": {
+      "totalCustomers": "Total Teachers & Nurseries",
+      "activeNurseries": "Active Nurseries",
+      "totalOrders": "Total Recorded Orders"
+    },
+    "table": {
+      "customer": "Customer / Teacher",
+      "type": "Entity Type",
+      "phone": "Phone Number",
+      "governorate": "Governorate",
+      "ordersCount": "Orders Count",
+      "lastOrderDate": "Last Order Date",
+      "totalSpent": "Total Purchases"
+    },
+    "nurseryTypeDefault": "Nursery / KG",
+    "individualType": "Individual Teacher",
+    "noOrdersYet": "No orders yet",
+    "emptyTitle": "No registered customers found",
+    "emptyMessage": "Check the teacher name, nursery name, or phone number",
+    "errorLoading": "Failed to load customers database"
+  },
+  "categories": {
+    "title": "Approved Educational Categories",
+    "description": "The 6 fixed categories of the platform tailored for nurseries and kindergartens per the content dictionary.",
+    "fixedNoticeTitle": "Fixed & Protected Categories",
+    "fixedNotice": "The six categories are permanently fixed and designated exclusively for nursery educational aids. Adding or deleting categories is disabled to preserve platform quality and educational focus.",
+    "reorderHelp": "Use the arrow buttons to reorder how categories appear on the homepage and storefront.",
+    "table": {
+      "order": "Order",
+      "nameAr": "Arabic Name",
+      "nameEn": "English Name",
+      "slug": "Slug",
+      "description": "Approved Description",
+      "productsCount": "Available Aids",
+      "color": "Category Color",
+      "actions": "Actions"
+    },
+    "moveUp": "Move Up",
+    "moveDown": "Move Down",
+    "edit": "Edit Category",
+    "editModalTitle": "Edit Category Information",
+    "editModalDescription": "Modify Arabic and English names and select the distinctive category color.",
+    "colorLabel": "Category Accent Color",
+    "saveChanges": "Save Changes",
+    "cancel": "Cancel",
+    "saveSuccess": "Category updated successfully",
+    "reorderSuccess": "New categories order saved successfully",
+    "errorUpdating": "An error occurred while updating the category",
+    "errorLoading": "Failed to load categories"
+  },
+  "settings": {
+    "title": "Platform Settings",
+    "description": "Configure sales commission rate, official Vodafone Cash wallet, and governorate shipping rates.",
+    "saveAllBtn": "Save All Settings",
+    "saving": "Saving...",
+    "saveSuccess": "Platform settings saved successfully and commission rate applied immediately.",
+    "saveError": "Failed to save settings, please try again",
+    "validationError": "Please correct the errors indicated in the form",
+    "financialSection": {
+      "title": "Financial Settings & Commission Rate",
+      "description": "Define the platform administrative commission percentage deducted from each sale for artisan sellers.",
+      "commissionRateLabel": "Platform Commission Rate (%)",
+      "commissionRateHelper": "Calculated on every sale, visible to sellers and admin only",
+      "commissionRateError": "Commission rate must be between 0% and 50%",
+      "mathPreviewTitle": "Approved Math Calculation Preview:",
+      "mathPreview": "Sale 100 EGP = Commission {{commission}} EGP + Seller Net {{net}} EGP",
+      "platformCommission": "Platform Commission:",
+      "sellerNet": "Seller Net Profit:"
+    },
+    "walletSection": {
+      "title": "Official Vodafone Cash Wallet",
+      "description": "The designated number to receive customer manual transfers and verify payment receipts.",
+      "walletLabel": "Vodafone Cash Wallet Number",
+      "walletHelper": "Egyptian mobile format: 01XXXXXXXXX",
+      "walletError": "Please enter a valid 11-digit Egyptian mobile number starting with 01",
+      "copyWallet": "Copy Number",
+      "copied": "Copied!",
+      "noteTitle": "Important Note on Transfers:",
+      "noteText": "This number is displayed to nursery managers and teachers on checkout for manual Vodafone Cash transfers and receipt screenshot uploads, reviewed by admin in the payments queue."
+    },
+    "shippingSection": {
+      "title": "Shipping Rates by Delivery Zone",
+      "description": "Define delivery costs across Egyptian governorates and zones.",
+      "zoneCol": "Zone & Governorates",
+      "rateCol": "Shipping Rate (EGP)",
+      "deliveryTimeLabel": "Estimated Delivery Time for Nurseries",
+      "deliveryTimePlaceholder": "e.g. 2 - 4 business days depending on governorate and seller workshop",
+      "zones": {
+        "greater_cairo": "Greater Cairo (Cairo)",
+        "giza": "Giza",
+        "alexandria": "Alexandria",
+        "delta_canal": "Delta & Canal Governorates",
+        "upper_egypt": "Upper Egypt & Frontier Governorates"
+      }
+    },
+    "notificationsSection": {
+      "title": "Notifications & Alerts Settings",
+      "description": "Configure administrative notification channels for new orders and payment transfers.",
+      "emailNotifLabel": "Email Notifications",
+      "emailNotifDesc": "Send instant emails when a new order is placed or a payment receipt is uploaded",
+      "inSiteNotifLabel": "In-site Platform Alerts",
+      "inSiteNotifDesc": "Display live badge and notifications inside the admin dashboard"
+    },
+    "gatewaySection": {
+      "title": "Electronic Payment Gateways",
+      "disabledCardTitle": "Automatic Online Payment — Coming Soon",
+      "disabledCardDesc": "We are working on integrating automated electronic payment gateways in future updates. Currently, the platform relies exclusively on manual Vodafone Cash transfers and receipt reviews.",
+      "soonBadge": "Coming Soon"
+    },
+    "walletWarningBanner": "Warning: Platform wallet number (Vodafone Cash) is not configured yet. Customers cannot complete orders until it is set.",
+    "contactSection": {
+      "title": "Contact Details & Payout Schedule",
+      "description": "Customer service channels and craftswomen payout schedule (displayed only when set).",
+      "supportPhoneLabel": "Support Phone Number",
+      "supportPhoneHelper": "Shown in About page and Footer",
+      "supportEmailLabel": "Support Email Address",
+      "supportEmailHelper": "Official contact email",
+      "whatsappLabel": "WhatsApp Number",
+      "whatsappHelper": "For quick messaging",
+      "payoutScheduleLabel": "Seller Payout Schedule",
+      "payoutScheduleHelper": "Displayed exclusively to sellers on earnings and profile pages when set",
+      "payoutSchedulePlaceholder": "e.g. Due earnings are transferred periodically to your registered Vodafone Cash wallet...",
+      "phoneError": "Invalid phone number (01XXXXXXXXX)",
+      "whatsappError": "Invalid WhatsApp number (01XXXXXXXXX)",
+      "emailError": "Invalid email address"
+    }
+  }
+}

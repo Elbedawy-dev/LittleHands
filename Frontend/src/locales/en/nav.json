@@ -1,0 +1,68 @@
+{
+  "links": {
+    "home": "Home",
+    "products": "Products",
+    "sellers": "Sellers",
+    "about": "About Us"
+  },
+  "backToStore": "Back to Store",
+  "dashboard": {
+    "seller": "Seller Dashboard",
+    "admin": "Platform Admin Dashboard"
+  },
+  "account": {
+    "profile": "My Account",
+    "orders": "My Orders",
+    "favorites": "Favorites",
+    "addresses": "My Addresses",
+    "settings": "Settings"
+  },
+  "appearanceAndLang": "Appearance and Language",
+  "accountSection": "Account & Orders",
+  "openMenu": "Open main menu",
+  "accountMenu": "Account menu",
+  "cartAria": "Shopping cart",
+  "home": "Home",
+  "products": "Products",
+  "sellers": "Sellers",
+  "about": "About Us",
+  "cart": "Cart",
+  "accountLabel": "My Account",
+  "login": "Sign In",
+  "register": "Register",
+  "logout": "Sign Out",
+  "notifications": "Notifications",
+  "favorites": "Favorites",
+  "orders": "My Orders",
+  "settings": "Settings",
+  "sellerDashboard": "Seller Dashboard",
+  "adminDashboard": "Admin Dashboard",
+  "seller": {
+    "dashboard": "Dashboard",
+    "products": "My Products",
+    "orders": "My Orders",
+    "earnings": "My Earnings",
+    "profile": "My Profile",
+    "notifications": "Notifications"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "payments": "Vodafone Cash Payments",
+    "orders": "Orders",
+    "products": "Products",
+    "sellers": "Sellers & Earnings",
+    "customers": "Customers",
+    "categories": "Categories",
+    "notifications": "Notifications",
+    "settings": "Settings"
+  },
+  "categories": {
+    "alphabetBoards": "Alphabet Boards",
+    "numberBoards": "Number Boards",
+    "flashCards": "Flash Cards",
+    "wallCharts": "Wall Charts",
+    "classroomDecor": "Classroom Decor",
+    "activityKits": "Activity Kits"
+  }
+}
+

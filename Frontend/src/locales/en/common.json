@@ -1,0 +1,121 @@
+{
+  "appName": "Little Hands",
+  "brand": "Little Hands",
+  "appTagline": "Handmade Educational Teaching Aids for Nurseries",
+  "footerCopyright": "Little Hands — Handmade Educational Aids for Nurseries © 2026",
+  "tabBar": {
+    "home": "Home",
+    "products": "Products",
+    "cart": "Cart",
+    "account": "Account",
+    "ariaNav": "Bottom Navigation Bar"
+  },
+  "footer": {
+    "desc": "An Egyptian marketplace dedicated to handmade educational aids crafted from felt, fabric, and laminated cardstock for preschools and nurseries by skilled women craftswomen.",
+    "handmadeBadge": "Locally crafted handmade aids",
+    "categoriesTitle": "Educational Categories",
+    "linksTitle": "Platform Links",
+    "allProducts": "Browse All Aids",
+    "sellers": "Women Craftswomen",
+    "about": "About Little Hands",
+    "paymentsTitle": "Payment & Transfer",
+    "vodafoneCash": "Vodafone Cash",
+    "vodafoneCashDesc": "Direct manual transfer via mobile wallet with receipt screenshot attachment.",
+    "disabledGateway": "Automatic electronic payment — coming soon",
+    "contactTitle": "Contact Information:",
+    "madeWithLove": "Crafted with care for nurseries"
+  },
+  "currency": "EGP",
+  "currencyEgp": "Egyptian Pound",
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "view": "View",
+    "details": "Details",
+    "search": "Search...",
+    "filter": "Filter",
+    "reset": "Reset",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "add": "Add",
+    "addToCart": "Add to Aids",
+    "orderNow": "Order Now",
+    "upload": "Upload File",
+    "download": "Download",
+    "refresh": "Refresh",
+    "submit": "Submit",
+    "apply": "Apply",
+    "seeAll": "See All",
+    "switchLanguage": "Switch Language",
+    "lightMode": "Activate light mode",
+    "darkMode": "Activate dark mode",
+    "logout": "Sign Out"
+  },
+  "status": {
+    "loading": "Loading...",
+    "empty": "No items to display currently",
+    "error": "An unexpected error occurred",
+    "retry": "Try Again",
+    "success": "Operation completed successfully",
+    "underDevelopment": "Under Development",
+    "inStock": "In Stock",
+    "outOfStock": "Out of Stock",
+    "published": "Published",
+    "draft": "Draft"
+  },
+  "orderStatus": {
+    "pending_payment": "Pending Payment",
+    "payment_confirmed": "Payment Confirmed",
+    "preparing": "Preparing",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "payment_rejected": "Payment Rejected"
+  },
+  "roles": {
+    "customer": "Teacher / Nursery",
+    "seller": "Artisan Seller",
+    "admin": "Platform Admin"
+  },
+  "sellers": {
+    "seller1": "First Artisan Seller",
+    "seller2": "Second Artisan Seller"
+  },
+  "stages": {
+    "nursery": "Nursery (1-3 yrs)",
+    "kg1": "KG1 (3-4 yrs)",
+    "kg2": "KG2 (4-5 yrs)",
+    "primary": "Early Primary"
+  },
+  "materials": {
+    "felt": "Craft felt",
+    "cardstock": "Laminated cardstock",
+    "fabric": "Fabric"
+  },
+  "vodafoneCash": {
+    "title": "Vodafone Cash",
+    "walletNumber": "Platform Wallet Number",
+    "instructions": "Transfer to the official wallet, then upload a screenshot receipt and sender phone number for verification.",
+    "disabledGateway": "Automatic Electronic Payment — Coming Soon"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "ar": "Arabic",
+    "en": "English",
+    "switch": "Switch Language"
+  },
+  "emptyState": {
+    "defaultTitle": "No items",
+    "defaultDescription": "No items to display."
+  }
+}

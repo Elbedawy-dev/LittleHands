@@ -1,0 +1,9 @@
+{
+  "title": "Oops! An unexpected error occurred",
+  "subtitle": "We apologize for this temporary issue. You can try reloading the page or returning to the home page.",
+  "reload": "Reload Page",
+  "backHome": "Back to Home",
+  "details": "Technical Error Details (Development Only)",
+  "errorId": "Error Reference"
+}
+

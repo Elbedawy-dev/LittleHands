@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تحديث بشأن إيصال الدفع — أيدي صغيرة</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #FFF8F0; font-family: 'Cairo', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; color: #2D2522;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FFF8F0; padding: 24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; border: 1px solid #FFE8D6; box-shadow: 0 4px 16px rgba(154, 70, 0, 0.06);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 28px 32px; background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%); border-bottom: 2px solid #FECACA;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="right" style="vertical-align: middle;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="vertical-align: middle; padding-left: 12px;">
+                          <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #EF4444 0%, #F87171 100%); color: #ffffff; font-size: 22px; font-weight: bold; text-align: center; line-height: 44px;">
+                            !
+                          </div>
+                        </td>
+                        <td style="vertical-align: middle;">
+                          <div style="font-size: 20px; font-weight: 800; color: #991B1B; line-height: 1.2;">أيدي صغيرة</div>
+                          <div style="font-size: 11px; color: #B91C1C; margin-top: 2px;">تنبيه بشأن إيصال تحويل فودافون كاش</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="left" style="vertical-align: middle;">
+                    <span style="display: inline-block; padding: 6px 14px; background-color: #EF4444; color: #ffffff; border-radius: 9999px; font-size: 11px; font-weight: bold;">
+                      مراجعة الإيصال
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Notice -->
+          <tr>
+            <td style="padding: 32px 32px 16px 32px;">
+              <div style="font-size: 18px; font-weight: 800; color: #991B1B; margin-bottom: 8px;">
+                مرحباً {{customerName}}، يرجى مراجعة إيصال التحويل
+              </div>
+              <p style="font-size: 14px; line-height: 1.8; color: #564338; margin: 0 0 16px 0;">
+                نحيطكِ علماً بأنه تعذر اعتماد إيصال تحويل فودافون كاش المرفق للطلب رقم <strong dir="ltr" style="unicode-bidi: isolate; color: #9A4600;">{{orderNumber}}</strong>، وذلك للسبب الموضح أدناه من إدارة المنصة:
+              </p>
+            </td>
+          </tr>
+
+          <!-- Rejection Reason Box -->
+          <tr>
+            <td style="padding: 0 32px 24px 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FEF2F2; border-radius: 16px; border: 1.5px solid #FCA5A5; padding: 20px;">
+                <tr>
+                  <td>
+                    <div style="font-size: 13px; font-weight: 800; color: #991B1B; margin-bottom: 6px;">
+                      سبب عدم الاعتماد:
+                    </div>
+                    <div style="font-size: 13px; font-weight: bold; color: #B91C1C; margin-bottom: 8px;">
+                      {{rejectionReason}}
+                    </div>
+                    <div style="font-size: 12px; line-height: 1.7; color: #7F1D1D;">
+                      <strong>ملاحظات الإدارة:</strong> {{adminNotes}}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Re-upload Action CTA -->
+          <tr>
+            <td style="padding: 0 32px 28px 32px; text-align: center;">
+              <p style="font-size: 13px; color: #564338; line-height: 1.7; margin: 0 0 16px 0;">
+                لا داعي للقلق، طلبكِ محفوظ. يمكنكِ الآن تسجيل الدخول لحسابكِ وإعادة رفع لقطة شاشة واضحة لإيصال التحويل:
+              </p>
+              <a href="{{orderUrl}}" style="display: inline-block; padding: 14px 32px; background-color: #FF8A3D; color: #ffffff; text-decoration: none; border-radius: 9999px; font-size: 14px; font-weight: bold; box-shadow: 0 4px 12px rgba(255, 138, 61, 0.35);">
+                إعادة رفع إيصال التحويل الآن
+              </a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #FAF6F0; border-top: 1px solid #EFE6D8; text-align: center;">
+              <p style="font-size: 12px; color: #6E5C53; margin: 0 0 8px 0;">
+                للمساعدة والدعم المباشر، تواصلي معنا عبر الهاتف أو واتساب: <strong dir="ltr" style="unicode-bidi: isolate; color: #9A4600;">{{supportPhone}}</strong>
+              </p>
+              <p style="font-size: 11px; color: #8A776D; margin: 0;">
+                أيدي صغيرة — وسائل تعليمية يدوية لرياض الأطفال والحضانات
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+

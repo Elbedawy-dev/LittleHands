@@ -1,0 +1,20 @@
+{
+  "title": "Email Templates Preview",
+  "subtitle": "Inspect and test standardized 600px table-based email notifications — showing commission only for sellers and completely hidden from customers",
+  "templateSelector": "Select Email Template",
+  "deviceView": "Viewport Size",
+  "desktop": "Desktop (600px)",
+  "mobile": "Mobile (390px)",
+  "copyHtml": "Copy HTML Code",
+  "copied": "Copied successfully!",
+  "sampleData": "Sample Preview Data",
+  "commissionNotice": "The 20% platform commission is visible strictly in seller and admin templates, and never in customer templates.",
+  "templates": {
+    "customerOrderReceived": "Customer: Order Received & Pending Payment",
+    "customerPaymentConfirmed": "Customer: Vodafone Cash Payment Confirmed",
+    "customerPaymentRejected": "Customer: Payment Receipt Rejected (with Reason)",
+    "customerShipped": "Customer: Teaching Aids Shipped to Nursery",
+    "sellerNewOrder": "Seller: New Order on Aid (with 20% Commission & Net Profit)",
+    "adminNewPayment": "Admin: New Vodafone Cash Payment Receipt for Review"
+  }
+}

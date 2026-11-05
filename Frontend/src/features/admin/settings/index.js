@@ -1,0 +1,6 @@
+export { ContactSettingsSection } from './ContactSettingsSection'
+export { FinancialSettingsSection } from './FinancialSettingsSection'
+export { NotificationSettingsSection } from './NotificationSettingsSection'
+export { PaymentGatewayCard } from './PaymentGatewayCard'
+export { ShippingSettingsSection } from './ShippingSettingsSection'
+export { WalletSettingsSection } from './WalletSettingsSection'

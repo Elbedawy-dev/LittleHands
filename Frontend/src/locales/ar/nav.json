@@ -1,0 +1,68 @@
+{
+  "links": {
+    "home": "الرئيسية",
+    "products": "المنتجات",
+    "sellers": "البائعات",
+    "about": "عن المنصة"
+  },
+  "backToStore": "الرجوع إلى المتجر",
+  "dashboard": {
+    "seller": "لوحة تحكم البائعة",
+    "admin": "لوحة تحكم إدارة المنصة"
+  },
+  "account": {
+    "profile": "حسابي",
+    "orders": "طلباتي",
+    "favorites": "المفضلة",
+    "addresses": "عناويني",
+    "settings": "الإعدادات"
+  },
+  "appearanceAndLang": "المظهر واللغة",
+  "accountSection": "الحساب والطلبيات",
+  "openMenu": "فتح القائمة الرئيسية",
+  "accountMenu": "قائمة الحساب",
+  "cartAria": "سلة الوسائل التعليمية",
+  "home": "الرئيسية",
+  "products": "المنتجات",
+  "sellers": "البائعات",
+  "about": "عن المنصة",
+  "cart": "السلة",
+  "accountLabel": "حسابي",
+  "login": "تسجيل الدخول",
+  "register": "إنشاء حساب",
+  "logout": "تسجيل الخروج",
+  "notifications": "الإشعارات",
+  "favorites": "المفضلة",
+  "orders": "طلباتي",
+  "settings": "الإعدادات",
+  "sellerDashboard": "لوحة البائعة",
+  "adminDashboard": "لوحة الإدارة",
+  "seller": {
+    "dashboard": "لوحة التحكم",
+    "products": "منتجاتي",
+    "orders": "طلباتي",
+    "earnings": "أرباحي",
+    "profile": "ملفي الشخصي",
+    "notifications": "الإشعارات"
+  },
+  "admin": {
+    "dashboard": "لوحة التحكم",
+    "payments": "مدفوعات فودافون كاش",
+    "orders": "الطلبات",
+    "products": "المنتجات",
+    "sellers": "البائعات والأرباح",
+    "customers": "العملاء",
+    "categories": "التصنيفات",
+    "notifications": "الإشعارات",
+    "settings": "الإعدادات"
+  },
+  "categories": {
+    "alphabetBoards": "لوحات الحروف",
+    "numberBoards": "لوحات الأرقام",
+    "flashCards": "بطاقات تعليمية",
+    "wallCharts": "لوحات حائط",
+    "classroomDecor": "زينة الفصول",
+    "activityKits": "حقائب الأنشطة"
+  }
+}
+

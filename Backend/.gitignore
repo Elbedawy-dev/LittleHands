@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+storage/
+logs/
+*.log
+data/
+coverage/
+dist/
+.tmp/
+tmp/
+.DS_Store
+BACKEND_NOTES.md

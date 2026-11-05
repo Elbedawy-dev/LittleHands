@@ -1,0 +1,237 @@
+{
+  "overview": {
+    "title": "Platform Admin Dashboard",
+    "description": "Monitor key performance indicators, 20% platform commission, review Vodafone Cash transfer receipts, and track order activity.",
+    "walletWarning": "Warning: Platform wallet number (Vodafone Cash) is not configured yet. Customers cannot complete orders until it is set.",
+    "setupWallet": "Configure Wallet",
+    "cycleBadge": "Current Financial Cycle",
+    "cycleDate": "Current Month - Egypt",
+    "stats": {
+      "grossSales": "Total Gross Sales",
+      "grossSalesSubtitle": "Confirmed and delivered orders",
+      "platformCommission": "Platform Commission (20%)",
+      "platformCommissionSubtitle": "Fixed 20% cut per order",
+      "sellersNet": "Sellers Net Payouts (80%)",
+      "sellersNetSubtitle": "Net artisan workshop earnings",
+      "pendingPayments": "Pending Payment Reviews",
+      "pendingPaymentsSubtitle": "Pending Vodafone Cash receipts",
+      "totalOrders": "Total Orders",
+      "totalOrdersSubtitle": "Educational aids nursery supplies"
+    },
+    "chart": {
+      "title": "Revenue & Commission Flow",
+      "description": "Gross sales compared to the 20% platform commission",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "grossLabel": "Gross Sales",
+      "commissionLabel": "Platform Commission (20%)",
+      "sellerNetLabel": "Sellers Net (80%)",
+      "emptyTitle": "No sales recorded yet",
+      "emptyDescription": "Charts and metrics will appear here once the first order is confirmed and paid."
+    },
+    "recentOrders": {
+      "title": "Recent Orders",
+      "description": "Latest orders received from nurseries",
+      "viewAll": "View All Orders",
+      "orderNumber": "Order #",
+      "customer": "Customer / Nursery",
+      "total": "Total",
+      "status": "Status",
+      "date": "Date",
+      "empty": "No recent orders"
+    },
+    "pendingWidget": {
+      "title": "Pending Vodafone Cash Verification Queue",
+      "description": "Review and verify manual transfer receipts before workshops begin crafting",
+      "urgentCount": "{{count}} pending receipt(s)",
+      "viewAll": "Go to Vodafone Cash Payments",
+      "from": "Sent from:",
+      "mismatchWarning": "Amount Mismatch",
+      "empty": "Great! All receipts are verified and there are no pending payments.",
+      "reviewAction": "Review & Verify"
+    }
+  },
+  "payments": {
+    "title": "Vodafone Cash Payments",
+    "description": "Review and verify manual transfer receipts received from nursery clients before teaching aids preparation begins.",
+    "tabs": {
+      "all": "All Payments",
+      "pending": "Pending Review",
+      "confirmed": "Confirmed",
+      "rejected": "Rejected"
+    },
+    "searchPlaceholder": "Search by order #, customer name, wallet phone, or reference code...",
+    "table": {
+      "orderNumber": "Order #",
+      "customer": "Customer & Nursery",
+      "expectedTotal": "Required Total",
+      "transferredAmount": "Transferred Amount",
+      "senderPhone": "Sender Wallet",
+      "reference": "Reference #",
+      "receipt": "Receipt Image",
+      "submittedAt": "Date Submitted",
+      "status": "Status",
+      "actions": "Actions & Verification",
+      "viewReceipt": "Preview Receipt",
+      "noReceipt": "No receipt",
+      "reviewed": "Reviewed",
+      "approve": "Confirm Payment",
+      "reject": "Reject Receipt"
+    },
+    "mismatch": {
+      "badge": "Amount Mismatch",
+      "tooltip": "Transferred amount ({{transferred}}) does not match required total ({{expected}})"
+    },
+    "confirmDialog": {
+      "title": "Confirm Vodafone Cash Transfer",
+      "message": "Have you verified the transfer has arrived in the platform wallet? The artisan seller will be notified immediately to start preparing the educational teaching aids.",
+      "orderNumber": "Order #",
+      "customer": "Customer",
+      "nursery": "Nursery",
+      "expectedAmount": "Required Order Total (incl. shipping)",
+      "transferredAmount": "Transferred Amount on Receipt",
+      "senderPhone": "Sender Wallet Phone",
+      "reference": "Transaction Code / Reference",
+      "confirmButton": "Confirm & Approve Order",
+      "cancelButton": "Cancel",
+      "successToast": "Order {{number}} approved and seller notified successfully"
+    },
+    "rejectModal": {
+      "title": "Reject Vodafone Cash Payment",
+      "subtitle": "Select a rejection reason and notify the client to resubmit the correct receipt",
+      "reasonLabel": "Rejection Reason",
+      "notesLabel": "Detailed Notes for Client",
+      "notesPlaceholder": "Write clear clarification (e.g. please transfer remaining difference or upload clear receipt)...",
+      "notifyCheckbox": "Send notification and text message to client to correct receipt",
+      "rejectButton": "Confirm Payment Rejection",
+      "cancelButton": "Go Back",
+      "successToast": "Payment rejected for order {{number}} and client notified"
+    },
+    "empty": "No payments match the selected criteria"
+  },
+  "orders": {
+    "title": "All Platform Orders",
+    "description": "Comprehensive order ledger for all nurseries and sellers across payment and delivery stages.",
+    "filters": {
+      "status": "Order Status",
+      "allStatuses": "All Statuses",
+      "seller": "Seller",
+      "allSellers": "All Sellers",
+      "dateRange": "Time Period",
+      "allDates": "All Time",
+      "today": "Today",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "search": "Search by order #, customer name, or phone number..."
+    },
+    "table": {
+      "orderNumber": "Order #",
+      "customer": "Customer / Nursery",
+      "itemsSummary": "Teaching Aids Summary",
+      "total": "Total",
+      "status": "Status",
+      "date": "Date",
+      "actions": "Order Details",
+      "viewDetails": "View Details",
+      "itemCount_one": "1 aid",
+      "itemCount_other": "{{count}} aids"
+    },
+    "drawer": {
+      "title": "Order Details",
+      "customerInfo": "Customer & Nursery Info",
+      "name": "Name",
+      "phone": "Phone",
+      "nursery": "Nursery",
+      "address": "Address & Governorate",
+      "notes": "Client Notes",
+      "noNotes": "No additional notes",
+      "statusUpdate": "Update Order Status",
+      "statusUpdateSuccess": "Order status updated successfully",
+      "items": "Ordered Teaching Aids",
+      "commissionTable": {
+        "title": "Commission & Net Earnings Breakdown",
+        "description": "Calculation of fixed platform commission (20%) and seller net earnings (80%) per teaching aid",
+        "item": "Handmade Aid",
+        "seller": "Seller",
+        "unitPrice": "Unit Price",
+        "qty": "Qty",
+        "salePrice": "Sale Price",
+        "commission": "Platform Commission (20%)",
+        "sellerNet": "Seller Net (80%)",
+        "totals": "Totals",
+        "shippingNote": "Shipping cost ({{amount}} EGP) is not subject to teaching aids commission."
+      },
+      "paymentSection": {
+        "title": "Vodafone Cash Transfer Details",
+        "senderPhone": "Sender Wallet Phone",
+        "reference": "Reference #",
+        "amount": "Transferred Amount",
+        "date": "Transfer Date",
+        "viewReceipt": "Preview Enlarged Receipt",
+        "noPayment": "No payment receipt submitted yet"
+      },
+      "timelineTitle": "Order Progress & Timeline"
+    },
+    "empty": "No orders found matching the filter criteria",
+    "emptyTitle": "No orders found"
+  },
+  "sellers": {
+    "title": "Sellers & Platform Earnings",
+    "description": "Track sales volume for each seller, calculate the 20% platform commission, and record outgoing Vodafone Cash payouts.",
+    "cards": {
+      "verifiedSeller": "Registered Platform Workshop",
+      "seller1Specialty": "Interactive Felt Boards Workshop",
+      "seller2Specialty": "Educational Flash Cards & Activity Kits",
+      "grossSales": "Gross Sales",
+      "platformCommission": "Platform Commission (20%)",
+      "sellerNet": "Seller Net Due (80%)",
+      "totalPaidOut": "Paid Out",
+      "pendingDue": "Pending Balance Due",
+      "walletNumber": "Vodafone Cash Wallet:",
+      "recordPayoutAction": "Record Payout Transfer",
+      "noPendingBalance": "All dues settled"
+    },
+    "payoutModal": {
+      "title": "Record Payout for {{name}}",
+      "description": "Record transfer details sent via Vodafone Cash to deduct from the seller's pending balance",
+      "amount": "Transferred Amount (EGP)",
+      "maxAmountHint": "Maximum available payout: {{amount}} EGP",
+      "reference": "Vodafone Cash Transfer Reference #",
+      "referencePlaceholder": "VF-PAY-00X",
+      "date": "Transfer Date",
+      "notes": "Transfer Notes",
+      "notesPlaceholder": "Earnings for first half of the month...",
+      "cancel": "Cancel",
+      "submit": "Record Payout & Confirm Deduction",
+      "errorMax": "Entered amount exceeds the pending balance due to seller",
+      "errorMin": "Please enter a valid amount greater than zero",
+      "successToast": "Payout of {{amount}} EGP successfully recorded for seller"
+    },
+    "history": {
+      "title": "Outgoing Sellers Payout Ledger",
+      "description": "Ledger of all executed financial transfers to artisan workshops via Vodafone Cash",
+      "date": "Date",
+      "seller": "Artisan Seller",
+      "amount": "Transferred Amount",
+      "reference": "Reference #",
+      "notes": "Notes",
+      "empty": "No previous payouts recorded",
+      "emptyDescription": "Vodafone Cash payouts recorded for sellers will appear here."
+    },
+    "drilldown": {
+      "title": "Seller Sales & Commission Audit",
+      "description": "Detailed breakdown of orders for each workshop with 20% platform cut and 80% seller net",
+      "allSellers": "All Workshops",
+      "orderNumber": "Order #",
+      "customer": "Customer / Nursery",
+      "item": "Teaching Aid",
+      "salePrice": "Sale Price",
+      "commission": "Platform Commission (20%)",
+      "sellerNet": "Seller Net (80%)",
+      "status": "Status",
+      "date": "Date",
+      "empty": "No orders for this seller",
+      "emptyDescription": "This seller's orders will appear here once they are placed."
+    }
+  }
+}

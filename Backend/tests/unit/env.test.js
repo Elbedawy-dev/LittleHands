@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { validateEnv } from '../../src/config/env.js'
+import { validateProductionEnv } from '../../src/scripts/checkEnv.js'
 
 describe('Environment Validation', () => {
   it('parses valid environment configuration', () => {
@@ -47,5 +48,49 @@ describe('Environment Validation', () => {
 
     expect(() => validateEnv(invalid)).toThrow(/ADMIN_PHONE must be a valid Egyptian mobile number/)
   })
-})
 
+  it('validates production environment requirements', () => {
+    const validProd = {
+      NODE_ENV: 'production',
+      PORT: '5000',
+      MONGODB_URI: 'mongodb+srv://app_user:StrongPass123@cluster.mongodb.net/little_hands_prod',
+      CLIENT_ORIGINS: 'https://littlehands.eg, https://www.littlehands.eg',
+      JWT_ACCESS_SECRET: 'super_secret_jwt_access_token_min_32_characters_12345_prod!',
+      JWT_REFRESH_SECRET: 'super_secret_jwt_refresh_token_min_32_characters_12345_prod!',
+      EMAIL_DRIVER: 'smtp',
+      SMTP_HOST: 'smtp.sendgrid.net',
+      SMTP_USER: 'apikey',
+      SMTP_PASS: 'SG.valid_smtp_pass_key_secret',
+      REQUIRE_EMAIL_VERIFICATION: 'true',
+      ADMIN_PASSWORD: 'CustomSuperSecureAdminPassword2026!',
+    }
+
+    const result = validateProductionEnv(validProd)
+    expect(result.EMAIL_DRIVER).toBe('smtp')
+    expect(result.REQUIRE_EMAIL_VERIFICATION).toBe(true)
+
+    // Fails if CLIENT_ORIGINS has localhost
+    expect(() =>
+      validateProductionEnv({
+        ...validProd,
+        CLIENT_ORIGINS: 'https://littlehands.eg, http://localhost:5173',
+      })
+    ).toThrow(/CLIENT_ORIGINS must not contain localhost/)
+
+    // Fails if EMAIL_DRIVER is console
+    expect(() =>
+      validateProductionEnv({
+        ...validProd,
+        EMAIL_DRIVER: 'console',
+      })
+    ).toThrow(/EMAIL_DRIVER must be set to "smtp"/)
+
+    // Fails if REQUIRE_EMAIL_VERIFICATION is false
+    expect(() =>
+      validateProductionEnv({
+        ...validProd,
+        REQUIRE_EMAIL_VERIFICATION: 'false',
+      })
+    ).toThrow(/REQUIRE_EMAIL_VERIFICATION must be true/)
+  })
+})

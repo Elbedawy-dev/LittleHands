@@ -165,6 +165,11 @@ const orderSchema = new mongoose.Schema(
   }
 )
 
+// Compound indexes for customer orders, multi-seller item fulfillment, and status filtering
+orderSchema.index({ customerId: 1, createdAt: -1 })
+orderSchema.index({ 'items.sellerId': 1, status: 1, createdAt: -1 })
+orderSchema.index({ status: 1, createdAt: -1 })
+
 orderSchema.plugin(toJSONPlugin)
 
 export const Order = mongoose.models.Order || mongoose.model('Order', orderSchema)

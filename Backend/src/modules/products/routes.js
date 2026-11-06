@@ -2,7 +2,7 @@ import { Router } from 'express'
 import multer from 'multer'
 import { productController } from './controller.js'
 import { catalogController } from '../catalog/controller.js'
-import { authenticate, authorize } from '../../middlewares/auth.js'
+import { authenticate, authorize, optionalAuth } from '../../middlewares/auth.js'
 import { csrfGuard } from '../../middlewares/csrfGuard.js'
 import { validate } from '../../middlewares/validate.js'
 import {
@@ -135,7 +135,7 @@ router.patch(
 // Public discovery endpoints when accessed via /api/v1/products
 router.get('/featured', catalogController.getFeaturedProducts)
 router.get('/:id/related', catalogController.getRelatedProducts)
-router.get('/:id', catalogController.getProduct)
+router.get('/:id', optionalAuth, catalogController.getProduct)
 router.get('/', validate({ query: productListQuerySchema }), catalogController.getProducts)
 
 export default router

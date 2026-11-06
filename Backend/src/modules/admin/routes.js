@@ -44,10 +44,10 @@ router.put('/settings/shipping-rates', csrfGuard, settingsController.updateShipp
 router.patch('/settings/shipping-rates', csrfGuard, settingsController.updateShippingRates)
 
 // Categories management (B2)
-router.patch('/categories/:id', csrfGuard, validate(updateCategorySchema), adminController.updateCategory)
-router.put('/categories/:slug', csrfGuard, validate(updateCategorySchema), adminController.updateCategory)
 router.put('/categories/reorder', csrfGuard, validate(reorderCategoriesSchema), adminController.reorderCategories)
 router.put('/categories/order', csrfGuard, validate(reorderCategoriesSchema), adminController.reorderCategories)
+router.patch('/categories/:id', csrfGuard, validate(updateCategorySchema), adminController.updateCategory)
+router.put('/categories/:slug', csrfGuard, validate(updateCategorySchema), adminController.updateCategory)
 
 // Custom Requests (B2)
 router.get('/custom-requests', validate({ query: customRequestQuerySchema }), contactController.getCustomRequests)

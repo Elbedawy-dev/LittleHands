@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { catalogController } from './controller.js'
+import { optionalAuth } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
 import { productListQuerySchema } from './schemas.js'
 
@@ -11,7 +12,7 @@ router.get('/categories', catalogController.getCategories)
 // Public Products Discovery
 router.get('/products', validate({ query: productListQuerySchema }), catalogController.getProducts)
 router.get('/products/featured', catalogController.getFeaturedProducts)
-router.get('/products/:id', catalogController.getProduct)
+router.get('/products/:id', optionalAuth, catalogController.getProduct)
 router.get('/products/:id/related', catalogController.getRelatedProducts)
 
 export default router

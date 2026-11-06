@@ -1,146 +1,117 @@
 import { fromPiasters, toPiasters } from '../../utils/money.js'
 
-export function toSellerOverviewDTO({
-  sellerId,
-  period = 'month',
-  totalSales = 0,
-  commission = 0,
-  net = 0,
-  paid = 0,
-  due = 0,
-  newOrders = 0,
-  ordersCount = 0,
-  commissionRate = 0.20,
-  series = [],
-  recentOrders = [],
-  recentPayouts = [],
-}) {
-  const round = (val) => fromPiasters(toPiasters(val))
-  const salesRounded = round(totalSales)
-  const commissionRounded = round(commission)
-  const netRounded = round(net)
-  const paidRounded = round(paid)
-  const dueRounded = Math.max(0, round(due))
+const str = (v) => (v === undefined || v === null ? v : v.toString())
 
+/** Per-item money in integer piasters, read ONLY from the order-time snapshots. */
+export function itemPiasters(item) {
   return {
-    sellerId: sellerId?.toString(),
-    period,
-    // Dual naming for both prompt & frontend compatibility
-    totalSales: salesRounded,
-    grossSales: salesRounded,
-    commission: commissionRounded,
-    platformCut: commissionRounded,
-    net: netRounded,
-    netEarnings: netRounded,
-    paid: paidRounded,
-    totalPaidOut: paidRounded,
-    due: dueRounded,
-    pendingBalance: dueRounded,
-    newOrders,
-    ordersCount,
-    commissionRate,
-    series,
-    daily: series,
-    recentOrders,
-    recentPayouts,
+    sales: toPiasters((item.qty || 0) * (item.unitPrice || 0)),
+    commission: toPiasters(item.commissionAmount || 0),
+    net: toPiasters(item.sellerNet || 0),
   }
 }
 
-export function toAdminOverviewDTO({
-  period = 'month',
-  totalSales = 0,
-  commission = 0,
-  sellersNet = 0,
-  sellersDue = 0,
-  totalPaidOut = 0,
-  totalOrders = 0,
-  pendingPayments = 0,
-  ordersCountByStatus = {},
-  series = [],
-  latestOrders = [],
-  pendingPaymentsWidget = [],
-}) {
-  const round = (val) => fromPiasters(toPiasters(val))
-  const salesRounded = round(totalSales)
-  const commRounded = round(commission)
-  const netRounded = round(sellersNet)
-  const dueRounded = Math.max(0, round(sellersDue))
-  const paidRounded = round(totalPaidOut)
-
+/**
+ * Money cards from integer piasters. `due` is clamped at zero.
+ * Both the prompt names and the names used by the frontend services are exposed.
+ */
+export function toCardsDTO({ sales = 0, commission = 0, net = 0, paid = 0 } = {}) {
+  const due = Math.max(0, net - paid)
+  const out = {
+    totalSales: fromPiasters(sales),
+    commission: fromPiasters(commission),
+    net: fromPiasters(net),
+    paid: fromPiasters(paid),
+    due: fromPiasters(due),
+  }
   return {
-    period,
-    totalSales: salesRounded,
-    grossSales: salesRounded,
-    commission: commRounded,
-    platformCommission: commRounded,
-    sellersNet: netRounded,
-    sellersDue: dueRounded,
-    pendingPayoutsBalance: dueRounded,
-    totalPaidOut: paidRounded,
-    totalOrders,
-    pendingPayments,
-    pendingPaymentsCount: pendingPayments,
-    ordersCountByStatus,
-    series,
-    revenueSeries: series,
-    latestOrders,
-    recentOrders: latestOrders,
-    pendingPaymentsWidget,
-    pendingPaymentsList: pendingPaymentsWidget,
+    ...out,
+    grossSales: out.totalSales,
+    platformCut: out.commission,
+    netEarnings: out.net,
+    totalPaidOut: out.paid,
+    pendingBalance: out.due,
   }
 }
 
-export function toSellerOrderRowDTO(order, sellerId) {
-  const sidStr = sellerId?.toString()
-  const sellerItems = (order.items || []).filter(
-    (item) => item.sellerId?.toString() === sidStr
-  )
+/** Day bucket (sales/commission/net given in piasters). */
+export function toSeriesPointDTO(date, { sales = 0, commission = 0, net = 0, orders = 0 } = {}) {
+  return {
+    date,
+    sales: fromPiasters(sales),
+    commission: fromPiasters(commission),
+    net: fromPiasters(net),
+    orders,
+  }
+}
 
+function sellerItems(order, sellerId) {
+  const sid = str(sellerId)
+  return (order.items || []).filter((it) => str(it.sellerId) === sid)
+}
+
+/**
+ * One order seen from one seller's point of view: ONLY her items and her money.
+ * Never includes payment data, shipping or customer details unless `forAdmin`.
+ */
+export function toSellerOrderRowDTO(order, sellerId, { forAdmin = false } = {}) {
+  const items = sellerItems(order, sellerId)
   let sales = 0
   let commission = 0
   let net = 0
-  let commRate = 0.20
-
-  for (const it of sellerItems) {
-    const itemSales = (it.qty || 1) * (it.unitPrice || 0)
-    sales += itemSales
-    commRate = it.commissionRate !== undefined ? it.commissionRate : commRate
-    const itComm = it.commissionAmount !== undefined ? it.commissionAmount : itemSales * commRate
-    const itNet = it.sellerNet !== undefined ? it.sellerNet : itemSales - itComm
-    commission += itComm
-    net += itNet
+  for (const it of items) {
+    const p = itemPiasters(it)
+    sales += p.sales
+    commission += p.commission
+    net += p.net
   }
+  const fulfillment = (order.sellerFulfillment || []).find((f) => str(f.sellerId) === str(sellerId))
+  const rate = items.length ? items[0].commissionRate : undefined
 
-  const fulfillment = (order.sellerFulfillment || []).find(
-    (f) => f.sellerId?.toString() === sidStr
-  )
-
-  return {
-    id: order.id || order._id?.toString(),
+  const row = {
+    id: str(order._id || order.id),
     number: order.number,
-    createdAt: order.createdAt,
+    createdAt: order.createdAt instanceof Date ? order.createdAt.toISOString() : order.createdAt,
     status: order.status,
     fulfillmentStatus: fulfillment?.status || 'pending',
-    itemsCount: sellerItems.reduce((acc, it) => acc + (it.qty || 1), 0),
-    sales: fromPiasters(toPiasters(sales)),
-    commissionRate: commRate,
-    commission: fromPiasters(toPiasters(commission)),
-    net: fromPiasters(toPiasters(net)),
+    itemsCount: items.reduce((acc, it) => acc + (it.qty || 0), 0),
+    sales: fromPiasters(sales),
+    commission: fromPiasters(commission),
+    net: fromPiasters(net),
+    items: items.map((it) => ({
+      productId: str(it.productId),
+      name: it.name,
+      qty: it.qty,
+      unitPrice: it.unitPrice,
+      ...(forAdmin
+        ? { sellerId: str(it.sellerId), commissionRate: it.commissionRate }
+        : {}),
+      commissionAmount: it.commissionAmount,
+      sellerNet: it.sellerNet,
+    })),
   }
+  if (rate !== undefined) row.commissionRate = rate
+
+  if (forAdmin) {
+    row.customerId = str(order.customerId)
+    row.customerName = order.delivery?.name || ''
+    row.nurseryName = order.delivery?.nurseryName || ''
+  }
+  return row
 }
 
 export function toPayoutDTO(payout) {
   if (!payout) return null
-  const p = payout.toObject ? payout.toObject() : { ...payout }
+  const p = payout.toObject ? payout.toObject() : payout
   return {
-    id: p.id || p._id?.toString(),
-    sellerId: p.sellerId?.toString(),
+    id: str(p._id || p.id),
+    sellerId: str(p.sellerId),
     sellerName: p.sellerName || '',
     amount: fromPiasters(toPiasters(p.amount)),
     reference: p.reference,
     date: p.date,
     note: p.note || p.notes || '',
     notes: p.notes || p.note || '',
-    createdAt: p.createdAt,
+    createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
   }
 }

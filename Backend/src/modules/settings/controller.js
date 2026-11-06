@@ -5,58 +5,39 @@ import { ok } from '../../utils/response.js'
 
 export const settingsController = {
   /**
-   * GET /settings
-   * Returns settings shaped by caller role:
-   * - Seller & Admin receive commissionRate & payoutScheduleText
-   * - Public & Customer NEVER receive commissionRate
+   * GET /settings — shaped by the caller's role:
+   * seller/admin additionally receive commissionRate + payoutScheduleText; everyone else never does.
    */
   getSettings: asyncHandler(async (req, res) => {
-    const role = req.user?.role || 'public'
-    const settings = await settingsService.getSettings(role)
-    return ok(res, settings)
+    const role = req.user?.role === 'admin' || req.user?.role === 'seller' ? req.user.role : 'public'
+    return ok(res, await settingsService.getSettings(role))
   }),
 
-  /**
-   * GET /settings/public
-   * Strictly public settings. Never contains commissionRate.
-   */
+  /** GET /settings/public — never contains commission keys. */
   getPublicSettings: asyncHandler(async (_req, res) => {
-    const settings = await settingsService.getPublicSettings()
-    return ok(res, settings)
+    return ok(res, await settingsService.getPublicSettings())
   }),
 
-  /**
-   * GET /settings/shipping-rates
-   */
+  /** GET /settings/shipping-rates — price map by zone; full zones in meta. */
   getShippingRates: asyncHandler(async (_req, res) => {
-    const rates = await settingsService.getShippingRates()
-    return ok(res, rates)
+    const { rates, zones } = await settingsService.getShippingRates()
+    return ok(res, rates, { zones })
   }),
 
-  /**
-   * PUT/PATCH /settings
-   * PUT/PATCH /admin/settings
-   */
+  /** PUT /admin/settings */
   updateSettings: asyncHandler(async (req, res) => {
-    const validated = updateSettingsSchema.parse(req.body)
-    const settings = await settingsService.updateSettings(validated, {
-      actorId: req.user._id,
-      ip: req.ip,
-    })
-    return ok(res, settings)
+    const values = updateSettingsSchema.parse(req.body)
+    return ok(res, await settingsService.updateSettings(values, { actorId: req.user._id, ip: req.ip }))
   }),
 
-  /**
-   * PUT/PATCH /settings/shipping-rates
-   * PUT/PATCH /admin/settings/shipping-rates
-   */
+  /** PUT /admin/settings/shipping-rates */
   updateShippingRates: asyncHandler(async (req, res) => {
-    const validated = updateShippingRatesSchema.parse(req.body)
-    const rates = await settingsService.updateShippingRates(validated, {
+    const input = updateShippingRatesSchema.parse(req.body)
+    const { rates, zones } = await settingsService.updateShippingRates(input, {
       actorId: req.user._id,
       ip: req.ip,
     })
-    return ok(res, rates)
+    return ok(res, rates, { zones })
   }),
 }
 

@@ -94,6 +94,22 @@ router.patch(
   orderController.setSellerOrderStatus
 )
 router.patch(
+  '/seller/:id/fulfillment',
+  authenticate,
+  authorize('seller'),
+  csrfGuard,
+  validate({ body: setSellerOrderStatusSchema }),
+  orderController.setSellerOrderStatus
+)
+router.patch(
+  '/seller/:id/status',
+  authenticate,
+  authorize('seller'),
+  csrfGuard,
+  validate({ body: setSellerOrderStatusSchema }),
+  orderController.setSellerOrderStatus
+)
+router.patch(
   '/seller/orders/:id/fulfillment',
   authenticate,
   authorize('seller'),

@@ -31,7 +31,7 @@ export const audit = {
         return entry
       }
     } catch (e) {
-      console.warn('[AUDIT_STUB] Failed to write AuditLog:', e.message)
+      console.warn('[AUDIT_LOG] Failed to write AuditLog:', e.message)
     }
 
     return {

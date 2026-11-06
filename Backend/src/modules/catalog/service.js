@@ -244,8 +244,10 @@ export const catalogService = {
 
   /**
    * Retrieves single public product by ID or slug.
+   * Draft products or suspended seller products are hidden from public/customers (404),
+   * while allowing the product's owning seller or admin to load it for editing.
    */
-  async getProduct(idOrSlug) {
+  async getProduct(idOrSlug, viewer = null) {
     if (!idOrSlug) {
       throw new AppError('ERR_PRODUCT_NOT_FOUND', 404)
     }
@@ -254,17 +256,28 @@ export const catalogService = {
       ? {
           $or: [{ _id: idOrSlug }, { slug: idOrSlug }],
           deletedAt: null,
-          published: true,
         }
       : {
           slug: idOrSlug,
           deletedAt: null,
-          published: true,
         }
 
     const product = await Product.findOne(query).populate('sellerId', '_id name seller avatar status')
 
-    if (!product || !product.sellerId || product.sellerId.status !== 'active') {
+    if (!product || !product.sellerId) {
+      throw new AppError('ERR_PRODUCT_NOT_FOUND', 404)
+    }
+
+    const isAdmin = viewer?.role === 'admin'
+    const isOwnerSeller =
+      viewer?.role === 'seller' &&
+      viewer._id?.toString() === product.sellerId._id?.toString()
+
+    if (!product.published && !isAdmin && !isOwnerSeller) {
+      throw new AppError('ERR_PRODUCT_NOT_FOUND', 404)
+    }
+
+    if (product.sellerId.status !== 'active' && !isAdmin) {
       throw new AppError('ERR_PRODUCT_NOT_FOUND', 404)
     }
 

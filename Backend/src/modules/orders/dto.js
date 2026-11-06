@@ -122,6 +122,8 @@ export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) 
     }
     dto.payment = o.payment
       ? {
+          id: o.payment.id || o.payment._id?.toString(),
+          attempt: o.payment.attempt,
           orderId,
           orderNumber: o.number,
           customerId,
@@ -174,6 +176,8 @@ export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) 
     // Customer sees safe payment proof summary without admin internal flags
     dto.payment = o.payment
       ? {
+          id: o.payment.id || o.payment._id?.toString(),
+          attempt: o.payment.attempt,
           senderPhone: o.payment.senderPhone,
           reference: o.payment.reference,
           transferredAmount: o.payment.transferredAmount,

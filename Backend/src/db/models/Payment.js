@@ -81,6 +81,10 @@ const paymentSchema = new mongoose.Schema(
   }
 )
 
+// Compound indexes for order payment lookups and admin pending payment reviews
+paymentSchema.index({ orderId: 1, attempt: -1 })
+paymentSchema.index({ status: 1, submittedAt: -1 })
+
 paymentSchema.plugin(toJSONPlugin)
 
 export const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema)

@@ -120,6 +120,11 @@ const productSchema = new mongoose.Schema(
 
 productSchema.plugin(toJSONPlugin)
 
+// Compound indexes for catalog browsing, seller product management, and sorting
+productSchema.index({ deletedAt: 1, published: 1, categorySlug: 1, createdAt: -1 })
+productSchema.index({ deletedAt: 1, published: 1, sellerId: 1, createdAt: -1 })
+productSchema.index({ sellerId: 1, deletedAt: 1, createdAt: -1 })
+
 // Text index for search
 productSchema.index({
   'name.ar': 'text',

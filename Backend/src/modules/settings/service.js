@@ -1,236 +1,163 @@
 import { Setting } from '../../db/models/Setting.js'
-import { AuditLog } from '../../db/models/AuditLog.js'
-import { SHIPPING_ZONES, EGYPTIAN_GOVERNORATES } from '../../config/constants.js'
+import { SHIPPING_ZONES } from '../../config/constants.js'
 import { AppError } from '../../utils/appError.js'
-import { mapSettingsDTO, toPublicSettingsDTO, toAdminSettingsDTO } from './dto.js'
+import { audit } from '../../infra/audit/index.js'
+import {
+  mapSettingsDTO,
+  toAdminSettingsDTO,
+  toPublicSettingsDTO,
+  toShippingRatesMap,
+  toShippingZonesDTO,
+} from './dto.js'
 
-/**
- * Ensures platform settings singleton document exists.
- */
-async function getOrCreateSettings() {
-  let setting = await Setting.findOne({ singletonKey: 'platform_settings' })
-  if (!setting) {
-    setting = await Setting.create({
-      singletonKey: 'platform_settings',
-      commissionRate: 0.20,
-      platformWallet: '',
-      shippingRates: SHIPPING_ZONES,
-      deliveryTimeText: {
-        ar: 'التوصيل خلال ٢-٤ أيام عمل',
-        en: 'Delivery within 2-4 business days',
-      },
-      supportPhone: '',
-      supportEmail: '',
-      whatsappNumber: '',
-      payoutScheduleText: '',
-      maintenanceMode: false,
-      notifications: {
-        orderCreated: true,
-        paymentSubmitted: true,
-        payoutRecorded: true,
-      },
-    })
-  } else if (!setting.shippingRates || setting.shippingRates.length === 0) {
-    setting.shippingRates = SHIPPING_ZONES
-    await setting.save()
+const SINGLETON = 'platform_settings'
+const AUDITED_FIELDS = [
+  'commissionRate',
+  'platformWallet',
+  'supportPhone',
+  'supportEmail',
+  'whatsappNumber',
+  'payoutScheduleText',
+  'deliveryTimeText',
+  'maintenanceMode',
+]
+
+/** Atomic get-or-create of the settings singleton (defaults come from the model + fixed zone config). */
+async function getSettingsDoc() {
+  let doc = await Setting.findOneAndUpdate(
+    { singletonKey: SINGLETON },
+    { $setOnInsert: { shippingRates: SHIPPING_ZONES } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  )
+  if (!doc.shippingRates?.length) {
+    doc.shippingRates = SHIPPING_ZONES
+    doc = await doc.save()
   }
-  return setting
+  return doc
 }
 
+function snapshot(doc) {
+  const s = doc.toObject()
+  const out = {}
+  for (const key of AUDITED_FIELDS) out[key] = s[key]
+  out.notifications = { ...(s.notifications || {}) }
+  out.shippingRates = toShippingRatesMap(s.shippingRates)
+  return out
+}
+
+function diff(before, after) {
+  const b = {}
+  const a = {}
+  for (const key of Object.keys(after)) {
+    if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+      b[key] = before[key]
+      a[key] = after[key]
+    }
+  }
+  return { before: b, after: a }
+}
+
+const validationError = (message, path) =>
+  new AppError('VALIDATION_ERROR', 400, [{ path, message }])
+
 export const settingsService = {
-  /**
-   * Retrieves settings according to caller role.
-   */
+  /** Settings shaped by role: public/customer never see commissionRate. */
   async getSettings(role = 'public') {
-    const setting = await getOrCreateSettings()
-    return mapSettingsDTO(setting, role)
+    return mapSettingsDTO(await getSettingsDoc(), role)
   },
 
-  /**
-   * Retrieves public settings strictly omitting commission rate.
-   */
   async getPublicSettings() {
-    const setting = await getOrCreateSettings()
-    return toPublicSettingsDTO(setting)
+    return toPublicSettingsDTO(await getSettingsDoc())
   },
 
-  /**
-   * Retrieves public shipping rates.
-   */
+  /** Price map by zone id + full zone list (for admin screens). */
   async getShippingRates() {
-    const setting = await getOrCreateSettings()
-    return setting.shippingRates || SHIPPING_ZONES
+    const doc = await getSettingsDoc()
+    return {
+      rates: toShippingRatesMap(doc.shippingRates),
+      zones: toShippingZonesDTO(doc.shippingRates),
+    }
   },
 
-  /**
-   * Updates platform settings with audit log.
-   */
   async updateSettings(values, { actorId, ip } = {}) {
-    const setting = await getOrCreateSettings()
-    const before = setting.toObject()
+    const doc = await getSettingsDoc()
+    const before = snapshot(doc)
 
-    if (values.commissionRate !== undefined) {
-      const rate = Number(values.commissionRate)
-      // If given as percentage (e.g. 20 for 20%), convert to decimal 0.20
-      setting.commissionRate = rate > 1 ? Number((rate / 100).toFixed(4)) : rate
+    const simple = [
+      'commissionRate',
+      'platformWallet',
+      'supportPhone',
+      'supportEmail',
+      'whatsappNumber',
+      'payoutScheduleText',
+      'maintenanceMode',
+    ]
+    for (const key of simple) {
+      if (values[key] !== undefined) doc[key] = values[key]
     }
 
-    if (values.platformWallet !== undefined) {
-      setting.platformWallet = values.platformWallet
+    const delivery = values.deliveryTimeText ?? values.deliveryTime
+    if (delivery !== undefined) {
+      const current = doc.deliveryTimeText || {}
+      doc.deliveryTimeText =
+        typeof delivery === 'string' ? { ar: delivery, en: current.en || '' } : delivery
+      doc.markModified('deliveryTimeText')
     }
 
-    if (values.supportPhone !== undefined) {
-      setting.supportPhone = values.supportPhone
-    }
-
-    if (values.supportEmail !== undefined) {
-      setting.supportEmail = values.supportEmail
-    }
-
-    if (values.whatsappNumber !== undefined) {
-      setting.whatsappNumber = values.whatsappNumber
-    }
-
-    if (values.payoutScheduleText !== undefined) {
-      setting.payoutScheduleText = values.payoutScheduleText
-    }
-
-    if (values.deliveryTimeText !== undefined) {
-      setting.deliveryTimeText = values.deliveryTimeText
-    }
-
-    if (values.maintenanceMode !== undefined) {
-      setting.maintenanceMode = !!values.maintenanceMode
-    }
-
-    if (values.notifications !== undefined) {
-      setting.notifications = {
-        ...setting.notifications,
-        ...values.notifications,
+    if (values.notifications) {
+      for (const [key, flag] of Object.entries(values.notifications)) {
+        doc.set(`notifications.${key}`, flag)
       }
     }
 
-    if (values.shippingRates !== undefined) {
-      if (Array.isArray(values.shippingRates)) {
-        setting.shippingRates = values.shippingRates
-      }
+    if (values.shippingRates) {
+      applyPriceMap(doc, values.shippingRates)
     }
 
-    await setting.save()
-    const after = setting.toObject()
-
-    // Audit Log
-    await AuditLog.create({
-      actorId: actorId || null,
-      action: 'SETTINGS_UPDATED',
-      entityType: 'Setting',
-      entityId: setting.id || setting._id.toString(),
-      meta: {
-        before: {
-          commissionRate: before.commissionRate,
-          platformWallet: before.platformWallet,
-          supportPhone: before.supportPhone,
-          supportEmail: before.supportEmail,
-          whatsappNumber: before.whatsappNumber,
-          maintenanceMode: before.maintenanceMode,
-        },
-        after: {
-          commissionRate: after.commissionRate,
-          platformWallet: after.platformWallet,
-          supportPhone: after.supportPhone,
-          supportEmail: after.supportEmail,
-          whatsappNumber: after.whatsappNumber,
-          maintenanceMode: after.maintenanceMode,
-        },
-      },
-      ip: ip || '',
-    })
-
-    return toAdminSettingsDTO(setting)
+    await doc.save()
+    const { before: b, after: a } = diff(before, snapshot(doc))
+    if (Object.keys(a).length) {
+      await audit.log(actorId, 'SETTINGS_UPDATED', 'Setting', doc._id.toString(), { before: b, after: a }, ip)
+    }
+    return toAdminSettingsDTO(doc)
   },
 
   /**
-   * Updates shipping rates with partition validation & audit log.
-   * Requirement: price >= 0, every governorate in exactly one zone.
+   * Price-only update (map by zone id) keeps the partition; a zone list re-partitions.
+   * Partition integrity (every governorate in exactly one zone) is enforced by the zod schema.
    */
   async updateShippingRates(input, { actorId, ip } = {}) {
-    const setting = await getOrCreateSettings()
-    const before = setting.toObject()
+    const doc = await getSettingsDoc()
+    const before = toShippingZonesDTO(doc.shippingRates)
 
-    let newZones = []
-
-    if (Array.isArray(input)) {
-      newZones = input
-    } else if (input && Array.isArray(input.zones)) {
-      newZones = input.zones
-    } else if (input && typeof input === 'object') {
-      // Map format: { greater_cairo: 45, giza: 50, ... }
-      const currentRates = setting.shippingRates?.length ? setting.shippingRates : SHIPPING_ZONES
-      newZones = currentRates.map((zoneObj) => {
-        const zoneKey = zoneObj.zone || zoneObj.id
-        const updatedPrice = input[zoneKey] !== undefined ? Number(input[zoneKey]) : zoneObj.price
-        return {
-          zone: zoneKey,
-          price: updatedPrice,
-          governorates: zoneObj.governorates,
-        }
-      })
+    const zones = Array.isArray(input) ? input : input.zones
+    if (zones) {
+      doc.shippingRates = zones.map((z) => ({
+        zone: z.zone,
+        price: z.price,
+        governorates: z.governorates,
+      }))
     } else {
-      throw new AppError('INVALID_SHIPPING_RATES_FORMAT', 400, 'صيغة أسعار الشحن غير صالحة')
+      applyPriceMap(doc, input)
     }
 
-    // Validate prices >= 0
-    for (const z of newZones) {
-      if (z.price === undefined || z.price === null || isNaN(z.price) || Number(z.price) < 0) {
-        throw new AppError('INVALID_SHIPPING_PRICE', 400, `سعر الشحن للمنطقة (${z.zone}) غير صالح`)
-      }
-    }
-
-    // Validate governorates: every governorate in exactly one zone
-    const seenGovs = new Set()
-    for (const z of newZones) {
-      if (!Array.isArray(z.governorates) || z.governorates.length === 0) {
-        throw new AppError('EMPTY_ZONE_GOVERNORATES', 400, `المنطقة (${z.zone}) يجب أن تحتوي على محافظة واحدة على الأقل`)
-      }
-      for (const gov of z.governorates) {
-        if (seenGovs.has(gov)) {
-          throw new AppError(
-            'DUPLICATE_GOVERNORATE_ZONE',
-            400,
-            `المحافظة (${gov}) مكررة في أكثر من منطقة شحن`
-          )
-        }
-        seenGovs.add(gov)
-      }
-    }
-
-    const missingGovs = EGYPTIAN_GOVERNORATES.filter((gov) => !seenGovs.has(gov))
-    if (missingGovs.length > 0) {
-      throw new AppError(
-        'MISSING_GOVERNORATES',
-        400,
-        `مناطق الشحن تنقصها المحافظات التالية: ${missingGovs.join('، ')}`
-      )
-    }
-
-    setting.shippingRates = newZones
-    await setting.save()
-
-    // Audit Log
-    await AuditLog.create({
-      actorId: actorId || null,
-      action: 'SHIPPING_RATES_UPDATED',
-      entityType: 'Setting',
-      entityId: setting.id || setting._id.toString(),
-      meta: {
-        before: before.shippingRates,
-        after: setting.shippingRates,
-      },
-      ip: ip || '',
-    })
-
-    return setting.shippingRates
+    await doc.save()
+    const after = toShippingZonesDTO(doc.shippingRates)
+    await audit.log(actorId, 'SHIPPING_RATES_UPDATED', 'Setting', doc._id.toString(), { before, after }, ip)
+    return { rates: toShippingRatesMap(doc.shippingRates), zones: after }
   },
+}
+
+function applyPriceMap(doc, map) {
+  const known = new Set(doc.shippingRates.map((z) => z.zone))
+  for (const key of Object.keys(map)) {
+    if (!known.has(key)) throw validationError(`Unknown shipping zone "${key}"`, ['shippingRates', key])
+  }
+  doc.shippingRates = doc.shippingRates.map((z) => ({
+    zone: z.zone,
+    price: map[z.zone] !== undefined ? map[z.zone] : z.price,
+    governorates: [...z.governorates],
+  }))
 }
 
 export default settingsService

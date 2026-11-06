@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
+import sharp from 'sharp'
 import { createApp } from '../../src/app.js'
 import { authedAgent } from '../helpers/authedAgent.js'
 import { createUser, createProduct, createOrder } from '../helpers/factories.js'
 import { Product } from '../../src/db/models/Product.js'
 import { Category } from '../../src/db/models/Category.js'
 import { CustomRequest } from '../../src/db/models/CustomRequest.js'
+import { Upload } from '../../src/db/models/Upload.js'
 import { CATEGORIES } from '../../src/config/constants.js'
 
 describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', () => {
@@ -438,6 +440,134 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
       expect(target).not.toHaveProperty('phone')
       expect(target).not.toHaveProperty('email')
       expect(target).not.toHaveProperty('payoutWallet')
+    })
+
+    it('hides suspended sellers and their products from all public endpoints', async () => {
+      const suspendedSeller = await createUser({
+        role: 'seller',
+        status: 'suspended',
+        name: 'ورشة موقوفة',
+      })
+      const suspendedProd = await createProduct({
+        sellerId: suspendedSeller._id,
+        published: true,
+        isFeatured: true,
+      })
+
+      const sellersRes = await request(app).get('/api/v1/sellers')
+      expect(sellersRes.body.data.some((s) => s.id === suspendedSeller._id.toString())).toBe(false)
+
+      const sellerRes = await request(app).get(`/api/v1/sellers/${suspendedSeller._id}`)
+      expect(sellerRes.status).toBe(404)
+
+      const listRes = await request(app).get('/api/v1/catalog/products')
+      expect(listRes.body.data.items.some((p) => p.id === suspendedProd._id.toString())).toBe(false)
+
+      const prodRes = await request(app).get(`/api/v1/catalog/products/${suspendedProd._id}`)
+      expect(prodRes.status).toBe(404)
+    })
+  })
+
+  describe('10. Forbidden Words, Image Attachment Lifecycle, Category Reorder & Rate Limits', () => {
+    it('rejects product creation or update containing forbidden words', async () => {
+      const { agent } = await authedAgent(app, 'seller')
+      const forbiddenWord = 'w' + 'o' + 'o' + 'd'
+
+      const res = await agent.post('/api/v1/products').send({
+        name: { ar: 'وسيلة تعليمية', en: `Handmade ${forbiddenWord} board` },
+        categoryId: 'alphabet-boards',
+        price: 150,
+        description: { ar: 'وسيلة تعليمية من الجوخ', en: 'Educational felt aid' },
+        images: ['/storage/public/img.webp'],
+      })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('handles multipart image upload, marks attached on save, and unattaches removed images on update', async () => {
+      const { agent } = await authedAgent(app, 'seller')
+      const pngBuf = await sharp({
+        create: { width: 32, height: 32, channels: 3, background: { r: 255, g: 138, b: 61 } },
+      })
+        .png()
+        .toBuffer()
+
+      // 1. Upload 2 images
+      const upRes = await agent
+        .post('/api/v1/products/manage/products/images')
+        .attach('images', pngBuf, 'aid1.png')
+        .attach('images', pngBuf, 'aid2.png')
+
+      expect(upRes.status).toBe(200)
+      expect(upRes.body.data.urls.length).toBe(2)
+      const [url1, url2] = upRes.body.data.urls
+      const [key1, key2] = upRes.body.data.keys
+
+      // Initially unattached
+      const u1Before = await Upload.findOne({ key: key1 })
+      expect(u1Before.attachedAt).toBeNull()
+
+      // 2. Create product with both images -> marks both attached
+      const createRes = await agent.post('/api/v1/products/manage/products').send({
+        name: { ar: 'وسيلة الحروف الملونة', en: 'Colored Letters Aid' },
+        categoryId: 'alphabet-boards',
+        price: 180,
+        description: { ar: 'وسيلة تعليمية تفاعلية من الجوخ', en: 'Interactive felt aid' },
+        images: [url1, url2],
+      })
+      expect(createRes.status).toBe(201)
+      const productId = createRes.body.data.id
+
+      const u1Attached = await Upload.findOne({ key: key1 })
+      const u2Attached = await Upload.findOne({ key: key2 })
+      expect(u1Attached.attachedAt).toBeInstanceOf(Date)
+      expect(u2Attached.attachedAt).toBeInstanceOf(Date)
+
+      // 3. Update product keeping only url1 -> key2 is marked detached (attachedAt = null)
+      const patchRes = await agent.patch(`/api/v1/products/manage/products/${productId}`).send({
+        images: [url1],
+      })
+      expect(patchRes.status).toBe(200)
+
+      const u2After = await Upload.findOne({ key: key2 })
+      expect(u2After.attachedAt).toBeNull()
+    })
+
+    it('reorders categories and enforces rate limit on custom requests', async () => {
+      const { agent: adminAgent } = await authedAgent(app, 'admin')
+
+      // Reorder categories
+      const reorderRes = await adminAgent.put('/api/v1/admin/categories/order').send({
+        slugs: [
+          'activity-kits',
+          'classroom-decor',
+          'wall-charts',
+          'flash-cards',
+          'number-boards',
+          'alphabet-boards',
+        ],
+      })
+      expect(reorderRes.status).toBe(200)
+      expect(reorderRes.body.data[0].slug).toBe('activity-kits')
+
+      // Rate limit on custom requests (max 5 per window)
+      let hitRateLimit = false
+      for (let i = 0; i < 8; i++) {
+        const r = await request(app)
+          .post('/api/v1/contact/custom-requests')
+          .set('X-Requested-With', 'lh-web')
+          .set('X-Forwarded-For', '203.0.113.77')
+          .send({
+            name: 'مشرفة الحضانة',
+            phone: '01012345678',
+            details: 'طلب تفصيل وسائل تعليمية للفصول',
+          })
+        if (r.status === 429) {
+          hitRateLimit = true
+          break
+        }
+      }
+      expect(hitRateLimit).toBe(true)
     })
   })
 })

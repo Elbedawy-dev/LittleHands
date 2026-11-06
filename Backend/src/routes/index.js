@@ -12,9 +12,14 @@ import earningsRoutes from '../modules/earnings/routes.js'
 import adminRoutes from '../modules/admin/routes.js'
 import settingsRoutes from '../modules/settings/routes.js'
 import notificationsRoutes from '../modules/notifications/routes.js'
+import path from 'node:path'
 import { authenticate, authorize } from '../middlewares/auth.js'
 import { csrfGuard } from '../middlewares/csrfGuard.js'
 import { storage } from '../infra/storage/index.js'
+import { jobs } from '../jobs/index.js'
+import { Payment } from '../db/models/Payment.js'
+import { Order } from '../db/models/Order.js'
+import { Upload } from '../db/models/Upload.js'
 import { AppError } from '../utils/appError.js'
 import { ok } from '../utils/response.js'
 
@@ -26,11 +31,15 @@ const router = Router()
  */
 router.get('/health', (req, res) => {
   const isDbConnected = mongoose.connection.readyState === 1
-  return ok(res, {
-    status: 'healthy',
-    database: isDbConnected ? 'connected' : 'disconnected',
-    uptime: Math.floor(process.uptime()),
-    timestamp: new Date().toISOString(),
+  const statusCode = isDbConnected ? 200 : 503
+  return res.status(statusCode).json({
+    success: isDbConnected,
+    data: {
+      status: isDbConnected ? 'healthy' : 'unhealthy',
+      database: isDbConnected ? 'connected' : 'disconnected',
+      uptime: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    },
   })
 })
 
@@ -48,17 +57,57 @@ router.use('/admin', adminRoutes)
 router.use('/settings', settingsRoutes)
 router.use('/notifications', notificationsRoutes)
 
-// Private file streaming (B5)
-router.get('/files/:key', authenticate, (req, res) => {
-  storage.streamPrivate(req.params.key, res)
+// Private file streaming with strict object-level authorization (IDOR protection)
+router.get('/files/:key', authenticate, async (req, res, next) => {
+  try {
+    const rawKey = req.params.key
+    const safeKey = path.basename(rawKey)
+    const currentUser = req.user
+
+    // Admin has access to all private files
+    if (currentUser.role === 'admin') {
+      return storage.streamPrivate(safeKey, res)
+    }
+
+    // Check if key is a payment screenshot
+    const payment = await Payment.findOne({ 'screenshot.key': safeKey })
+    if (payment) {
+      const order = await Order.findById(payment.orderId)
+      if (order && order.customerId.toString() === currentUser._id.toString()) {
+        return storage.streamPrivate(safeKey, res)
+      }
+      return next(new AppError('RECEIPT_NOT_FOUND', 404))
+    }
+
+    // Check upload owner
+    const upload = await Upload.findOne({ key: safeKey })
+    if (upload && upload.ownerId && upload.ownerId.toString() === currentUser._id.toString()) {
+      return storage.streamPrivate(safeKey, res)
+    }
+
+    return next(new AppError('FILE_NOT_FOUND', 404))
+  } catch (err) {
+    next(err)
+  }
 })
+
+// Optional general file upload endpoint
 router.post('/files/upload', authenticate, csrfGuard, (req, res, next) => {
   next(new AppError('NOT_IMPLEMENTED', 501))
 })
 
-// Job trigger (B5)
-router.post('/jobs/run/:jobName', authenticate, authorize('admin'), csrfGuard, (req, res, next) => {
-  next(new AppError('NOT_IMPLEMENTED', 501))
+// Admin job trigger
+router.post('/jobs/run/:jobName', authenticate, authorize('admin'), csrfGuard, async (req, res, next) => {
+  try {
+    const { jobName } = req.params
+    if (typeof jobs.jobHandlers?.[jobName] === 'function') {
+      const result = await jobs.jobHandlers[jobName]()
+      return ok(res, result || { success: true })
+    }
+    return next(new AppError('NOT_FOUND', 404, `Unknown job: ${jobName}`))
+  } catch (err) {
+    next(err)
+  }
 })
 
 export default router

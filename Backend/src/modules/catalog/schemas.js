@@ -24,23 +24,29 @@ export const productListQuerySchema = z.object({
 
 export const updateCategorySchema = z
   .object({
-    nameAr: z.string().min(2).optional(),
-    nameEn: z.string().min(2).optional(),
+    nameAr: z.string().trim().min(2).optional(),
+    nameEn: z.string().trim().min(1).optional(),
     name: z
-      .object({
-        ar: z.string().min(2).optional(),
-        en: z.string().min(2).optional(),
-      })
+      .union([
+        z.string().trim().min(2),
+        z.object({
+          ar: z.string().trim().min(2).optional(),
+          en: z.string().trim().min(1).optional(),
+        }),
+      ])
       .optional(),
     descriptionAr: z.string().optional(),
     descriptionEn: z.string().optional(),
     description: z
-      .object({
-        ar: z.string().optional(),
-        en: z.string().optional(),
-      })
+      .union([
+        z.string(),
+        z.object({
+          ar: z.string().optional(),
+          en: z.string().optional(),
+        }),
+      ])
       .optional(),
-    color: z.string().optional(),
+    color: z.string().trim().min(1).optional(),
     bgColor: z.string().optional(),
     textColor: z.string().optional(),
     icon: z.string().optional(),

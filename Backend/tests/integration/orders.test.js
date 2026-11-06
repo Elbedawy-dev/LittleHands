@@ -329,15 +329,135 @@ describe('Orders Module Integration Tests', () => {
       expect(res2.status).toBe(200)
       expect(res2.body.data.status).toBe('preparing')
 
-      // Step 3: Seller 2 sets shipped -> ALL sellers shipped -> overall becomes 'shipped'
+      // Step 3: Seller 2 sets preparing -> overall remains 'preparing'
       const res3 = await sellerAgent2
         .patch(`/api/v1/orders/${order._id}/fulfillment`)
-        .send({ status: 'shipped' })
+        .send({ status: 'preparing' })
       expect(res3.status).toBe(200)
-      expect(res3.body.data.status).toBe('shipped')
+      expect(res3.body.data.status).toBe('preparing')
+
+      // Step 4: Seller 2 sets shipped -> ALL sellers shipped -> overall becomes 'shipped'
+      const res4 = await sellerAgent2
+        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .send({ status: 'shipped' })
+      expect(res4.status).toBe(200)
+      expect(res4.body.data.status).toBe('shipped')
+
+      // Step 5: Seller 2 cannot revert from shipped to preparing (illegal backward transition)
+      const resRevert = await sellerAgent2
+        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .send({ status: 'preparing' })
+      expect(resRevert.status).toBe(422)
 
       const dbOrder = await Order.findById(order._id)
       expect(dbOrder.status).toBe('shipped')
+    })
+
+    it('rejects seller jumping pending -> shipped or seller2 updating seller1 order (IDOR)', async () => {
+      const { agent: sellerAgent1, user: seller1 } = await authedAgent(app, 'seller')
+      const { agent: sellerAgent2 } = await authedAgent(app, 'seller')
+
+      const order = await createOrder({
+        sellerId: seller1._id,
+        status: 'payment_confirmed',
+        sellerFulfillment: [{ sellerId: seller1._id, status: 'pending', updatedAt: new Date() }],
+      })
+
+      // Seller 2 cannot update Seller 1's fulfillment -> 404
+      const idorRes = await sellerAgent2
+        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .send({ status: 'preparing' })
+      expect(idorRes.status).toBe(404)
+
+      // Seller 1 cannot skip 'preparing' and jump straight from 'pending' to 'shipped' -> 422
+      const skipRes = await sellerAgent1
+        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .send({ status: 'shipped' })
+      expect(skipRes.status).toBe(422)
+    })
+
+    it('enforces every legal and illegal Admin state machine transition', async () => {
+      const { agent: adminAgent } = await authedAgent(app, 'admin')
+      const seller = await createUser({ role: 'seller', status: 'active' })
+      const product = await createProduct({ sellerId: seller._id, stock: 10 })
+
+      const order = await createOrder({
+        sellerId: seller._id,
+        status: 'pending_payment',
+        sellerFulfillment: [{ sellerId: seller._id, status: 'pending', updatedAt: new Date() }],
+        items: [
+          {
+            productId: product._id,
+            name: { ar: 'وسيلة', en: 'Aid' },
+            qty: 1,
+            unitPrice: 100,
+            sellerId: seller._id,
+            commissionRate: 0.20,
+            commissionAmount: 20,
+            sellerNet: 80,
+          },
+        ],
+      })
+
+      // Illegal jump: pending_payment -> delivered (422)
+      const illegalJump = await adminAgent
+        .patch(`/api/v1/orders/admin/${order._id}/status`)
+        .send({ status: 'delivered' })
+      expect(illegalJump.status).toBe(422)
+
+      // Legal: pending_payment -> payment_rejected -> pending_payment -> payment_confirmed -> preparing -> shipped -> delivered
+      expect(
+        (await adminAgent.patch(`/api/v1/orders/admin/${order._id}/status`).send({ status: 'payment_rejected' })).status
+      ).toBe(200)
+      expect(
+        (await adminAgent.patch(`/api/v1/orders/admin/${order._id}/status`).send({ status: 'pending_payment' })).status
+      ).toBe(200)
+      expect(
+        (await adminAgent.patch(`/api/v1/orders/admin/${order._id}/status`).send({ status: 'payment_confirmed' })).status
+      ).toBe(200)
+      expect(
+        (await adminAgent.patch(`/api/v1/orders/admin/${order._id}/status`).send({ status: 'preparing' })).status
+      ).toBe(200)
+      expect(
+        (await adminAgent.patch(`/api/v1/orders/admin/${order._id}/status`).send({ status: 'shipped' })).status
+      ).toBe(200)
+      expect(
+        (await adminAgent.patch(`/api/v1/orders/admin/${order._id}/status`).send({ status: 'delivered' })).status
+      ).toBe(200)
+
+      // Terminal state: delivered cannot transition to cancelled or preparing (422)
+      expect(
+        (await adminAgent.patch(`/api/v1/orders/admin/${order._id}/status`).send({ status: 'cancelled' })).status
+      ).toBe(422)
+      expect(
+        (await adminAgent.post(`/api/v1/orders/admin/${order._id}/cancel`).send({ reason: 'Too late' })).status
+      ).toBe(422)
+    })
+
+    it('compensates (restores) stock if a later item in a multi-item order fails stock check', async () => {
+      const { agent: customerAgent } = await authedAgent(app, 'customer')
+      const seller = await createUser({ role: 'seller', status: 'active' })
+      const prod1 = await createProduct({ sellerId: seller._id, price: 100, stock: 5 })
+      const prod2 = await createProduct({ sellerId: seller._id, price: 100, stock: 1 })
+
+      const res = await customerAgent.post('/api/v1/orders').send({
+        items: [
+          { productId: prod1._id.toString(), qty: 2 },
+          { productId: prod2._id.toString(), qty: 3 }, // Exceeds stock of 1!
+        ],
+        delivery: {
+          name: 'عميلة تعويض المخزون',
+          phone: '01012345678',
+          governorate: 'القاهرة',
+          city: 'المعادي',
+          address: 'شارع النصر رقم 10',
+        },
+      })
+
+      expect(res.status).toBe(422)
+      // Verify prod1 stock was compensated back to 5!
+      const checkProd1 = await Product.findById(prod1._id)
+      expect(checkProd1.stock).toBe(5)
     })
 
     it('rejects seller fulfillment update before payment_confirmed', async () => {

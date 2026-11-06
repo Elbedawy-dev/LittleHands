@@ -22,6 +22,8 @@ const payoutSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      unique: true,
+      index: true,
     },
     date: {
       type: String,

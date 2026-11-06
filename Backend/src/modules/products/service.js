@@ -3,6 +3,7 @@ import sharp from 'sharp'
 import { Product } from '../../db/models/Product.js'
 import { User } from '../../db/models/User.js'
 import { Setting } from '../../db/models/Setting.js'
+import { Upload } from '../../db/models/Upload.js'
 import { storage } from '../../infra/storage/index.js'
 import { arabicNormalize } from '../../utils/arabic.js'
 import { escapeRegex } from '../../utils/regex.js'
@@ -285,6 +286,7 @@ export const productService = {
 
     // Images update
     if (data.images !== undefined) {
+      const oldKeys = (product.images || []).map((img) => img.key).filter(Boolean)
       const rawImages = Array.isArray(data.images) ? data.images : []
       const formatted = rawImages.map((img) => {
         if (typeof img === 'string') {
@@ -298,15 +300,25 @@ export const productService = {
       if (newKeys.length > 0) {
         await storage.markAttached(newKeys)
       }
+
+      // Mark removed/detached images as unattached for cleanup
+      const detachedKeys = oldKeys.filter((k) => !newKeys.includes(k))
+      if (detachedKeys.length > 0) {
+        await Upload.updateMany(
+          { key: { $in: detachedKeys } },
+          { $set: { attachedAt: null } }
+        )
+      }
     }
 
     if (data.published !== undefined || data.isPublished !== undefined) {
       const targetPublished =
         data.published !== undefined ? Boolean(data.published) : Boolean(data.isPublished)
-      if (targetPublished && (!product.images || product.images.length === 0)) {
-        throw new AppError('VALIDATION_ERROR', 400, 'Publishing requires at least one product image')
-      }
       product.published = targetPublished
+    }
+
+    if (product.published && (!product.images || product.images.length === 0)) {
+      throw new AppError('VALIDATION_ERROR', 400, 'Publishing requires at least one product image')
     }
 
     await product.save()

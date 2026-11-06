@@ -26,11 +26,13 @@ export async function withSellerMutex(sellerId, task) {
   locks.set(key, execution)
 
   // Clean up lock from map once execution is finished if still latest
-  execution.finally(() => {
-    if (locks.get(key) === execution) {
-      locks.delete(key)
-    }
-  })
+  execution
+    .finally(() => {
+      if (locks.get(key) === execution) {
+        locks.delete(key)
+      }
+    })
+    .catch(() => {})
 
   return execution
 }

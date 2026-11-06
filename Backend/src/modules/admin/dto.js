@@ -1,15 +1,25 @@
-import { mapUserDTO } from '../../utils/dto.js'
-import { fromPiasters, toPiasters } from '../../utils/money.js'
+import { fromPiasters } from '../../utils/money.js'
 
-export const toCustomerSummaryDTO = (user, { ordersCount = 0, totalSpent = 0, lastOrderAt = null } = {}) => {
-  const base = mapUserDTO(user, 'admin')
-  const spentRounded = fromPiasters(toPiasters(totalSpent))
+const iso = (d) => (d ? new Date(d).toISOString() : null)
 
+/** Admin-only customer row: contact + account info and order statistics (no credentials/lock data). */
+export function toCustomerSummaryDTO(user, { ordersCount = 0, totalSpentPiasters = 0, lastOrderAt = null } = {}) {
+  const u = user.toObject ? user.toObject() : user
   return {
-    ...base,
+    id: (u._id || u.id).toString(),
+    name: u.name,
+    email: u.email,
+    phone: u.phone,
+    accountType: u.accountType,
+    nurseryName: u.nurseryName || '',
+    governorate: u.governorate || '',
+    city: u.city || '',
+    status: u.status,
+    createdAt: iso(u.createdAt),
     ordersCount,
-    totalSpent: spentRounded,
-    lastOrderAt: lastOrderAt ? new Date(lastOrderAt).toISOString() : null,
-    lastOrderDate: lastOrderAt ? new Date(lastOrderAt).toISOString() : null,
+    totalSpent: fromPiasters(totalSpentPiasters),
+    lastOrderAt: iso(lastOrderAt),
+    // Alias used by the existing customers table
+    lastOrderDate: iso(lastOrderAt),
   }
 }

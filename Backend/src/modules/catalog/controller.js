@@ -14,7 +14,7 @@ export const catalogController = {
   }),
 
   getProduct: asyncHandler(async (req, res) => {
-    const product = await catalogService.getProduct(req.params.id)
+    const product = await catalogService.getProduct(req.params.id, req.user)
     return ok(res, product)
   }),
 

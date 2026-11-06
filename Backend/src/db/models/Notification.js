@@ -49,6 +49,9 @@ const notificationSchema = new mongoose.Schema(
   }
 )
 
+// Compound index for user notification list and unread counts
+notificationSchema.index({ userId: 1, read: 1, createdAt: -1 })
+
 notificationSchema.plugin(toJSONPlugin)
 
 export const Notification =

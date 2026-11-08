@@ -332,12 +332,22 @@ export const earningsService = {
         })
       }
 
+      if (reference && typeof reference === 'string' && reference.trim()) {
+        const existing = await Payout.findOne({
+          sellerId: oid(sellerId),
+          reference: reference.trim(),
+        })
+        if (existing) {
+          throw new AppError('CONFLICT', 409, 'A payout with this reference already exists for this seller')
+        }
+      }
+
       const text = note || notes || ''
       const payout = await Payout.create({
         sellerId: oid(sellerId),
         sellerName: seller.name,
         amount: amountPiasters / 100,
-        reference,
+        reference: reference ? reference.trim() : '',
         date,
         note: text,
         notes: text,

@@ -1,14 +1,10 @@
 import {
   Moon,
-  RotateCcw,
   Send,
   ShoppingBag,
   Sun,
 } from 'lucide-react'
 import { useState } from 'react'
-import toast from 'react-hot-toast'
-import { db } from '../../mocks/db'
-import { DevToolsPanel } from './DevToolsPanel'
 import { OrderItemsList } from '../../components/order/OrderItemsList'
 import { OrderTimeline } from '../../components/order/OrderTimeline'
 import { ProductCard } from '../../components/product/ProductCard'
@@ -68,8 +64,8 @@ export default function DesignSystemPage() {
     name: 'لوحة الحروف الأبجدية بالجوخ',
     nameEn: 'Arabic Alphabet Felt Board',
     categoryId: 'alphabet-boards',
-    sellerId: 'seller_1',
-    sellerName: 'البائعة الأولى',
+    sellerId: 'sample_seller',
+    sellerName: 'ورشة الوسائل التعليمية',
     price: 320,
     inStock: true,
     images: [],
@@ -154,23 +150,8 @@ export default function DesignSystemPage() {
             {theme === 'dark' ? <Sun className="w-4 h-4 text-brand-yellow" /> : <Moon className="w-4 h-4" />}
             <span>{theme === 'dark' ? 'الليلي' : 'النهاري'}</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              db.reset()
-              toast.success('تمت إعادة ضبط قاعدة البيانات بنجاح (Database Reset to v2 Empty State)')
-              setTimeout(() => window.location.reload(), 400)
-            }}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-rose-300 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>إعادة ضبط قاعدة البيانات (Reset DB)</span>
-          </button>
         </div>
       </div>
-
-      <DevToolsPanel />
 
       {/* 1. الأزرار Buttons */}
       <section className="space-y-4">

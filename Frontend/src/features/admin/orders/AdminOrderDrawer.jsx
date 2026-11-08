@@ -1,31 +1,39 @@
 import {
+  CheckCircle2,
   Clock,
   Eye,
   FileText,
   MapPin,
   Phone,
   Receipt,
+  RotateCcw,
+  ShieldAlert,
   User,
 } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { OrderTimeline } from '../../../components/order/OrderTimeline'
+import { Badge } from '../../../components/ui/Badge'
+import { Button } from '../../../components/ui/Button'
 import { Drawer } from '../../../components/ui/Drawer'
+import { Input } from '../../../components/ui/Input'
 import { Lightbox } from '../../../components/ui/Lightbox'
+import { Modal } from '../../../components/ui/Modal'
 import { PriceTag } from '../../../components/ui/PriceTag'
 import { ProductImage } from '../../../components/ui/ProductImage'
 import { Select } from '../../../components/ui/Select'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { ORDER_STATUS } from '../../../config/constants'
 import { useFormat } from '../../../hooks/useFormat'
+import { usePrivateReceipt } from '../../../hooks/usePrivateReceipt'
 import { orderService } from '../../../services/orderService'
 import { calcCommission, getDisplayName } from '../../../utils'
 
 /**
  * درج التفاصيل المتقدم للطلب (Admin Order Details Drawer)
  * يعرض بيانات العميلة، والوسائل مجمعة بحسب البائعة، وجدول توزيع العمولة (20٪) وصافي البائعة (80٪)
- * ومعاينة إيصال فودافون كاش ومسار الطلب الزمني
+ * ومعاينة إيصال فودافون كاش ومسار الطلب الزمني وإجراءات رد المبالغ
  */
 export function AdminOrderDrawer({
   order,
@@ -36,30 +44,50 @@ export function AdminOrderDrawer({
   const { t, i18n } = useTranslation('admin-core')
   const isEn = i18n.language === 'en'
   const { formatDateTime } = useFormat()
-  const [activeLightboxImg, setActiveLightboxImg] = useState(null)
+  const [activeReceiptTarget, setActiveReceiptTarget] = useState(null)
+  const { imageUrl: privateReceiptUrl } = usePrivateReceipt(activeReceiptTarget)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+
+  // حالة نافذة رد المبلغ
+  const [refundModalOpen, setRefundModalOpen] = useState(false)
+  const [refundRef, setRefundRef] = useState('')
+  const [refundNote, setRefundNote] = useState('')
+  const [isRefunding, setIsRefunding] = useState(false)
 
   if (!order) return null
 
-  // تجميع المنتجات حسب البائعة
-  const sellerNamesMap = {
-    seller_1: getDisplayName({ id: 'seller_1', name: 'البائعة الأولى', nameEn: 'First Seller' }, i18n.language),
-    seller_2: getDisplayName({ id: 'seller_2', name: 'البائعة الثانية', nameEn: 'Second Seller' }, i18n.language),
-  }
+  // بناء خريطة أسماء البائعات المترجمة
+  const sellerNamesMap = (order.items || []).reduce((acc, it) => {
+    if (it.sellerId) {
+      acc[it.sellerId] =
+        getDisplayName(
+          {
+            id: it.sellerId,
+            sellerId: it.sellerId,
+            name: it.sellerName,
+            nameEn: it.sellerNameEn,
+            displayName: it.sellerDisplayName,
+          },
+          i18n.language
+        ) || it.sellerId
+    }
+    return acc
+  }, {})
 
-  const itemsBySeller = order.items.reduce((acc, item) => {
-    const sId = item.sellerId || 'seller_1'
+  // تجميع المنتجات حسب البائعة
+  const itemsBySeller = (order.items || []).reduce((acc, item) => {
+    const sId = item.sellerId || ''
     if (!acc[sId]) acc[sId] = []
     acc[sId].push(item)
     return acc
   }, {})
 
   // حساب مجاميع جدول العمولات لجميع عناصر الطلب
-  const breakdownRows = order.items.map((item) => {
+  const breakdownRows = (order.items || []).map((item) => {
     const salePrice = item.unitPrice * item.qty
     const { commission, net } = calcCommission(salePrice)
     const sellerTitle =
-      getDisplayName({ id: item.sellerId, sellerId: item.sellerId, name: item.sellerName, nameEn: item.sellerNameEn }, i18n.language) || sellerNamesMap[item.sellerId] || item.sellerId || ''
+      sellerNamesMap[item.sellerId] || item.sellerId || ''
 
     return {
       ...item,
@@ -92,6 +120,33 @@ export function AdminOrderDrawer({
       toast.error(err.message || 'تعذر تحديث حالة الطلب')
     } finally {
       setIsUpdatingStatus(false)
+    }
+  }
+
+  // معالجة تسجيل رد المبلغ للعميل
+  const handleRefundSubmit = async (e) => {
+    e.preventDefault()
+    if (!refundRef.trim()) {
+      toast.error(isEn ? 'Reference number is required' : 'رقم العملية المرجعي لرد المبلغ مطلوب')
+      return
+    }
+
+    setIsRefunding(true)
+    try {
+      await orderService.adminRefundOrder(order.id, {
+        reference: refundRef.trim(),
+        note: refundNote.trim(),
+      })
+      toast.success(isEn ? 'Refund recorded successfully' : 'تم تسجيل رد المبلغ بنجاح')
+      setRefundModalOpen(false)
+      setRefundRef('')
+      setRefundNote('')
+      if (onStatusUpdated) onStatusUpdated()
+    } catch (err) {
+      console.error('Failed to record refund:', err)
+      toast.error(err.message || (isEn ? 'Failed to process refund' : 'تعذر تسجيل رد المبلغ'))
+    } finally {
+      setIsRefunding(false)
     }
   }
 
@@ -310,12 +365,94 @@ export function AdminOrderDrawer({
             </p>
           </div>
 
+          {/* قسم استرداد المبلغ (Refund Status & Action) */}
+          {order.refund && order.refund.required && (
+            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  <div>
+                    <h4 className="font-bold text-xs text-amber-900 dark:text-amber-200">
+                      {isEn ? 'Order Refund' : 'استرداد قيمة الطلب'}
+                    </h4>
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                      {isEn ? 'Amount to refund:' : 'المبلغ المطلوب رده:'}{' '}
+                      <span className="font-black text-amber-950 dark:text-amber-100">
+                        {order.refund.amount} ج.م
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                {order.refund.status === 'completed' ? (
+                  <Badge variant="success" size="sm" className="gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{isEn ? 'Refunded' : 'تم رد المبلغ'}</span>
+                  </Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setRefundModalOpen(true)}
+                    className="text-xs gap-1"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>{isEn ? 'Process Refund' : 'تم رد المبلغ'}</span>
+                  </Button>
+                )}
+              </div>
+
+              {order.refund.status === 'completed' && (
+                <div className="p-2.5 rounded-xl bg-white/70 dark:bg-black/30 text-xs text-text-muted space-y-0.5">
+                  <div>
+                    <span className="font-bold">{isEn ? 'Reference:' : 'الرقم المرجعي:'}</span>{' '}
+                    <span className="font-mono">{order.refund.reference}</span>
+                  </div>
+                  {order.refund.refundedAt && (
+                    <div>
+                      <span className="font-bold">{isEn ? 'Date:' : 'التاريخ:'}</span>{' '}
+                      <span>{formatDateTime(order.refund.refundedAt)}</span>
+                    </div>
+                  )}
+                  {order.refund.note && (
+                    <div>
+                      <span className="font-bold">{isEn ? 'Note:' : 'ملاحظة:'}</span>{' '}
+                      <span>{order.refund.note}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* بيانات تحويل فودافون كاش والإيصال */}
           <div className="p-4 rounded-2xl bg-surface-subtle border border-surface-border space-y-3">
-            <h4 className="font-bold text-xs text-text-muted flex items-center gap-1.5">
-              <Receipt className="w-4 h-4 text-brand-orange" />
-              <span>{t('orders.drawer.paymentSection.title')}</span>
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-text-muted flex items-center gap-1.5">
+                <Receipt className="w-4 h-4 text-brand-orange" />
+                <span>{t('orders.drawer.paymentSection.title')}</span>
+              </h4>
+
+              {/* شارات التحذير الأمنية للدفع إن وجدت */}
+              {order.payment?.flags && order.payment.flags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {order.payment.flags.map((flag) => {
+                    const flagMap = {
+                      amount_mismatch: isEn ? 'Amount Mismatch' : 'المبلغ غير مطابق',
+                      duplicate_reference: isEn ? 'Duplicate Reference' : 'مرجع مكرر',
+                      duplicate_screenshot: isEn ? 'Duplicate Receipt' : 'إيصال مكرر',
+                    }
+                    return (
+                      <Badge key={flag} variant="danger" size="sm" className="gap-1">
+                        <ShieldAlert className="w-3 h-3" />
+                        <span>{flagMap[flag] || flag}</span>
+                      </Badge>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
             {order.payment ? (
               <div className="space-y-3 text-xs">
@@ -355,11 +492,11 @@ export function AdminOrderDrawer({
                   </div>
                 </div>
 
-                {order.payment.screenshotUrl && (
+                {(order.payment.screenshotUrl || order.payment.id || order.id) && (
                   <div className="pt-2">
                     <button
                       type="button"
-                      onClick={() => setActiveLightboxImg(order.payment.screenshotUrl)}
+                      onClick={() => setActiveReceiptTarget(order.payment.id || order.id)}
                       className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface border border-surface-border text-xs font-bold text-brand-orange-text dark:text-brand-orange hover:bg-surface-border transition-colors cursor-zoom-in"
                     >
                       <Eye className="w-4 h-4" />
@@ -386,13 +523,68 @@ export function AdminOrderDrawer({
         </div>
       </Drawer>
 
-      {/* معاينة صورة الإيصال المكبرة */}
+      {/* معاينة صورة الإيصال المكبرة عبر البث الموثق */}
       <Lightbox
-        isOpen={Boolean(activeLightboxImg)}
-        onClose={() => setActiveLightboxImg(null)}
-        src={activeLightboxImg}
+        isOpen={Boolean(activeReceiptTarget)}
+        onClose={() => setActiveReceiptTarget(null)}
+        src={privateReceiptUrl}
         alt="إيصال فودافون كاش"
       />
+
+      {/* نافذة تسجيل رد المبلغ للعميل */}
+      <Modal
+        isOpen={refundModalOpen}
+        onClose={() => setRefundModalOpen(false)}
+        title={isEn ? 'Record Order Refund' : 'تسجيل رد المبلغ للعميل'}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleRefundSubmit} className="space-y-4 p-2">
+          <p className="text-xs text-text-muted">
+            {isEn
+              ? 'Enter the transaction reference number for the refund sent to the customer wallet.'
+              : 'أدخلي الرقم المرجعي لعملية تحويل رد المبلغ عبر محفظة فودافون كاش للعميل:'}
+          </p>
+
+          <Input
+            id="refund-reference"
+            label={isEn ? 'Transaction Reference *' : 'الرقم المرجعي للتحويل *'}
+            placeholder="مثال: 9876543210"
+            value={refundRef}
+            onChange={(e) => setRefundRef(e.target.value)}
+            required
+            disabled={isRefunding}
+          />
+
+          <Input
+            id="refund-note"
+            label={isEn ? 'Note (Optional)' : 'ملاحظات إضافية (اختياري)'}
+            placeholder={isEn ? 'Reason or details' : 'سبب الرد أو تفاصيل العملية'}
+            value={refundNote}
+            onChange={(e) => setRefundNote(e.target.value)}
+            disabled={isRefunding}
+          />
+
+          <div className="flex gap-2 justify-end pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setRefundModalOpen(false)}
+              disabled={isRefunding}
+            >
+              {isEn ? 'Cancel' : 'إلغاء'}
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              loading={isRefunding}
+            >
+              {isEn ? 'Confirm Refund' : 'تأكيد رد المبلغ'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   )
 }

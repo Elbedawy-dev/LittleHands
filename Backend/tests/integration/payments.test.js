@@ -37,7 +37,7 @@ describe('Payments Module Integration Tests', () => {
       })
 
       const res = await customerAgent
-        .post(`/api/v1/orders/${order._id}/payment`)
+        .post(`/api/v1/payments/orders/${order._id}/payment`)
         .field('senderPhone', '01011112222')
         .field('transferredAmount', '250')
         .field('reference', 'VF-998877')
@@ -71,7 +71,7 @@ describe('Payments Module Integration Tests', () => {
       // First order & payment
       const order1 = await createOrder({ customerId: customer1._id, total: 300 })
       await customerAgent1
-        .post(`/api/v1/orders/${order1._id}/payment`)
+        .post(`/api/v1/payments/orders/${order1._id}/payment`)
         .field('senderPhone', '01011112222')
         .field('transferredAmount', '300')
         .field('reference', 'TXN-REPEATED-100')
@@ -83,7 +83,7 @@ describe('Payments Module Integration Tests', () => {
       // - screenshot is identical (duplicate_screenshot)
       const order2 = await createOrder({ customerId: customer2._id, total: 300 })
       const res = await customerAgent2
-        .post(`/api/v1/orders/${order2._id}/payment`)
+        .post(`/api/v1/payments/orders/${order2._id}/payment`)
         .field('senderPhone', '01033334444')
         .field('transferredAmount', '200')
         .field('reference', 'TXN-REPEATED-100')
@@ -123,7 +123,7 @@ describe('Payments Module Integration Tests', () => {
 
       // 6th attempt should be rejected with 422
       const res = await customerAgent
-        .post(`/api/v1/orders/${order._id}/payment`)
+        .post(`/api/v1/payments/orders/${order._id}/payment`)
         .field('senderPhone', '01011112222')
         .field('transferredAmount', '100')
         .attach('screenshot', samplePngBuffer, 'attempt6.png')
@@ -138,7 +138,7 @@ describe('Payments Module Integration Tests', () => {
       const orderA = await createOrder({ customerId: customerA._id })
 
       const res = await agentB
-        .post(`/api/v1/orders/${orderA._id}/payment`)
+        .post(`/api/v1/payments/orders/${orderA._id}/payment`)
         .field('senderPhone', '01011112222')
         .field('transferredAmount', '100')
         .attach('screenshot', samplePngBuffer, 'receipt.png')
@@ -154,7 +154,7 @@ describe('Payments Module Integration Tests', () => {
 
       const order = await createOrder({ customerId: customer._id, total: 200 })
       await customerAgent
-        .post(`/api/v1/orders/${order._id}/payment`)
+        .post(`/api/v1/payments/orders/${order._id}/payment`)
         .field('senderPhone', '01099998888')
         .field('transferredAmount', '200')
         .attach('screenshot', samplePngBuffer, 'valid.png')
@@ -174,7 +174,7 @@ describe('Payments Module Integration Tests', () => {
 
       const order = await createOrder({ customerId: customer._id, total: 180 })
       await customerAgent
-        .post(`/api/v1/orders/${order._id}/payment`)
+        .post(`/api/v1/payments/orders/${order._id}/payment`)
         .field('senderPhone', '01088887777')
         .field('transferredAmount', '100')
         .attach('screenshot', samplePngBuffer, 'unclear.png')
@@ -222,7 +222,7 @@ describe('Payments Module Integration Tests', () => {
 
       const order = await createOrder({ customerId: customer._id })
       await customerAgent
-        .post(`/api/v1/orders/${order._id}/payment`)
+        .post(`/api/v1/payments/orders/${order._id}/payment`)
         .field('senderPhone', '01055556666')
         .field('transferredAmount', '100')
         .attach('screenshot', samplePngBuffer, 'proof.png')
@@ -245,7 +245,7 @@ describe('Payments Module Integration Tests', () => {
 
       const order = await createOrder({ customerId: customer1._id })
       await customerAgent1
-        .post(`/api/v1/orders/${order._id}/payment`)
+        .post(`/api/v1/payments/orders/${order._id}/payment`)
         .field('senderPhone', '01055556666')
         .field('transferredAmount', '100')
         .attach('screenshot', samplePngBuffer, 'proof.png')

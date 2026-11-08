@@ -128,14 +128,12 @@ export const paymentService = {
       submittedAt: new Date(),
     })
 
-    // Move order back to pending_payment and update timeline
+    // Move order back to pending_payment and update timeline (no hardcoded Arabic in timeline)
     order.status = 'pending_payment'
     order.timeline.push({
       status: 'pending_payment',
-      title:
-        attempt === 1
-          ? 'تم إرفاق إيصال تحويل فودافون كاش وبانتظار مراجعة الإدارة'
-          : 'تم إعادة إرفاق إيصال تحويل فودافون كاش وبانتظار مراجعة الإدارة',
+      note: attempt === 1 ? 'Proof submitted' : 'Proof resubmitted',
+      actor: 'customer',
       byId: currentUser._id,
       at: new Date(),
       timestamp: new Date(),
@@ -226,6 +224,7 @@ export const paymentService = {
 
   /**
    * Admin approves payment proof and marks order payment_confirmed
+   * Implements single atomic conditional update
    */
   async confirmPayment(orderId, currentUser) {
     if (!currentUser || currentUser.role !== 'admin') {
@@ -261,39 +260,60 @@ export const paymentService = {
       throw new AppError('INVALID_ORDER_TRANSITION', 422, 'Can only confirm pending payment for an order awaiting payment')
     }
 
-    payment.status = 'confirmed'
-    payment.reviewedAt = new Date()
-    payment.reviewedBy = currentUser._id
-    await payment.save()
+    // SINGLE CONDITIONAL UPDATE: filter with expected status 'pending_payment'
+    const updatedOrder = await Order.findOneAndUpdate(
+      { _id: order._id, status: 'pending_payment' },
+      {
+        $set: { status: 'payment_confirmed' },
+        $push: {
+          timeline: {
+            status: 'payment_confirmed',
+            note: '',
+            actor: 'admin',
+            byId: currentUser._id,
+            at: new Date(),
+            timestamp: new Date(),
+          },
+        },
+      },
+      { new: true }
+    )
 
-    const oldStatus = order.status
-    order.status = 'payment_confirmed'
-    order.timeline.push({
-      status: 'payment_confirmed',
-      title: 'تم اعتماد إيصال فودافون كاش وتأكيد الدفع',
-      byId: currentUser._id,
-      at: new Date(),
-      timestamp: new Date(),
-    })
-    await order.save()
+    if (!updatedOrder) {
+      throw new AppError('INVALID_ORDER_TRANSITION', 422, 'Order is no longer awaiting payment')
+    }
 
-    eventBus.emit(EVENT_TYPES.PAYMENT_CONFIRMED, { order, payment })
+    const updatedPayment =
+      (await Payment.findOneAndUpdate(
+        { _id: payment._id, status: 'pending' },
+        {
+          $set: {
+            status: 'confirmed',
+            reviewedAt: new Date(),
+            reviewedBy: currentUser._id,
+          },
+        },
+        { new: true }
+      )) || payment
+
+    eventBus.emit(EVENT_TYPES.PAYMENT_CONFIRMED, { order: updatedOrder, payment: updatedPayment })
     eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
-      order,
-      from: oldStatus,
+      order: updatedOrder,
+      from: 'pending_payment',
       to: 'payment_confirmed',
       actorId: currentUser._id,
     })
 
-    await audit.log(currentUser._id, 'PAYMENT_CONFIRMED', 'Payment', payment._id.toString(), {
-      orderId: order._id,
+    await audit.log(currentUser._id, 'PAYMENT_CONFIRMED', 'Payment', updatedPayment._id.toString(), {
+      orderId: updatedOrder._id,
     })
 
-    return { order, payment }
+    return { order: updatedOrder, payment: updatedPayment }
   },
 
   /**
    * Admin rejects payment proof and records reason
+   * Implements single atomic conditional update
    */
   async rejectPayment(orderId, { reason, notes = '', notify = true }, currentUser) {
     if (!currentUser || currentUser.role !== 'admin') {
@@ -324,44 +344,65 @@ export const paymentService = {
       throw new AppError('RECEIPT_NOT_FOUND', 404)
     }
     if (order.status !== 'pending_payment' || payment.status !== 'pending') {
-      throw new AppError('INVALID_ORDER_TRANSITION', 422, 'Can only confirm pending payment for an order awaiting payment')
+      throw new AppError('INVALID_ORDER_TRANSITION', 422, 'Can only reject pending payment for an order awaiting payment')
     }
 
-    payment.status = 'rejected'
-    payment.rejectReason = reason
-    payment.rejectNotes = notes || ''
-    payment.notifyCustomer = notify !== false
-    payment.reviewedAt = new Date()
-    payment.reviewedBy = currentUser._id
-    await payment.save()
+    const rejectNote = notes ? `${reason} - ${notes}` : reason
 
-    const oldStatus = order.status
-    order.status = 'payment_rejected'
-    order.timeline.push({
-      status: 'payment_rejected',
-      title: `تم رفض الإيصال: ${reason}`,
-      description: notes || '',
-      byId: currentUser._id,
-      at: new Date(),
-      timestamp: new Date(),
-    })
-    await order.save()
+    // SINGLE CONDITIONAL UPDATE: filter with expected status 'pending_payment'
+    const updatedOrder = await Order.findOneAndUpdate(
+      { _id: order._id, status: 'pending_payment' },
+      {
+        $set: { status: 'payment_rejected' },
+        $push: {
+          timeline: {
+            status: 'payment_rejected',
+            note: rejectNote,
+            actor: 'admin',
+            byId: currentUser._id,
+            at: new Date(),
+            timestamp: new Date(),
+          },
+        },
+      },
+      { new: true }
+    )
 
-    eventBus.emit(EVENT_TYPES.PAYMENT_REJECTED, { order, payment })
+    if (!updatedOrder) {
+      throw new AppError('INVALID_ORDER_TRANSITION', 422, 'Order is no longer awaiting payment')
+    }
+
+    const updatedPayment =
+      (await Payment.findOneAndUpdate(
+        { _id: payment._id, status: 'pending' },
+        {
+          $set: {
+            status: 'rejected',
+            rejectReason: reason,
+            rejectNotes: notes || '',
+            notifyCustomer: notify !== false,
+            reviewedAt: new Date(),
+            reviewedBy: currentUser._id,
+          },
+        },
+        { new: true }
+      )) || payment
+
+    eventBus.emit(EVENT_TYPES.PAYMENT_REJECTED, { order: updatedOrder, payment: updatedPayment })
     eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
-      order,
-      from: oldStatus,
+      order: updatedOrder,
+      from: 'pending_payment',
       to: 'payment_rejected',
       actorId: currentUser._id,
     })
 
-    await audit.log(currentUser._id, 'PAYMENT_REJECTED', 'Payment', payment._id.toString(), {
-      orderId: order._id,
+    await audit.log(currentUser._id, 'PAYMENT_REJECTED', 'Payment', updatedPayment._id.toString(), {
+      orderId: updatedOrder._id,
       reason,
       notes,
     })
 
-    return { order, payment }
+    return { order: updatedOrder, payment: updatedPayment }
   },
 
   /**

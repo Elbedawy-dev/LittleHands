@@ -5,6 +5,7 @@ import { createUser, createProduct, createOrder } from '../helpers/factories.js'
 import { Product } from '../../src/db/models/Product.js'
 import { Order } from '../../src/db/models/Order.js'
 import { Setting } from '../../src/db/models/Setting.js'
+import { env } from '../../src/config/env.js'
 import { cancelExpiredUnpaidOrders } from '../../src/modules/orders/service.js'
 
 const app = createApp()
@@ -201,6 +202,91 @@ describe('Orders Module Integration Tests', () => {
       const finalProduct = await Product.findById(product._id)
       expect(finalProduct.stock).toBe(8)
     })
+
+    it('enforces requireVerified when REQUIRE_EMAIL_VERIFICATION=true', async () => {
+      const orig = env.REQUIRE_EMAIL_VERIFICATION
+      try {
+        env.REQUIRE_EMAIL_VERIFICATION = true
+        const { agent: unverifiedAgent } = await authedAgent(app, 'customer', { emailVerified: false })
+        const p = await createProduct({ stock: 5 })
+
+        const res = await unverifiedAgent.post('/api/v1/orders').send({
+          items: [{ productId: p._id.toString(), qty: 1 }],
+          delivery: {
+            name: 'عميلة غير مؤكدة',
+            phone: '01011112222',
+            governorate: 'القاهرة',
+            city: 'المعادي',
+            address: 'شارع 9',
+          },
+        })
+
+        expect(res.status).toBe(403)
+        expect(res.body.error.code).toBe('EMAIL_NOT_VERIFIED')
+      } finally {
+        env.REQUIRE_EMAIL_VERIFICATION = orig
+      }
+    })
+
+    it('seller creates and publishes product through manage API, customer orders it, admin suspends seller, product disappears from public API', async () => {
+      const { agent: sellerAgent, user: seller } = await authedAgent(app, 'seller')
+      const { agent: customerAgent, user: customer } = await authedAgent(app, 'customer')
+      const { agent: adminAgent } = await authedAgent(app, 'admin')
+
+      // 1. Seller creates product as draft via manage API
+      const createRes = await sellerAgent.post('/api/v1/products/manage/products').send({
+        name: { ar: 'لوحة تفاعلية جديدة', en: 'New Interactive Board' },
+        description: { ar: 'وصف الوسيلة التعليمية بالجوخ', en: 'Handmade educational felt board' },
+        price: 250,
+        stock: 5,
+        categoryId: 'alphabet-boards',
+        stages: ['nursery'],
+        materials: ['felt'],
+        images: ['/storage/public/test_img.webp'],
+        published: false,
+      })
+      expect([200, 201]).toContain(createRes.status)
+      const prodId = createRes.body.data.id
+
+      // 2. Seller publishes product via manage API
+      const pubRes = await sellerAgent
+        .patch(`/api/v1/products/manage/products/${prodId}/publish`)
+        .send({ published: true })
+      expect(pubRes.status).toBe(200)
+
+      // 3. Product is visible in public catalog
+      const pubCatalogRes = await customerAgent.get(`/api/v1/catalog/products/${prodId}`)
+      expect(pubCatalogRes.status).toBe(200)
+      expect(pubCatalogRes.body.data.id).toBe(prodId)
+
+      // 4. Customer successfully places an order for the product
+      const orderRes = await customerAgent.post('/api/v1/orders').send({
+        items: [{ productId: prodId, qty: 1 }],
+        delivery: {
+          name: customer.name,
+          phone: customer.phone,
+          governorate: 'القاهرة',
+          city: 'مدينة نصر',
+          address: 'شارع عباس العقاد',
+        },
+      })
+      expect(orderRes.status).toBe(201)
+
+      // 5. Admin suspends the seller
+      const suspendRes = await adminAgent
+        .patch(`/api/v1/admin/users/${seller._id}/status`)
+        .send({ status: 'suspended' })
+      expect(suspendRes.status).toBe(200)
+
+      // 6. Product disappears from public catalog API (returns 404)
+      const postSuspendRes = await customerAgent.get(`/api/v1/catalog/products/${prodId}`)
+      expect(postSuspendRes.status).toBe(404)
+
+      // And excluded from public catalog list
+      const catalogListRes = await customerAgent.get('/api/v1/catalog/products')
+      const foundInList = catalogListRes.body.data.items.some((item) => item.id === prodId)
+      expect(foundInList).toBe(false)
+    })
   })
 
   describe('Object-Level Authorization & IDOR', () => {
@@ -245,14 +331,15 @@ describe('Orders Module Integration Tests', () => {
         },
       })
 
-      const res = await sellerAgent.get('/api/v1/orders/seller/list')
+      const res = await sellerAgent.get('/api/v1/orders/seller')
       expect(res.status).toBe(200)
 
       const myOrder = res.body.data.items.find((o) => o.id === order._id.toString())
       expect(myOrder).toBeDefined()
-      expect(myOrder.delivery.city).toBe('***')
-      expect(myOrder.delivery.phone).toBe('01*********')
-      expect(myOrder.delivery.address).toContain('محجوب حتى تأكيد الدفع')
+      expect(myOrder.delivery.masked).toBe(true)
+      expect(myOrder.delivery.city).toBeNull()
+      expect(myOrder.delivery.phone).toBeNull()
+      expect(myOrder.delivery.address).toBeNull()
     })
 
     it('unmasks delivery information for seller once payment is confirmed', async () => {
@@ -269,7 +356,7 @@ describe('Orders Module Integration Tests', () => {
         },
       })
 
-      const res = await sellerAgent.get('/api/v1/orders/seller/list')
+      const res = await sellerAgent.get('/api/v1/orders/seller')
       expect(res.status).toBe(200)
 
       const myOrder = res.body.data.items.find((o) => o.id === order._id.toString())
@@ -317,35 +404,35 @@ describe('Orders Module Integration Tests', () => {
 
       // Step 1: Seller 1 sets preparing -> overall status becomes 'preparing'
       const res1 = await sellerAgent1
-        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .patch(`/api/v1/orders/seller/${order._id}/fulfillment`)
         .send({ status: 'preparing' })
       expect(res1.status).toBe(200)
       expect(res1.body.data.status).toBe('preparing')
 
       // Step 2: Seller 1 sets shipped, but Seller 2 is still pending -> overall remains 'preparing'
       const res2 = await sellerAgent1
-        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .patch(`/api/v1/orders/seller/${order._id}/fulfillment`)
         .send({ status: 'shipped' })
       expect(res2.status).toBe(200)
       expect(res2.body.data.status).toBe('preparing')
 
       // Step 3: Seller 2 sets preparing -> overall remains 'preparing'
       const res3 = await sellerAgent2
-        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .patch(`/api/v1/orders/seller/${order._id}/fulfillment`)
         .send({ status: 'preparing' })
       expect(res3.status).toBe(200)
       expect(res3.body.data.status).toBe('preparing')
 
       // Step 4: Seller 2 sets shipped -> ALL sellers shipped -> overall becomes 'shipped'
       const res4 = await sellerAgent2
-        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .patch(`/api/v1/orders/seller/${order._id}/fulfillment`)
         .send({ status: 'shipped' })
       expect(res4.status).toBe(200)
       expect(res4.body.data.status).toBe('shipped')
 
       // Step 5: Seller 2 cannot revert from shipped to preparing (illegal backward transition)
       const resRevert = await sellerAgent2
-        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .patch(`/api/v1/orders/seller/${order._id}/fulfillment`)
         .send({ status: 'preparing' })
       expect(resRevert.status).toBe(422)
 
@@ -365,13 +452,13 @@ describe('Orders Module Integration Tests', () => {
 
       // Seller 2 cannot update Seller 1's fulfillment -> 404
       const idorRes = await sellerAgent2
-        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .patch(`/api/v1/orders/seller/${order._id}/fulfillment`)
         .send({ status: 'preparing' })
       expect(idorRes.status).toBe(404)
 
       // Seller 1 cannot skip 'preparing' and jump straight from 'pending' to 'shipped' -> 422
       const skipRes = await sellerAgent1
-        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .patch(`/api/v1/orders/seller/${order._id}/fulfillment`)
         .send({ status: 'shipped' })
       expect(skipRes.status).toBe(422)
     })
@@ -469,7 +556,7 @@ describe('Orders Module Integration Tests', () => {
       })
 
       const res = await sellerAgent
-        .patch(`/api/v1/orders/${order._id}/fulfillment`)
+        .patch(`/api/v1/orders/seller/${order._id}/fulfillment`)
         .send({ status: 'preparing' })
       expect(res.status).toBe(422)
     })

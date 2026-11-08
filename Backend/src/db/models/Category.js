@@ -10,6 +10,7 @@ const categorySchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       index: true,
+      immutable: true,
     },
     nameAr: {
       type: String,

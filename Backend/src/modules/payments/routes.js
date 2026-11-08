@@ -27,6 +27,10 @@ const uploadScreenshot = (req, res, next) => {
 
 const router = Router()
 
+// Canonical routes:
+// payments: POST /payments/orders/:id/payment, GET /payments/:id/screenshot,
+//           admin: GET /payments/admin, POST /payments/admin/:orderId/confirm, POST /payments/admin/:orderId/reject
+
 // Customer payment proof submission
 router.post(
   '/orders/:id/payment',
@@ -41,7 +45,6 @@ router.post(
 
 // Stream private payment screenshot
 router.get('/:id/screenshot', authenticate, paymentController.getScreenshot)
-router.get('/orders/:id/screenshot', authenticate, paymentController.getScreenshot)
 
 // Admin payments management & verification
 router.get(
@@ -51,30 +54,9 @@ router.get(
   validate({ query: paymentQuerySchema }),
   paymentController.getPayments
 )
-router.get(
-  '/admin/payments',
-  authenticate,
-  authorize('admin'),
-  validate({ query: paymentQuerySchema }),
-  paymentController.getPayments
-)
-router.get(
-  '/',
-  authenticate,
-  authorize('admin'),
-  validate({ query: paymentQuerySchema }),
-  paymentController.getPayments
-)
 
 router.post(
-  '/admin/:id/confirm',
-  authenticate,
-  authorize('admin'),
-  csrfGuard,
-  paymentController.confirmPayment
-)
-router.post(
-  '/:orderId/confirm',
+  '/admin/:orderId/confirm',
   authenticate,
   authorize('admin'),
   csrfGuard,
@@ -82,15 +64,7 @@ router.post(
 )
 
 router.post(
-  '/admin/:id/reject',
-  authenticate,
-  authorize('admin'),
-  csrfGuard,
-  validate({ body: rejectPaymentSchema }),
-  paymentController.rejectPayment
-)
-router.post(
-  '/:orderId/reject',
+  '/admin/:orderId/reject',
   authenticate,
   authorize('admin'),
   csrfGuard,

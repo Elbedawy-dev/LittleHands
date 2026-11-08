@@ -1,34 +1,39 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { authService } from '../services/authService'
+import { ForcedChangePasswordModal } from '../components/auth/ForcedChangePasswordModal'
 
 const AuthContext = createContext({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  role: null,
   login: async () => {},
   register: async () => {},
   logout: async () => {},
   updateProfile: async () => {},
-  switchMockRole: async () => {},
+  refreshUser: async () => {},
+  setUser: () => {},
 })
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    async function initAuth() {
-      try {
-        const currentUser = await authService.me()
-        setUser(currentUser)
-      } catch (err) {
-        console.error('Failed to restore user auth:', err)
-        setUser(null)
-      } finally {
-        setIsLoading(false)
-      }
+  const refreshUser = async () => {
+    try {
+      const currentUser = await authService.me()
+      setUser(currentUser)
+      return currentUser
+    } catch {
+      setUser(null)
+      return null
     }
-    initAuth()
+  }
+
+  useEffect(() => {
+    refreshUser().finally(() => {
+      setIsLoading(false)
+    })
   }, [])
 
   const login = async ({ identifier, password }) => {
@@ -44,8 +49,11 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
-    await authService.logout()
-    setUser(null)
+    try {
+      await authService.logout()
+    } finally {
+      setUser(null)
+    }
   }
 
   const updateProfile = async (data) => {
@@ -54,24 +62,11 @@ export function AuthProvider({ children }) {
     return updated
   }
 
-  // تبديل سريع للمستخدم التجريبي في بيئة التطوير
-  const switchMockRole = async (role) => {
-    const emailMap = {
-      seller1: 'seller1@test.com',
-      seller2: 'seller2@test.com',
-      seller: 'seller1@test.com',
-      admin: 'admin@test.com',
-    }
-    const email = emailMap[role]
-    if (email) {
-      return login({ identifier: email, password: '123456' })
-    }
-  }
-
   return (
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         isAuthenticated: !!user,
         isLoading,
         role: user ? user.role : null,
@@ -79,10 +74,19 @@ export function AuthProvider({ children }) {
         register,
         logout,
         updateProfile,
-        switchMockRole,
+        refreshUser,
       }}
     >
       {children}
+      {user && user.mustChangePassword && (
+        <ForcedChangePasswordModal
+          isOpen={true}
+          onSuccess={async () => {
+            await refreshUser()
+          }}
+          onLogout={logout}
+        />
+      )}
     </AuthContext.Provider>
   )
 }
@@ -93,3 +97,4 @@ export function useAuth() {
   return ctx
 }
 
+export default AuthContext

@@ -40,6 +40,8 @@ export function toSellerSettingsDTO(settings) {
     ...toPublicSettingsDTO(s),
     commissionRate: s.commissionRate,
     payoutScheduleText: s.payoutScheduleText || '',
+    emailNotifications: s.emailNotifications !== false,
+    inSiteNotifications: s.inSiteNotifications !== false,
   }
 }
 

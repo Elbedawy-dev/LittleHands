@@ -31,9 +31,21 @@ const emailLogSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    dedupKey: {
+      type: String,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
+  }
+)
+
+emailLogSchema.index(
+  { dedupKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { dedupKey: { $type: 'string', $gt: '' } },
   }
 )
 

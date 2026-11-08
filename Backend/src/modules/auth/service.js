@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { env } from '../../config/env.js'
@@ -266,8 +267,13 @@ export const authService = {
       targetUser = await User.findOne({ email: email.trim().toLowerCase() })
     }
 
+    const candidateHash = sha256(code)
+
     if (!targetUser) {
-      throw new AppError('UNAUTHENTICATED', 401)
+      // Dummy constant-time comparison to prevent timing-based user enumeration
+      const dummyHash = sha256('000000')
+      crypto.timingSafeEqual(Buffer.from(candidateHash, 'hex'), Buffer.from(dummyHash, 'hex'))
+      throw new AppError('INVALID_CODE', 400)
     }
 
     const otp = await OtpCode.findOne({
@@ -290,7 +296,11 @@ export const authService = {
 
     otp.attempts += 1
 
-    if (otp.codeHash !== sha256(code)) {
+    const hashA = Buffer.from(candidateHash, 'hex')
+    const hashB = Buffer.from(otp.codeHash, 'hex')
+    const isMatch = hashA.length === hashB.length && crypto.timingSafeEqual(hashA, hashB)
+
+    if (!isMatch) {
       await otp.save()
       throw new AppError('INVALID_CODE', 400)
     }
@@ -314,7 +324,7 @@ export const authService = {
     }
 
     if (!targetUser) {
-      throw new AppError('UNAUTHENTICATED', 401)
+      return { message: 'Verification code resent successfully' }
     }
 
     const lastOtp = await OtpCode.findOne({

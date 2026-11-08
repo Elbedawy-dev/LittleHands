@@ -9,11 +9,7 @@
     "lint": "eslint . && npm run check:children",
     "preview": "vite preview",
     "check:children": "node scripts/check-no-object-children.mjs",
-    "check:i18n": "node scripts/check-i18n.mjs",
-    "i18n:crawl": "node scripts/i18n-crawl.cjs",
-    "test:navbar": "node scripts/test-navbar-parity.cjs",
-    "test:toggles": "node scripts/test-toggles.cjs",
-    "test:routes": "node scripts/test-routes-errors.cjs"
+    "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.2",

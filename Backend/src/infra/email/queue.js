@@ -13,11 +13,15 @@ class EmailQueue {
   constructor() {
     this.queue = new Map()
     this.counter = 0
+    this.inFlightDedup = new Set()
   }
 
   getDriver() {
     if (env.EMAIL_DRIVER === 'smtp' && env.NODE_ENV !== 'test') {
       return smtpDriver
+    }
+    if (env.NODE_ENV === 'production') {
+      throw new Error('[FATAL] Console email driver is strictly prohibited when NODE_ENV=production')
     }
     return consoleDriver
   }
@@ -51,7 +55,12 @@ class EmailQueue {
       // 3. Check Setting notification toggles
       if (Setting && typeof Setting.findOne === 'function') {
         const setting = await Setting.findOne({ singletonKey: 'platform_settings' })
-        if (setting && setting.notifications) {
+        if (setting) {
+          if (setting.emailNotifications === false) {
+            console.info('[EMAIL_QUEUE] Email skipped: emailNotifications global toggle is off in Setting')
+            return false
+          }
+          if (setting.notifications) {
           if ((templateKey === 'customer-order-received' || templateKey === 'seller-new-order') && setting.notifications.orderCreated === false) {
             console.info(`[EMAIL_QUEUE] Email skipped: orderCreated toggle is off in Setting`)
             return false
@@ -66,7 +75,8 @@ class EmailQueue {
           }
         }
       }
-    } catch (err) {
+    }
+  } catch (err) {
       console.warn('[EMAIL_QUEUE] Warning during shouldSend check:', err.message)
     }
 
@@ -102,12 +112,35 @@ class EmailQueue {
    * @param {string} to
    * @param {Object} data
    * @param {Object} [options]
+   * @param {'ar'|'en'} [options.locale='ar']
+   * @param {Object} [options.user]
+   * @param {string} [options.dedupKey]
    * @returns {Promise<{ success: boolean, messageId?: string, skipped?: boolean, error?: string }>}
    */
-  async enqueueAndSend(templateKey, to, data = {}, { locale = 'ar', user = null } = {}) {
+  async enqueueAndSend(templateKey, to, data = {}, { locale = 'ar', user = null, dedupKey = null } = {}) {
     const should = await this.shouldSend(templateKey, to, user)
     if (!should) {
       return { success: true, skipped: true }
+    }
+
+    const resolvedDedupKey = dedupKey || (data.orderNumber && data.status
+      ? `${to}:${templateKey}:${data.orderNumber}:${data.status}`
+      : null)
+
+    if (resolvedDedupKey) {
+      if (this.inFlightDedup.has(resolvedDedupKey)) {
+        console.info(`[EMAIL_QUEUE] Email skipped due to in-flight dedupKey: ${resolvedDedupKey}`)
+        return { success: true, skipped: true, duplicate: true }
+      }
+      this.inFlightDedup.add(resolvedDedupKey)
+
+      if (EmailLog && typeof EmailLog.findOne === 'function') {
+        const existing = await EmailLog.findOne({ dedupKey: resolvedDedupKey, status: { $in: ['sent', 'pending'] } })
+        if (existing) {
+          console.info(`[EMAIL_QUEUE] Email skipped due to duplicate dedupKey: ${resolvedDedupKey}`)
+          return { success: true, skipped: true, duplicate: true }
+        }
+      }
     }
 
     // Merge support info from platform settings if not provided
@@ -147,6 +180,7 @@ class EmailQueue {
         status: 'sent',
         attempts: 1,
         sentAt: new Date(),
+        dedupKey: resolvedDedupKey,
       })
 
       return { success: true, messageId: result.messageId }
@@ -160,6 +194,7 @@ class EmailQueue {
         status: 'failed',
         attempts: 1,
         error: error.message,
+        dedupKey: resolvedDedupKey,
       })
 
       // Enqueue for in-process retry with exponential backoff
@@ -185,7 +220,7 @@ class EmailQueue {
   /**
    * Helper to write/update EmailLog
    */
-  async recordEmailLog({ to, template, status, attempts, error, sentAt }) {
+  async recordEmailLog({ to, template, status, attempts, error, sentAt, dedupKey }) {
     try {
       if (EmailLog && typeof EmailLog.create === 'function') {
         return await EmailLog.create({
@@ -195,9 +230,14 @@ class EmailQueue {
           attempts,
           error: error || null,
           sentAt: sentAt || null,
+          dedupKey: dedupKey || undefined,
         })
       }
     } catch (e) {
+      if (e.code === 11000) {
+        console.info(`[EMAIL_QUEUE] EmailLog duplicate prevented by unique index: ${dedupKey}`)
+        return await EmailLog.findOne({ dedupKey })
+      }
       console.warn('[EMAIL_QUEUE] Failed to record EmailLog:', e.message)
     }
     return null
@@ -274,6 +314,7 @@ class EmailQueue {
 
   clearQueue() {
     this.queue.clear()
+    this.inFlightDedup.clear()
   }
 }
 

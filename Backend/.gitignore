@@ -10,4 +10,7 @@ dist/
 .tmp/
 tmp/
 .DS_Store
+tests
+B65_REPORT.md
+B66_REPORT.md
 BACKEND_NOTES.md

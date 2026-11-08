@@ -100,7 +100,7 @@ export function ProductForm({
     careAr: initialCareAr,
     careEn: initialCareEn,
     categoryId: initialValues.categoryId || 'alphabet-boards',
-    sellerId: initialValues.sellerId || (sellers[0]?.id || 'seller_1'),
+    sellerId: initialValues.sellerId || (sellers[0]?.id || sellers[0]?._id || ''),
     price: initialValues.price !== undefined ? String(initialValues.price) : '',
     stockCount: initialValues.stockCount !== undefined ? String(initialValues.stockCount) : '10',
     stages:

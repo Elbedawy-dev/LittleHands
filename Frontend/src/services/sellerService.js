@@ -1,68 +1,49 @@
-import { CATEGORIES } from '../config/constants'
-import { db } from '../mocks/db'
-import { delay } from '../utils'
+import apiClient from './api.js'
 
 /**
- * خدمة البائعات والورش اليدوية الشريكة
+ * خدمة البائعات والورش الشريكة
  */
 export const sellerService = {
+  /**
+   * استعراض قائمة البائعات النشطات
+   * GET /sellers
+   */
   async getSellers() {
-    await delay(300)
-    return db.data.users
-      .filter((u) => u.role === 'seller')
-      .map((s) => {
-        const sellerProducts = db.data.products.filter((p) => p.sellerId === s.id && p.isPublished)
-        const categoryIds = [...new Set(sellerProducts.map((p) => p.categoryId).filter(Boolean))]
-        const categories = categoryIds.map((cid) => CATEGORIES.find((c) => c.id === cid)).filter(Boolean)
-        const completedOrdersCount = (db.data.orders || []).filter(
-          (o) => o.status === 'delivered' && o.items?.some((it) => it.sellerId === s.id)
-        ).length
-
-        return {
-          ...s,
-          productsCount: sellerProducts.length,
-          categoryIds,
-          categories,
-          completedOrdersCount,
-        }
-      })
+    const res = await apiClient.get('/sellers')
+    return Array.isArray(res) ? res : res?.items || []
   },
 
+  /**
+   * جلب تفاصيل بائعة محددة
+   * GET /sellers/:id
+   */
   async getSeller(id) {
-    await delay(300)
-    const seller = db.data.users.find((u) => u.id === id && u.role === 'seller')
-    if (!seller) {
-      throw new Error('ERR_SELLER_NOT_FOUND')
-    }
-    const sellerProducts = db.data.products.filter((p) => p.sellerId === id && p.isPublished)
-    const categoryIds = [...new Set(sellerProducts.map((p) => p.categoryId).filter(Boolean))]
-    const categories = categoryIds.map((cid) => CATEGORIES.find((c) => c.id === cid)).filter(Boolean)
-    const completedOrdersCount = (db.data.orders || []).filter(
-      (o) => o.status === 'delivered' && o.items?.some((it) => it.sellerId === id)
-    ).length
-
-    return {
-      ...seller,
-      productsCount: sellerProducts.length,
-      categoryIds,
-      categories,
-      completedOrdersCount,
-    }
+    const res = await apiClient.get(`/sellers/${id}`)
+    return res?.seller || res
   },
 
-  async getSellerProducts(id) {
-    await delay(350)
-    return db.data.products.filter((p) => p.sellerId === id && p.isPublished)
+  async getSellerById(id) {
+    return this.getSeller(id)
   },
 
-  async updateSellerProfile(id, data) {
-    await delay(400)
-    const index = db.data.users.findIndex((u) => u.id === id && u.role === 'seller')
-    if (index === -1) throw new Error('ERR_SELLER_NOT_FOUND')
+  /**
+   * جلب منتجات ورشة بائعة محددة
+   * GET /sellers/:id/products
+   */
+  async getSellerProducts(id, params = {}) {
+    const res = await apiClient.get(`/sellers/${id}/products`, { params })
+    return Array.isArray(res) ? res : res?.items || []
+  },
 
-    const updated = { ...db.data.users[index], ...data }
-    db.data.users[index] = updated
-    db.save()
-    return updated
+  /**
+   * تحديث الملف المهني للبائعة الحالية
+   * PATCH /sellers/me/profile
+   */
+  async updateSellerProfile(arg1, arg2) {
+    const data = typeof arg1 === 'object' ? arg1 : arg2
+    const res = await apiClient.patch('/sellers/me/profile', data)
+    return res?.seller || res
   },
 }
+
+export default sellerService

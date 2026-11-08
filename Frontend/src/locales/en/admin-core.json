@@ -191,6 +191,43 @@
       "recordPayoutAction": "Record Payout Transfer",
       "noPendingBalance": "All dues settled"
     },
+    "createAccount": {
+      "button": "Create new seller account",
+      "modalTitle": "Create New Seller Account",
+      "modalDescription": "Add a new artisan seller and generate temporary login credentials",
+      "helperNotice": "A temporary password will be generated and shown to you only once",
+      "fields": {
+        "name": "Full Name",
+        "namePlaceholder": "e.g. Mariam Ahmed",
+        "email": "Email Address",
+        "emailPlaceholder": "seller@email.com",
+        "phone": "Phone Number",
+        "phonePlaceholder": "01XXXXXXXXX"
+      },
+      "submit": "Create Account",
+      "cancel": "Cancel",
+      "done": "Done",
+      "successTitle": "Seller account created successfully!",
+      "successDescription": "The account is registered. Please share these credentials with the seller:",
+      "sellerName": "Seller Name",
+      "sellerEmail": "Email Address",
+      "temporaryPassword": "Temporary Password",
+      "warning": "Copy the password now, it will not be shown again",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "passwordCopiedToast": "Password copied to clipboard successfully",
+      "successToast": "Seller account created successfully",
+      "errors": {
+        "nameRequired": "Please enter the seller's full name",
+        "emailRequired": "Please enter the email address",
+        "emailInvalid": "Please enter a valid email address",
+        "emailTaken": "This email address is already in use by another account",
+        "phoneRequired": "Please enter the phone number",
+        "phoneInvalid": "Please enter a valid 11-digit Egyptian phone number (010, 011, 012, 015)",
+        "phoneTaken": "This phone number is already in use by another account",
+        "generic": "Failed to create seller account, please try again"
+      }
+    },
     "payoutModal": {
       "title": "Record Payout for {{name}}",
       "description": "Record transfer details sent via Vodafone Cash to deduct from the seller's pending balance",

@@ -1,129 +1,128 @@
-import { db } from '../mocks/db'
-import { delay } from '../utils'
-
-const CURRENT_USER_KEY = 'lh_current_user'
+import apiClient from './api.js'
 
 /**
- * خدمة المصادقة وتوثيق المستخدمين
+ * خدمة المصادقة وتوثيق المستخدمين عبر المسارات الرسمية للباك إند
  */
 export const authService = {
+  /**
+   * تسجيل الدخول بالبريد الإلكتروني أو رقم الهاتف مع كلمة المرور
+   * POST /auth/login
+   */
   async login({ identifier, password }) {
-    await delay(350)
-    const cleanId = (identifier || '').trim().toLowerCase()
-
-    // فحص المستخدمين التجريبيين
-    const user = db.data.users.find(
-      (u) => u.email.toLowerCase() === cleanId || u.phone === cleanId
-    )
-
-    if (!user) {
-      throw new Error('ERR_USER_NOT_FOUND')
-    }
-
-    if (password !== '123456' && password !== 'admin123') {
-      throw new Error('ERR_INVALID_PASSWORD')
-    }
-
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
-    localStorage.setItem('lh_auth_token', `mock_token_${user.id}`)
-    return { user, token: `mock_token_${user.id}` }
+    const res = await apiClient.post('/auth/login', {
+      identifier: (identifier || '').trim(),
+      password,
+    })
+    // res is unwrapped to { user }
+    return res
   },
 
+  /**
+   * تسجيل حساب عميل جديد
+   * POST /auth/register
+   */
   async register(data) {
-    await delay(400)
-    const cleanEmail = (data.email || '').trim().toLowerCase()
-
-    const exists = db.data.users.some((u) => u.email.toLowerCase() === cleanEmail)
-    if (exists) {
-      throw new Error('ERR_EMAIL_EXISTS')
+    const payload = {
+      name: data.name?.trim(),
+      email: data.email?.trim().toLowerCase(),
+      phone: data.phone?.trim(),
+      password: data.password,
+      nurseryName: data.nurseryName?.trim() || '',
+      governorate: data.governorate?.trim() || 'القاهرة',
+      city: data.city?.trim() || '',
+      address: data.address?.trim() || '',
     }
-
-    const newUser = {
-      id: `usr_${Date.now()}`,
-      name: data.name,
-      email: cleanEmail,
-      phone: data.phone,
-      role: data.role || 'customer',
-      nurseryName: data.nurseryName || '',
-      governorate: data.governorate || 'القاهرة',
-      city: data.city || '',
-      address: data.address || '',
-      createdAt: new Date().toISOString(),
-    }
-
-    db.data.users.push(newUser)
-    db.save()
-
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser))
-    localStorage.setItem('lh_auth_token', `mock_token_${newUser.id}`)
-    return { user: newUser, token: `mock_token_${newUser.id}` }
+    const res = await apiClient.post('/auth/register', payload)
+    return res
   },
 
+  /**
+   * تسجيل الخروج وإلغاء صلاحية كوكيز الجلسة
+   * POST /auth/logout
+   */
   async logout() {
-    await delay(200)
-    localStorage.removeItem(CURRENT_USER_KEY)
-    localStorage.removeItem('lh_auth_token')
+    try {
+      await apiClient.post('/auth/logout')
+    } catch {
+      // Ignore errors on logout
+    }
     return { success: true }
   },
 
+  /**
+   * التحقق من المستخدم الحالي وجلب بياناته
+   * GET /auth/me
+   */
   async me() {
-    await delay(150)
     try {
-      const stored = localStorage.getItem(CURRENT_USER_KEY)
-      if (!stored) return null
-      const parsed = JSON.parse(stored)
-      // تزامن مع بيانات قاعدة البيانات إن وجد تحديث
-      const fresh = db.data.users.find((u) => u.id === parsed.id)
-      return fresh || parsed
+      const res = await apiClient.get('/auth/me')
+      return res?.user || res || null
     } catch {
       return null
     }
   },
 
+  /**
+   * تأكيد البريد الإلكتروني برمز OTP
+   * POST /auth/verify-email
+   */
+  async verifyEmail({ email, code }) {
+    const payload = typeof email === 'object' ? email : { email, code }
+    const res = await apiClient.post('/auth/verify-email', {
+      email: payload.email?.trim().toLowerCase(),
+      code: String(payload.code || '').trim(),
+    })
+    return res
+  },
+
+  /**
+   * إعادة إرسال رمز التحقق OTP
+   * POST /auth/resend-code
+   */
+  async resendCode({ email }) {
+    const res = await apiClient.post('/auth/resend-code', {
+      email: (email || '').trim().toLowerCase(),
+    })
+    return res
+  },
+
+  /**
+   * طلب رابط استعادة كلمة المرور
+   * POST /auth/forgot-password
+   */
   async forgotPassword(email) {
-    await delay(350)
-    const user = db.data.users.find((u) => u.email.toLowerCase() === (email || '').toLowerCase())
-    if (!user) {
-      throw new Error('ERR_EMAIL_NOT_FOUND')
-    }
-    return { success: true }
+    const cleanEmail = typeof email === 'object' ? email.email : email
+    const res = await apiClient.post('/auth/forgot-password', {
+      email: (cleanEmail || '').trim().toLowerCase(),
+    })
+    return res
   },
 
-  async verifyEmail(code) {
-    await delay(350)
-    if (code && code.length >= 4) {
-      return { success: true, verified: true }
-    }
-    throw new Error('ERR_INVALID_CODE')
+  /**
+   * تعيين كلمة مرور جديدة عبر رمز الاستعادة
+   * POST /auth/reset-password
+   */
+  async resetPassword({ token, newPassword }) {
+    const res = await apiClient.post('/auth/reset-password', {
+      token: (token || '').trim(),
+      newPassword,
+    })
+    return res
   },
 
-  async resendCode() {
-    await delay(300)
-    return { success: true }
-  },
-
-  async updateProfile(data) {
-    await delay(350)
-    const stored = localStorage.getItem(CURRENT_USER_KEY)
-    if (!stored) throw new Error('ERR_UNAUTHENTICATED')
-    const current = JSON.parse(stored)
-
-    const index = db.data.users.findIndex((u) => u.id === current.id)
-    if (index === -1) throw new Error('ERR_USER_NOT_FOUND')
-
-    const updated = { ...db.data.users[index], ...data }
-    db.data.users[index] = updated
-    db.save()
-
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updated))
-    return updated
-  },
-
-  async changePassword({ current, next }) {
-    await delay(350)
-    if (!current || !next) throw new Error('ERR_REQUIRED_FIELDS')
-    if (next.length < 6) throw new Error('ERR_PASSWORD_LENGTH')
-    return { success: true }
+  /**
+   * تغيير كلمة المرور للمستخدم المسجل
+   * POST /auth/change-password
+   */
+  async changePassword({ currentPassword, current, next, newPassword }) {
+    const curr = currentPassword || current
+    const nxt = newPassword || next
+    const res = await apiClient.post('/auth/change-password', {
+      currentPassword: curr,
+      newPassword: nxt,
+    })
+    return res
   },
 }
 
+export default authService

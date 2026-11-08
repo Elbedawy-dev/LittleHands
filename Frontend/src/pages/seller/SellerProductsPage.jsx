@@ -35,7 +35,7 @@ import { pickLocale } from '../../utils'
 export default function SellerProductsPage() {
   const { t } = useTranslation('seller')
   const { user } = useAuth()
-  const sellerId = user?.id || 'seller_1'
+  const sellerId = user?.id || ''
   const { isRtl } = useLanguage()
   const { formatNumber } = useFormat()
 

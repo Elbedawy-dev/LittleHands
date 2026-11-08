@@ -1,26 +1,21 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { PLATFORM_CONFIG } from '../config/constants'
 import { settingsService } from '../services/settingsService'
+import { useAuth } from './AuthContext'
 
 const SettingsContext = createContext({
-  settings: {
-    commissionRate: PLATFORM_CONFIG.COMMISSION_RATE,
-    platformWallet: '',
-    supportPhone: '',
-    supportEmail: '',
-    whatsappNumber: '',
-    payoutScheduleText: '',
-    shippingRates: {},
-    maintenanceMode: false,
-  },
+  settings: {},
   isLoading: true,
   updateSettings: async () => {},
   getShippingRateForZone: () => 40,
+  commissionRate: undefined,
+  platformWallet: '',
 })
 
 export function SettingsProvider({ children }) {
+  const { user } = useAuth()
+  const isPrivileged = user && (user.role === 'seller' || user.role === 'admin')
+
   const [settings, setSettings] = useState({
-    commissionRate: PLATFORM_CONFIG.COMMISSION_RATE,
     platformWallet: '',
     supportPhone: '',
     supportEmail: '',
@@ -38,18 +33,38 @@ export function SettingsProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
+
     async function fetchSettings() {
+      setIsLoading(true)
       try {
-        const data = await settingsService.getSettings()
-        setSettings(data)
+        let data
+        if (isPrivileged) {
+          data = await settingsService.getSettings()
+        } else {
+          data = await settingsService.getPublicSettings()
+        }
+
+        if (isMounted && data) {
+          // Hard rule: commissionRate must never exist in customer or guest state
+          if (!isPrivileged) {
+            delete data.commissionRate
+          }
+          setSettings(data)
+        }
       } catch (err) {
         console.warn('Failed to load settings:', err)
       } finally {
-        setIsLoading(false)
+        if (isMounted) setIsLoading(false)
       }
     }
+
     fetchSettings()
-  }, [])
+
+    return () => {
+      isMounted = false
+    }
+  }, [isPrivileged])
 
   const updateSettings = async (values) => {
     const updated = await settingsService.updateSettings(values)
@@ -71,8 +86,8 @@ export function SettingsProvider({ children }) {
         isLoading,
         updateSettings,
         getShippingRateForZone,
-        commissionRate: settings.commissionRate || PLATFORM_CONFIG.COMMISSION_RATE,
-        platformWallet: settings.platformWallet || PLATFORM_CONFIG.VODAFONE_CASH_WALLET,
+        commissionRate: isPrivileged ? settings.commissionRate : undefined,
+        platformWallet: settings.platformWallet || '',
       }}
     >
       {children}
@@ -86,3 +101,4 @@ export function useSettings() {
   return ctx
 }
 
+export default SettingsContext

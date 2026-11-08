@@ -135,6 +135,13 @@ export const ORDER_STATUS = {
     color: 'red',
     bgLight: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border-rose-300',
   },
+  cancelled: {
+    key: 'cancelled',
+    label: 'ملغي',
+    labelEn: 'Cancelled',
+    color: 'gray',
+    bgLight: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-300',
+  },
 }
 
 // المراحل التعليمية للحضانات ورياض الأطفال
@@ -289,9 +296,5 @@ export const PLATFORM_CONFIG = {
   CURRENCY_AR: 'ج.م',
   CURRENCY_EN: 'EGP',
   PHONE_FORMAT_HINT: '01XXXXXXXXX',
-  SELLERS: [
-    { id: 'seller_1', name: 'البائعة الأولى', nameEn: 'First Seller', email: 'seller1@test.com' },
-    { id: 'seller_2', name: 'البائعة الثانية', nameEn: 'Second Seller', email: 'seller2@test.com' },
-  ],
 }
 

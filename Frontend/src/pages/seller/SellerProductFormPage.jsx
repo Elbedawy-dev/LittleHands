@@ -52,7 +52,7 @@ export default function SellerProductFormPage() {
       } else {
         await productService.createProduct({
           ...values,
-          sellerId: user?.id || 'seller_1',
+          sellerId: user?.id || '',
         })
       }
       navigate('/seller/products')

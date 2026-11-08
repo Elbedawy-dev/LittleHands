@@ -56,6 +56,13 @@ export const cancelOrderSchema = z
   })
   .strict()
 
+export const refundOrderSchema = z
+  .object({
+    reference: z.string().trim().min(1, 'Reference is required').max(100),
+    note: z.string().trim().max(500).optional().default(''),
+  })
+  .strict()
+
 export const orderQuerySchema = z.object({
   status: z.string().optional(),
   sellerId: z.string().optional(),

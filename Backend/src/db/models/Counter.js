@@ -31,14 +31,22 @@ counterSchema.plugin(toJSONPlugin)
  */
 counterSchema.statics.nextOrderNumber = async function (year = new Date().getFullYear()) {
   const key = `order_${year}`
-  const counter = await this.findOneAndUpdate(
-    { key },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  )
-
-  const paddedSeq = String(counter.seq).padStart(3, '0')
-  return `LH-${year}-${paddedSeq}`
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const counter = await this.findOneAndUpdate(
+        { key },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      )
+      const paddedSeq = String(counter.seq).padStart(3, '0')
+      return `LH-${year}-${paddedSeq}`
+    } catch (err) {
+      if (err.code === 11000 && attempt < 4) {
+        continue
+      }
+      throw err
+    }
+  }
 }
 
 export const Counter = mongoose.models.Counter || mongoose.model('Counter', counterSchema)

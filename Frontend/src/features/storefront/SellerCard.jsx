@@ -15,16 +15,8 @@ export function SellerCard({ seller }) {
   const { i18n, t } = useTranslation('storefront')
   const lang = i18n.language === 'en' ? 'en' : 'ar'
 
-  const fallbackName = seller.id === 'seller_2'
-    ? (lang === 'en' ? 'Second Seller' : 'البائعة الثانية')
-    : (lang === 'en' ? 'First Seller' : 'البائعة الأولى')
-
-  const fallbackCity = seller.id === 'seller_2'
-    ? (lang === 'en' ? 'Alexandria' : 'الإسكندرية')
-    : (lang === 'en' ? 'Cairo' : 'القاهرة')
-
-  const sellerName = getDisplayName(seller, lang) || fallbackName
-  const sellerCity = pickLocaleText(seller.city || seller.governorate, lang) || fallbackCity
+  const sellerName = getDisplayName(seller, lang) || (lang === 'en' ? 'Seller' : 'بائعة')
+  const sellerCity = pickLocaleText(seller.city || seller.governorate, lang) || ''
   const productsCount = seller.productsCount || 0
   const completedOrdersCount = seller.completedOrdersCount || 0
 

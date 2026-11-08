@@ -24,6 +24,7 @@ const OrderSuccessPage = lazy(() => import('../pages/checkout/OrderSuccessPage')
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'))
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('../pages/auth/ResetPasswordPage'))
 const VerifyEmailPage = lazy(() => import('../pages/auth/VerifyEmailPage'))
 
 const AccountLayout = lazy(() => import('../pages/account/AccountLayout'))
@@ -52,6 +53,7 @@ const AdminProductFormPage = lazy(() => import('../pages/admin/AdminProductFormP
 const AdminSellersPage = lazy(() => import('../pages/admin/AdminSellersPage'))
 const AdminCustomersPage = lazy(() => import('../pages/admin/AdminCustomersPage'))
 const AdminCategoriesPage = lazy(() => import('../pages/admin/AdminCategoriesPage'))
+const AdminCustomRequestsPage = lazy(() => import('../pages/admin/AdminCustomRequestsPage'))
 const AdminNotificationsPage = lazy(() => import('../pages/admin/AdminNotificationsPage'))
 const AdminSettingsPage = lazy(() => import('../pages/admin/AdminSettingsPage'))
 const AdminAccountPage = lazy(() => import('../pages/admin/AdminAccountPage'))
@@ -184,6 +186,7 @@ export const router = createBrowserRouter([
       { path: 'login', element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
       { path: 'register', element: <SuspenseWrapper><RegisterPage /></SuspenseWrapper> },
       { path: 'forgot-password', element: <SuspenseWrapper><ForgotPasswordPage /></SuspenseWrapper> },
+      { path: 'reset-password', element: <SuspenseWrapper><ResetPasswordPage /></SuspenseWrapper> },
       { path: 'verify-email', element: <SuspenseWrapper><VerifyEmailPage /></SuspenseWrapper> },
     ],
   },
@@ -226,6 +229,7 @@ export const router = createBrowserRouter([
       { path: 'sellers', element: <SuspenseWrapper><AdminSellersPage /></SuspenseWrapper> },
       { path: 'customers', element: <SuspenseWrapper><AdminCustomersPage /></SuspenseWrapper> },
       { path: 'categories', element: <SuspenseWrapper><AdminCategoriesPage /></SuspenseWrapper> },
+      { path: 'custom-requests', element: <SuspenseWrapper><AdminCustomRequestsPage /></SuspenseWrapper> },
       { path: 'notifications', element: <SuspenseWrapper><AdminNotificationsPage /></SuspenseWrapper> },
       { path: 'settings', element: <SuspenseWrapper><AdminSettingsPage /></SuspenseWrapper> },
       { path: 'account', element: <SuspenseWrapper><AdminAccountPage /></SuspenseWrapper> },

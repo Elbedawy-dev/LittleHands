@@ -9,6 +9,7 @@ import { cn, getDisplayName } from '../../../utils'
  * شريط تصفية وبحث الوسائل التعليمية للإدارة
  */
 export function ProductFilters({
+  sellers = [],
   selectedSeller,
   onSelectSeller,
   searchQuery,
@@ -17,15 +18,18 @@ export function ProductFilters({
   onSelectCategory,
   selectedStatus,
   onSelectStatus,
-  counts = { all: 0, seller_1: 0, seller_2: 0 },
+  counts = { all: 0 },
 }) {
   const { t, i18n } = useTranslation('admin-manage')
   const { isRtl } = useLanguage()
 
   const sellerTabs = [
-    { id: 'all', label: t('products.allSellers'), count: counts.all },
-    { id: 'seller_1', label: getDisplayName({ id: 'seller_1', name: 'البائعة الأولى', nameEn: 'First Seller' }, i18n.language), count: counts.seller_1 },
-    { id: 'seller_2', label: getDisplayName({ id: 'seller_2', name: 'البائعة الثانية', nameEn: 'Second Seller' }, i18n.language), count: counts.seller_2 },
+    { id: 'all', label: t('products.allSellers'), count: counts.all || 0 },
+    ...sellers.map((s) => ({
+      id: s.id || s._id,
+      label: getDisplayName(s, i18n.language),
+      count: counts[s.id || s._id] ?? (s.productsCount || 0),
+    })),
   ]
 
   return (

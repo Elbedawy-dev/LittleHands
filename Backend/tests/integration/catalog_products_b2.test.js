@@ -192,7 +192,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
 
       // 1. Create product
       const createRes = await agent
-        .post('/api/v1/products')
+        .post('/api/v1/products/manage/products')
         .send({
           name: { ar: 'وسيلة بطاقات الحروف', en: 'Alphabet Flash Cards' },
           categoryId: 'flash-cards',
@@ -221,7 +221,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
       })
 
       // 3. Seller soft-deletes the product
-      const delRes = await agent.delete(`/api/v1/products/${productId}`)
+      const delRes = await agent.delete(`/api/v1/products/manage/products/${productId}`)
       expect(delRes.status).toBe(200)
 
       // 4. Excluded from public catalog
@@ -253,13 +253,13 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
 
       // Seller 2 attempts PATCH -> 404
       const patchRes = await agent2
-        .patch(`/api/v1/products/${product._id}`)
+        .patch(`/api/v1/products/manage/products/${product._id}`)
         .send({ price: 220 })
       expect(patchRes.status).toBe(404)
       expect(patchRes.body.error.code).toBe('ERR_PRODUCT_NOT_FOUND')
 
       // Seller 2 attempts DELETE -> 404
-      const delRes = await agent2.delete(`/api/v1/products/${product._id}`)
+      const delRes = await agent2.delete(`/api/v1/products/manage/products/${product._id}`)
       expect(delRes.status).toBe(404)
       expect(delRes.body.error.code).toBe('ERR_PRODUCT_NOT_FOUND')
 
@@ -274,12 +274,12 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
     it('rejects customer calling /manage endpoints with 403 Forbidden', async () => {
       const { agent: customerAgent } = await authedAgent(app, 'customer')
 
-      const resList = await customerAgent.get('/api/v1/products/manage')
+      const resList = await customerAgent.get('/api/v1/products/manage/products')
       expect(resList.status).toBe(403)
       expect(resList.body.error.code).toBe('FORBIDDEN')
 
       const resCreate = await customerAgent
-        .post('/api/v1/products')
+        .post('/api/v1/products/manage/products')
         .send({ name: 'وسيلة جديدة', price: 100 })
       expect(resCreate.status).toBe(403)
       expect(resCreate.body.error.code).toBe('FORBIDDEN')
@@ -314,7 +314,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
       expect(featForbidden).toEqual([])
 
       // 4. In contrast, Seller/Admin manage endpoint MUST include commissionAmount and sellerNet
-      const manageRes = await sellerAgent.get('/api/v1/products/manage')
+      const manageRes = await sellerAgent.get('/api/v1/products/manage/products')
       expect(manageRes.status).toBe(200)
       const item = manageRes.body.data[0]
       expect(item).toHaveProperty('commissionRate')
@@ -362,7 +362,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
       const initialCount = await CustomRequest.countDocuments()
 
       const res = await request(app)
-        .post('/api/v1/contact/custom-request')
+        .post('/api/v1/contact/custom-requests')
         .set('X-Requested-With', 'lh-web')
         .send({
           name: 'Spam Bot',
@@ -379,7 +379,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
     it('persists legitimate requests and rejects invalid phones', async () => {
       // 1. Invalid phone format
       const invalidRes = await request(app)
-        .post('/api/v1/contact/custom-request')
+        .post('/api/v1/contact/custom-requests')
         .set('X-Requested-With', 'lh-web')
         .send({
           name: 'مديرة الحضانة',
@@ -390,7 +390,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
 
       // 2. Legitimate request
       const validRes = await request(app)
-        .post('/api/v1/contact/custom-request')
+        .post('/api/v1/contact/custom-requests')
         .set('X-Requested-With', 'lh-web')
         .send({
           name: 'الأستاذة مروة',
@@ -473,7 +473,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
       const { agent } = await authedAgent(app, 'seller')
       const forbiddenWord = 'w' + 'o' + 'o' + 'd'
 
-      const res = await agent.post('/api/v1/products').send({
+      const res = await agent.post('/api/v1/products/manage/products').send({
         name: { ar: 'وسيلة تعليمية', en: `Handmade ${forbiddenWord} board` },
         categoryId: 'alphabet-boards',
         price: 150,

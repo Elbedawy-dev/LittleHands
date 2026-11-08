@@ -12,6 +12,7 @@ import { getDisplayName } from '../../utils'
  * يدعم التصفية حسب التصنيف، نطاق السعر بسلايدر ومدخلات رقمية، المرحلة التعليمية، البائعة وتوفر المخزون
  */
 export function FilterSidebar({
+  sellers = [],
   filters,
   onFilterChange,
   onReset,
@@ -30,11 +31,13 @@ export function FilterSidebar({
     { value: 'primary', label: t('storefront:products.stagePrimary') },
   ]
 
-  // البائعتان الحرفيتان
+  // البائعات من API
   const sellerOptions = [
     { value: '', label: t('storefront:products.allSellers') },
-    { value: 'seller_1', label: getDisplayName({ id: 'seller_1', name: 'البائعة الأولى', nameEn: 'First Seller' }, i18n.language) },
-    { value: 'seller_2', label: getDisplayName({ id: 'seller_2', name: 'البائعة الثانية', nameEn: 'Second Seller' }, i18n.language) },
+    ...sellers.map((s) => ({
+      value: s.id || s._id,
+      label: getDisplayName(s, i18n.language),
+    })),
   ]
 
   const handleCategoryToggle = (categorySlug) => {

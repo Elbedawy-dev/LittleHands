@@ -30,7 +30,7 @@ export function OrderDetailsDrawer({
   isOpen,
   onClose,
   order,
-  sellerId = 'seller_1',
+  sellerId = '',
   onStatusUpdate,
 }) {
   const { t } = useTranslation('seller')
@@ -159,57 +159,70 @@ export function OrderDetailsDrawer({
             <span>{t('orders.drawer.delivery_title')}</span>
           </h4>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            {order.delivery?.nurseryName && (
-              <div className="flex items-start gap-2">
-                <Building className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-text-muted block text-[11px]">{t('orders.drawer.nursery')}</span>
-                  <span className="font-bold text-text-main">{order.delivery.nurseryName}</span>
+          {order.delivery?.masked ? (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>
+                {t('orders.delivery_masked_notice', {
+                  defaultValue: 'تظهر بيانات التوصيل بعد تأكيد الدفع',
+                })}
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {order.delivery?.nurseryName && (
+                  <div className="flex items-start gap-2">
+                    <Building className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-text-muted block text-[11px]">{t('orders.drawer.nursery')}</span>
+                      <span className="font-bold text-text-main">{order.delivery.nurseryName}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-start gap-2">
+                  <User className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-text-muted block text-[11px]">{t('orders.drawer.recipient')}</span>
+                    <span className="font-bold text-text-main">{order.delivery?.name || '—'}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Phone className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-text-muted block text-[11px]">{t('orders.drawer.phone')}</span>
+                    <bdi
+                      dir="ltr"
+                      className="font-mono font-bold text-text-main block"
+                      style={{ unicodeBidi: 'isolate' }}
+                    >
+                      {order.delivery?.phone || '—'}
+                    </bdi>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-text-muted block text-[11px]">{t('orders.drawer.governorate')}</span>
+                    <span className="font-bold text-text-main">
+                      {order.delivery?.governorate || ''} {order.delivery?.city ? `(${order.delivery.city})` : ''}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
 
-            <div className="flex items-start gap-2">
-              <User className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
-              <div>
-                <span className="text-text-muted block text-[11px]">{t('orders.drawer.recipient')}</span>
-                <span className="font-bold text-text-main">{order.delivery?.name || '—'}</span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Phone className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
-              <div>
-                <span className="text-text-muted block text-[11px]">{t('orders.drawer.phone')}</span>
-                <bdi
-                  dir="ltr"
-                  className="font-mono font-bold text-text-main block"
-                  style={{ unicodeBidi: 'isolate' }}
-                >
-                  {order.delivery?.phone || '—'}
-                </bdi>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
-              <div>
-                <span className="text-text-muted block text-[11px]">{t('orders.drawer.governorate')}</span>
-                <span className="font-bold text-text-main">
-                  {order.delivery?.governorate || ''} {order.delivery?.city ? `(${order.delivery.city})` : ''}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {order.delivery?.address && (
-            <div className="pt-2 border-t border-surface-border text-xs">
-              <span className="text-text-muted block text-[11px]">{t('orders.drawer.address')}</span>
-              <p className="text-text-main mt-0.5 leading-relaxed font-medium">
-                {order.delivery.address}
-              </p>
-            </div>
+              {order.delivery?.address && (
+                <div className="pt-2 border-t border-surface-border text-xs">
+                  <span className="text-text-muted block text-[11px]">{t('orders.drawer.address')}</span>
+                  <p className="text-text-main mt-0.5 leading-relaxed font-medium">
+                    {order.delivery.address}
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </Card>
 

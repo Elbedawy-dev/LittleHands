@@ -209,6 +209,10 @@ export default function CheckoutPage() {
       navigate(`/order-success/${createdOrder.number}`)
     } catch (err) {
       console.error('Order creation error:', err)
+      if (err.code === 'EMAIL_NOT_VERIFIED') {
+        navigate('/verify-email?next=/checkout')
+        return
+      }
       setSubmitError(err.message || t('checkout:errors.failedOrder'))
     } finally {
       setIsSubmitting(false)

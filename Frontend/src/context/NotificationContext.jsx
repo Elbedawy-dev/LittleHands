@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { notificationService } from '../services/notificationService'
 import { useAuth } from './AuthContext'
 
@@ -7,48 +7,100 @@ const NotificationContext = createContext({
   unreadCount: 0,
   isLoading: false,
   fetchNotifications: async () => {},
+  fetchUnreadCount: async () => {},
   markAsRead: async () => {},
   markAllAsRead: async () => {},
 })
 
 export function NotificationProvider({ children }) {
-  const { user } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
 
-  const role = user ? user.role : 'customer'
+  // جلب عدد الإشعارات غير المقروءة
+  const fetchUnreadCount = useCallback(async () => {
+    if (!isAuthenticated) {
+      setUnreadCount(0)
+      return
+    }
+    try {
+      const res = await notificationService.getUnreadCount()
+      const count = typeof res === 'number' ? res : (res?.unreadCount ?? res?.count ?? 0)
+      setUnreadCount(count)
+    } catch {
+      // تجاهل أخطاء التوثيق أو الشبكة العارضة أثناء الاستطلاع الدوري
+    }
+  }, [isAuthenticated])
 
+  // جلب قائمة الإشعارات الكاملة
   const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated) {
+      setNotifications([])
+      return
+    }
     setIsLoading(true)
     try {
-      const list = await notificationService.getNotifications(role)
-      setNotifications(list)
+      const res = await notificationService.getNotifications()
+      const items = Array.isArray(res) ? res : (res?.items || [])
+      setNotifications(items)
+      if (res?.unreadCount !== undefined) {
+        setUnreadCount(res.unreadCount)
+      }
     } catch (e) {
       console.warn('Failed to load notifications:', e)
     } finally {
       setIsLoading(false)
     }
-  }, [role])
+  }, [isAuthenticated])
 
+  // استطلاع دوري لعدد الإشعارات غير المقروءة كل 45 ثانية أثناء تنشيط علامة التبويب
   useEffect(() => {
-    fetchNotifications()
-  }, [fetchNotifications])
+    if (!isAuthenticated) return
+
+    fetchUnreadCount()
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchUnreadCount()
+      }
+    }, 45000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUnreadCount()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isAuthenticated, fetchUnreadCount])
 
   const markAsRead = async (id) => {
-    await notificationService.markRead(id)
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
+    try {
+      await notificationService.markRead(id)
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      )
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err)
+    }
   }
 
   const markAllAsRead = async () => {
-    await notificationService.markAllRead(role)
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    try {
+      await notificationService.markAllRead()
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+      setUnreadCount(0)
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err)
+    }
   }
-
-  const unreadCount = useMemo(() => {
-    return notifications.filter((n) => !n.read).length
-  }, [notifications])
 
   return (
     <NotificationContext.Provider
@@ -57,6 +109,7 @@ export function NotificationProvider({ children }) {
         unreadCount,
         isLoading,
         fetchNotifications,
+        fetchUnreadCount,
         markAsRead,
         markAllAsRead,
       }}
@@ -72,3 +125,4 @@ export function useNotifications() {
   return ctx
 }
 
+export default NotificationContext

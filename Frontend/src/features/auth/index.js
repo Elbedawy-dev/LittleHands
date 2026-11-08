@@ -1,2 +1,1 @@
-export { MockAccountsBox } from './MockAccountsBox'
-
+// Auth feature components

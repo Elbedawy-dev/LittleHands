@@ -16,6 +16,7 @@ import path from 'node:path'
 import { authenticate, authorize } from '../middlewares/auth.js'
 import { csrfGuard } from '../middlewares/csrfGuard.js'
 import { storage } from '../infra/storage/index.js'
+import { audit } from '../infra/audit/index.js'
 import { jobs } from '../jobs/index.js'
 import { Payment } from '../db/models/Payment.js'
 import { Order } from '../db/models/Order.js'
@@ -91,20 +92,32 @@ router.get('/files/:key', authenticate, async (req, res, next) => {
   }
 })
 
-// Optional general file upload endpoint
-router.post('/files/upload', authenticate, csrfGuard, (req, res, next) => {
-  next(new AppError('NOT_IMPLEMENTED', 501))
-})
+const ALLOWED_JOBS = [
+  'cancelExpiredOrders',
+  'pendingPaymentReminder',
+  'retryFailedEmails',
+  'cleanupOrphanUploads',
+]
 
-// Admin job trigger
+// Admin job trigger: admin-only, CSRF protected, whitelist validated, audited
 router.post('/jobs/run/:jobName', authenticate, authorize('admin'), csrfGuard, async (req, res, next) => {
   try {
     const { jobName } = req.params
-    if (typeof jobs.jobHandlers?.[jobName] === 'function') {
-      const result = await jobs.jobHandlers[jobName]()
-      return ok(res, result || { success: true })
+    if (!ALLOWED_JOBS.includes(jobName) || typeof jobs.jobHandlers?.[jobName] !== 'function') {
+      return next(new AppError('NOT_FOUND', 404, `Unknown or unauthorized job: ${jobName}`))
     }
-    return next(new AppError('NOT_FOUND', 404, `Unknown job: ${jobName}`))
+
+    const result = await jobs.jobHandlers[jobName]()
+    await audit.log(
+      req.user._id,
+      'JOB_RUN_TRIGGERED',
+      'Job',
+      jobName,
+      { jobName, result: result || { success: true } },
+      req.ip
+    )
+
+    return ok(res, result || { success: true })
   } catch (err) {
     next(err)
   }

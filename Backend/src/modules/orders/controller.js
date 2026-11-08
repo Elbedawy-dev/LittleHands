@@ -110,6 +110,14 @@ export const orderController = {
     )
     return ok(res, toOrderDTO(order, req.user.role, req.user._id))
   }),
+
+  /**
+   * Admin records refund for cancelled order
+   */
+  refundOrder: asyncHandler(async (req, res) => {
+    const order = await orderService.refundOrder(req.params.id, req.body, req.user)
+    return ok(res, toOrderDTO(order, 'admin'))
+  }),
 }
 
 export default orderController

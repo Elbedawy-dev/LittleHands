@@ -1,5 +1,5 @@
 export { adminService } from './adminService'
-export { default as apiClient, API_BASE_URL, USE_MOCK } from './api'
+export { default as apiClient, API_BASE_URL } from './api'
 export { authService } from './authService'
 export { catalogService } from './catalogService'
 export { contactService } from './contactService'

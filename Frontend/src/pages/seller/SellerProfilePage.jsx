@@ -37,7 +37,7 @@ export default function SellerProfilePage() {
   const isEn = language === 'en'
   const { user, updateProfile } = useAuth()
   const { settings } = useSettings()
-  const sellerId = user && user.role === 'seller' ? user.id : 'seller_1'
+  const sellerId = user?.id || ''
   const fileInputRef = useRef(null)
 
   const [activeTab, setActiveTab] = useState('info') // 'info' | 'bio' | 'wallet'

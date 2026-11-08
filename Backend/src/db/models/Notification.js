@@ -43,6 +43,10 @@ const notificationSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    dedupKey: {
+      type: String,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
@@ -51,6 +55,14 @@ const notificationSchema = new mongoose.Schema(
 
 // Compound index for user notification list and unread counts
 notificationSchema.index({ userId: 1, read: 1, createdAt: -1 })
+notificationSchema.index(
+  { dedupKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { dedupKey: { $type: 'string', $gt: '' } },
+  }
+)
+
 
 notificationSchema.plugin(toJSONPlugin)
 

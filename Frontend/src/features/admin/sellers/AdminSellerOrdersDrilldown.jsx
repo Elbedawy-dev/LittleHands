@@ -8,11 +8,6 @@ import { Tabs } from '../../../components/ui/Tabs'
 import { useFormat } from '../../../hooks/useFormat'
 import { calcCommission, getDisplayName } from '../../../utils'
 
-const SELLER_MAP = {
-  seller_1: 'البائعة الأولى',
-  seller_2: 'البائعة الثانية',
-}
-
 /**
  * جدول تدقيق مبيعات وعمولات البائعات بالتفصيل (Per-Seller Orders Drilldown)
  * يفصل كل وسيلة تم بيعها، ويحسب عمولة المنصة (20٪) وصافي البائعة (80٪) ولتحقيق مطابقة الحسابات تماماً
@@ -25,16 +20,33 @@ export function AdminSellerOrdersDrilldown({
   const { formatDate } = useFormat()
   const [selectedSellerTab, setSelectedSellerTab] = useState('all')
 
+  // استخراج البائعات ديناميكياً من عناصر الطلبات
+  const dynamicSellers = useMemo(() => {
+    const map = new Map()
+    orders.forEach((o) => {
+      (o.items || []).forEach((item) => {
+        if (item.sellerId && !map.has(item.sellerId)) {
+          map.set(item.sellerId, {
+            id: item.sellerId,
+            name: item.sellerName || item.sellerId,
+            nameEn: item.sellerNameEn,
+          })
+        }
+      })
+    })
+    return Array.from(map.values())
+  }, [orders])
+
   // استخراج بنود الوسائل المرتبطة بالبائعات من كافة الطلبات المؤكدة والمسلمة
   const drilldownRows = useMemo(() => {
     const rows = []
 
     orders.forEach((order) => {
       // استبعاد الطلبات المرفوضة من حسابات الأرباح
-      if (order.status === 'payment_rejected') return
+      if (order.status === 'payment_rejected' || order.status === 'cancelled') return
 
-      order.items.forEach((item, index) => {
-        const sId = item.sellerId || 'seller_1'
+      (order.items || []).forEach((item, index) => {
+        const sId = item.sellerId || ''
         if (selectedSellerTab !== 'all' && sId !== selectedSellerTab) return
 
         const salePrice = item.unitPrice * item.qty
@@ -44,12 +56,12 @@ export function AdminSellerOrdersDrilldown({
           rowId: `${order.id}_${index}`,
           orderNumber: order.number,
           orderId: order.id,
-          customerName: order.delivery.name,
-          nurseryName: order.delivery.nurseryName,
+          customerName: order.delivery?.name || '',
+          nurseryName: order.delivery?.nurseryName || '',
           itemName: item.name,
           qty: item.qty,
           sellerId: sId,
-          sellerName: getDisplayName({ id: sId, name: item.sellerName }, i18n.language) || sId,
+          sellerName: getDisplayName({ id: sId, name: item.sellerName, nameEn: item.sellerNameEn }, i18n.language) || sId,
           salePrice,
           commission,
           net,
@@ -64,8 +76,10 @@ export function AdminSellerOrdersDrilldown({
 
   const tabs = [
     { id: 'all', label: t('sellers.drilldown.allSellers') },
-    { id: 'seller_1', label: getDisplayName({ id: 'seller_1', name: 'البائعة الأولى', nameEn: 'First Seller' }, i18n.language) },
-    { id: 'seller_2', label: getDisplayName({ id: 'seller_2', name: 'البائعة الثانية', nameEn: 'Second Seller' }, i18n.language) },
+    ...dynamicSellers.map((s) => ({
+      id: s.id,
+      label: getDisplayName(s, i18n.language),
+    })),
   ]
 
   const columns = [

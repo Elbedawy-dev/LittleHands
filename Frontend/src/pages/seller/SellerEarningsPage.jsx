@@ -35,7 +35,7 @@ export default function SellerEarningsPage() {
   const { t } = useTranslation('seller')
   const { user } = useAuth()
   const { settings } = useSettings()
-  const sellerId = user?.id || 'seller_1'
+  const sellerId = user?.id || ''
   const { formatMoney, formatDate, formatNumber } = useFormat()
 
   const [overview, setOverview] = useState(null)

@@ -1,6 +1,7 @@
 import { authService, getCookieOptions } from './service.js'
 import { toAuthUserDTO } from './dto.js'
 import { asyncHandler } from '../../utils/asyncHandler.js'
+import { AppError } from '../../utils/appError.js'
 import { created, ok } from '../../utils/response.js'
 
 export const authController = {
@@ -37,8 +38,10 @@ export const authController = {
   }),
 
   logout: asyncHandler(async (req, res) => {
-    const rt = req.cookies?.lh_rt || req.body?.refreshToken
-    await authService.logout(rt)
+    const rt = req.cookies?.lh_rt
+    if (rt) {
+      await authService.logout(rt)
+    }
 
     res.clearCookie('lh_at', { path: '/' })
     res.clearCookie('lh_rt', { path: '/' })
@@ -47,7 +50,10 @@ export const authController = {
   }),
 
   refresh: asyncHandler(async (req, res) => {
-    const rt = req.cookies?.lh_rt || req.body?.refreshToken
+    const rt = req.cookies?.lh_rt
+    if (!rt) {
+      throw new AppError('UNAUTHENTICATED', 401)
+    }
     const result = await authService.refresh(rt, {
       ip: req.ip,
       userAgent: req.headers['user-agent'],

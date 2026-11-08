@@ -126,11 +126,17 @@ export function getDisplayName(entity, language = 'ar') {
 
   // If passed a string
   if (typeof entity === 'string') {
-    if (isEn) {
-      if (entity === 'البائعة الأولى') return 'First Seller'
-      if (entity === 'البائعة الثانية') return 'Second Seller'
-    }
     return entity
+  }
+
+  // Check localized displayName { ar, en }
+  if (entity.displayName) {
+    if (typeof entity.displayName === 'object') {
+      return isEn
+        ? (entity.displayName.en || entity.displayName.ar || entity.name || '')
+        : (entity.displayName.ar || entity.displayName.en || entity.name || '')
+    }
+    return entity.displayName
   }
 
   // If language is 'en' and entity has nameEn
@@ -157,28 +163,8 @@ export function getDisplayName(entity, language = 'ar') {
       : (entity.sellerName.ar || entity.sellerName.en || '')
   }
 
-  // Fallback for placeholder sellers if nameEn wasn't explicitly attached
-  if (isEn) {
-    if (
-      entity.id === 'seller_1' ||
-      entity.sellerId === 'seller_1' ||
-      entity.name === 'البائعة الأولى' ||
-      entity.sellerName === 'البائعة الأولى'
-    ) {
-      return 'First Seller'
-    }
-    if (
-      entity.id === 'seller_2' ||
-      entity.sellerId === 'seller_2' ||
-      entity.name === 'البائعة الثانية' ||
-      entity.sellerName === 'البائعة الثانية'
-    ) {
-      return 'Second Seller'
-    }
-  }
-
-  // Normal name in Arabic (or fallback when not 'en' or nameEn doesn't exist)
-  const normal = entity.name || entity.sellerName || entity.displayName || entity.title || ''
+  // Normal name (or fallback)
+  const normal = entity.name || entity.sellerName || entity.title || ''
   if (typeof normal === 'object') {
     return isEn ? (normal.en || normal.ar || '') : (normal.ar || normal.en || '')
   }

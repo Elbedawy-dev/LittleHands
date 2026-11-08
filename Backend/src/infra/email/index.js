@@ -16,10 +16,11 @@ export const email = {
    * @param {Object} [options]
    * @param {'ar'|'en'} [options.locale='ar']
    * @param {Object} [options.user] - Recipient user model (for preference checking)
+   * @param {string} [options.dedupKey] - Unique de-duplication key
    * @returns {Promise<{ success: boolean, messageId?: string, skipped?: boolean, error?: string }>}
    */
-  async sendTemplate(templateKey, to, data = {}, { locale = 'ar', user = null } = {}) {
-    return emailQueue.enqueueAndSend(templateKey, to, data, { locale, user })
+  async sendTemplate(templateKey, to, data = {}, { locale = 'ar', user = null, dedupKey = null } = {}) {
+    return emailQueue.enqueueAndSend(templateKey, to, data, { locale, user, dedupKey })
   },
 
   /**

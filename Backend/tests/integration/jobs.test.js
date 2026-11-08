@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
 import sharp from 'sharp'
 import { jobs } from '../../src/jobs/index.js'
 import { Order } from '../../src/db/models/Order.js'
@@ -75,6 +73,11 @@ describe('Background Jobs Subsystem', () => {
     expect(res.success).toBe(true)
     expect(res.count).toBe(1)
 
+    // Second run: idempotent execution
+    const res2 = await jobs.run('pendingPaymentReminder')
+    expect(res2.success).toBe(true)
+    expect(res2.count).toBe(1)
+
     const adminNotifs = await Notification.find({ userId: admin._id, type: 'payment' })
     expect(adminNotifs.length).toBeGreaterThanOrEqual(1)
     expect(adminNotifs[0].title).toContain('تذكير')
@@ -125,6 +128,11 @@ describe('Background Jobs Subsystem', () => {
     const updatedLog = await EmailLog.findById(logEntry._id)
     expect(updatedLog.status).toBe('sent')
     expect(updatedLog.attempts).toBe(2)
+
+    // Second run: no remaining items in queue, 0 retried
+    const res2 = await jobs.run('retryFailedEmails')
+    expect(res2.success).toBe(true)
+    expect(res2.retriedCount).toBe(0)
   })
 
   it('cleanupOrphanUploads cleans unattached uploads older than 24 hours, preserves attached ones', async () => {
@@ -151,14 +159,10 @@ describe('Background Jobs Subsystem', () => {
     const attachedOld = await storage.saveImage({ buffer: validPngBuffer, originalname: 'attached_old.png' }, { kind: 'product' })
     await Upload.collection.updateOne({ key: attachedOld.key }, { $set: { createdAt: oldDate, attachedAt: oldDate } })
 
-    // Verify all 3 physical files exist before cleanup
-    const oldPath = path.join(storage.PUBLIC_DIR, oldOrphan.key)
-    const recentPath = path.join(storage.PUBLIC_DIR, recentOrphan.key)
-    const attachedPath = path.join(storage.PUBLIC_DIR, attachedOld.key)
-
-    expect(fs.existsSync(oldPath)).toBe(true)
-    expect(fs.existsSync(recentPath)).toBe(true)
-    expect(fs.existsSync(attachedPath)).toBe(true)
+    // Verify all 3 files exist in storage before cleanup
+    expect(storage.hasInMemory(oldOrphan.key)).toBe(true)
+    expect(storage.hasInMemory(recentOrphan.key)).toBe(true)
+    expect(storage.hasInMemory(attachedOld.key)).toBe(true)
 
     // Run cleanup job
     const res = await jobs.run('cleanupOrphanUploads')
@@ -166,13 +170,18 @@ describe('Background Jobs Subsystem', () => {
     expect(res.count).toBe(1)
 
     // Verify old orphan file and DB row were removed
-    expect(fs.existsSync(oldPath)).toBe(false)
+    expect(storage.hasInMemory(oldOrphan.key)).toBe(false)
     const docOld = await Upload.findOne({ key: oldOrphan.key })
     expect(docOld).toBeNull()
 
     // Verify recent orphan and attached old were preserved
-    expect(fs.existsSync(recentPath)).toBe(true)
-    expect(fs.existsSync(attachedPath)).toBe(true)
+    expect(storage.hasInMemory(recentOrphan.key)).toBe(true)
+    expect(storage.hasInMemory(attachedOld.key)).toBe(true)
+
+    // Second run: 0 orphans cleaned
+    const res2 = await jobs.run('cleanupOrphanUploads')
+    expect(res2.success).toBe(true)
+    expect(res2.count).toBe(0)
 
     // Clean up remaining
     await storage.remove(recentOrphan.key)

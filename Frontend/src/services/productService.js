@@ -1,118 +1,126 @@
-import { db } from '../mocks/db'
-import { delay } from '../utils'
+import apiClient from './api.js'
+import { normalizeProduct } from './catalogService.js'
 
 /**
  * خدمة إدارة الوسائل التعليمية للبائعات والإدارة
  */
 export const productService = {
-  async createProduct(values) {
-    await delay(450)
-    const newId = `prod_${Date.now()}`
-    const seller = db.data.users.find((u) => u.id === values.sellerId) || { name: 'البائعة الأولى', nameEn: 'First Seller' }
+  /**
+   * جلب الوسائل التعليمية القابلة للإدارة
+   * GET /products/manage/products
+   */
+  async getManageableProducts(params = {}) {
+    const query = { ...params }
+    if (query.status === 'all') delete query.status
+    const res = await apiClient.get('/products/manage/products', { params: query })
+    const items = Array.isArray(res) ? res : res?.items || []
+    return items.map(normalizeProduct)
+  },
 
-    const newProduct = {
-      id: newId,
+  /**
+   * إنشاء وسيلة تعليمية جديدة
+   * POST /products/manage/products
+   */
+  async createProduct(values) {
+    const payload = {
       name: values.name,
       nameEn: values.nameEn || '',
-      slug: (values.nameEn || values.name || 'product')
-        .toLowerCase()
-        .replace(/[^a-z0-9\u0621-\u064A]+/g, '-')
-        .replace(/(^-|-$)/g, ''),
       categoryId: values.categoryId,
-      sellerId: values.sellerId,
-      sellerName: seller.name,
-      sellerNameEn: seller.nameEn || (seller.id === 'seller_2' ? 'Second Seller' : 'First Seller'),
+      sellerId: values.sellerId || undefined,
       price: Number(values.price) || 0,
+      stock: values.stockCount !== undefined ? Number(values.stockCount) : Number(values.stock) || 0,
       description: values.description || '',
       stages: values.stages || ['nursery'],
       materials: values.materials || ['felt'],
-      images: values.images && values.images.length > 0 ? values.images : [],
-      inStock: values.inStock !== false,
-      stockCount: Number(values.stockCount) || 10,
-      isPublished: values.isPublished !== false,
-      isFeatured: !!values.isFeatured,
-      createdAt: new Date().toISOString(),
+      images: values.images || [],
+      published: values.isPublished !== undefined ? Boolean(values.isPublished) : values.published !== false,
+      featured: values.isFeatured !== undefined ? Boolean(values.isFeatured) : Boolean(values.featured),
     }
 
-    db.data.products.unshift(newProduct)
-    db.save()
-    return newProduct
+    if (!payload.sellerId) {
+      delete payload.sellerId
+    }
+
+    const res = await apiClient.post('/products/manage/products', payload)
+    const product = res?.product || res
+    return normalizeProduct(product)
   },
 
+  /**
+   * تعديل بيانات وسيلة تعليمية
+   * PATCH /products/manage/products/:id
+   */
   async updateProduct(id, values) {
-    await delay(400)
-    const index = db.data.products.findIndex((p) => p.id === id)
-    if (index === -1) throw new Error('ERR_PRODUCT_NOT_FOUND')
-
-    const updated = {
-      ...db.data.products[index],
-      ...values,
-      price: values.price !== undefined ? Number(values.price) : db.data.products[index].price,
-      stockCount: values.stockCount !== undefined ? Number(values.stockCount) : db.data.products[index].stockCount,
+    const payload = { ...values }
+    if (payload.stockCount !== undefined && payload.stock === undefined) {
+      payload.stock = Number(payload.stockCount)
+      delete payload.stockCount
+    }
+    if (payload.isPublished !== undefined && payload.published === undefined) {
+      payload.published = Boolean(payload.isPublished)
+      delete payload.isPublished
+    }
+    if (payload.isFeatured !== undefined && payload.featured === undefined) {
+      payload.featured = Boolean(payload.isFeatured)
+      delete payload.isFeatured
     }
 
-    db.data.products[index] = updated
-    db.save()
-    return updated
+    const res = await apiClient.patch(`/products/manage/products/${id}`, payload)
+    const product = res?.product || res
+    return normalizeProduct(product)
   },
 
+  /**
+   * حذف وسيلة تعليمية
+   * DELETE /products/manage/products/:id
+   */
   async deleteProduct(id) {
-    await delay(350)
-    const initialLen = db.data.products.length
-    db.data.products = db.data.products.filter((p) => p.id !== id)
-    if (db.data.products.length === initialLen) {
-      throw new Error('ERR_PRODUCT_NOT_FOUND')
-    }
-    db.save()
-    return { success: true }
+    const res = await apiClient.delete(`/products/manage/products/${id}`)
+    return res
   },
 
-  async setPublished(id, bool) {
-    await delay(300)
-    const product = db.data.products.find((p) => p.id === id)
-    if (!product) throw new Error('ERR_PRODUCT_NOT_FOUND')
-    product.isPublished = bool
-    db.save()
-    return product
+  /**
+   * تبديل حالة النشر (نشر / مسودة)
+   * PATCH /products/manage/products/:id/publish
+   */
+  async setPublished(id, published) {
+    const res = await apiClient.patch(`/products/manage/products/${id}/publish`, {
+      published: Boolean(published),
+    })
+    const product = res?.product || res
+    return normalizeProduct(product)
   },
 
-  async uploadImages(files) {
-    await delay(500)
-    // محاكاة رفع الصور مع تحويلها إلى مسارات أو Data URLs
-    const uploadedUrls = []
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      if (typeof file === 'string') {
-        uploadedUrls.push(file)
-      } else {
-        uploadedUrls.push(URL.createObjectURL(file))
-      }
-    }
-    return uploadedUrls
+  async togglePublish(id, published) {
+    return this.setPublished(id, published)
   },
 
-  async getManageableProducts({ sellerId, q = '', status = 'all' } = {}) {
-    await delay(350)
-    let list = [...db.data.products]
+  /**
+   * رفع صور الوسيلة التعليمية إلى Cloudinary عبر الباك إند
+   * POST /products/manage/products/images
+   */
+  async uploadImages(files, onProgress) {
+    const formData = new FormData()
+    const fileList = Array.isArray(files) ? files : [files]
 
-    if (sellerId) {
-      list = list.filter((p) => p.sellerId === sellerId)
+    for (const f of fileList) {
+      formData.append('images', f)
     }
 
-    if (q) {
-      const query = q.trim().toLowerCase()
-      list = list.filter((p) => p.name.toLowerCase().includes(query))
-    }
+    const res = await apiClient.post('/products/manage/products/images', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          onProgress(percent)
+        }
+      },
+    })
 
-    if (status === 'published') {
-      list = list.filter((p) => p.isPublished)
-    } else if (status === 'draft') {
-      list = list.filter((p) => !p.isPublished)
-    } else if (status === 'out_of_stock') {
-      list = list.filter((p) => !p.inStock || p.stockCount === 0)
-    }
-
-    return list
+    return res?.urls || res || []
   },
 }
 
+export default productService

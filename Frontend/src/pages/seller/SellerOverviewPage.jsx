@@ -35,7 +35,7 @@ import { calcCommission } from '../../utils'
 export default function SellerOverviewPage() {
   const { t, i18n } = useTranslation('seller')
   const { user } = useAuth()
-  const sellerId = user?.id || 'seller_1'
+  const sellerId = user?.id || ''
   const sellerName = getDisplayName(user, i18n.language) || (i18n.language === 'en' ? 'First Seller' : 'البائعة الأولى')
   const { formatMoney, formatNumber } = useFormat()
 

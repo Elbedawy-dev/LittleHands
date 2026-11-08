@@ -2,4 +2,5 @@ export { useDebounce } from './useDebounce'
 export { useDisclosure } from './useDisclosure'
 export { useFormat } from './useFormat'
 export { useMediaQuery } from './useMediaQuery'
-
+export { usePrivateReceipt } from './usePrivateReceipt'
+export { useScrollLock } from './useScrollLock'

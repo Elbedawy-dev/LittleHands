@@ -53,6 +53,14 @@ const settingSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    emailNotifications: {
+      type: Boolean,
+      default: true,
+    },
+    inSiteNotifications: {
+      type: Boolean,
+      default: true,
+    },
     notifications: {
       orderCreated: { type: Boolean, default: true },
       paymentSubmitted: { type: Boolean, default: true },

@@ -18,7 +18,7 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
   let seller1, seller2
   let admin
 
-  let product1, product2
+  let product1, _product2
   let order1
   let payment1
   let address1
@@ -48,7 +48,7 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
       stock: 10,
     })
 
-    product2 = await createProduct({
+    _product2 = await createProduct({
       sellerId: seller2.user._id,
       name: { ar: 'منتج البائعة الثانية', en: 'Seller 2 Product' },
       price: 200,
@@ -167,13 +167,13 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
 
     it('Customer-restricted endpoints reject unauthenticated guests (401) and sellers (403)', async () => {
       // Favorites list
-      const resGuestFav = await guest.get('/api/v1/users/favorites')
+      const resGuestFav = await guest.get('/api/v1/users/me/favorites')
       expect(resGuestFav.status).toBe(401)
 
-      const resSellerFav = await seller1.agent.get('/api/v1/users/favorites')
+      const resSellerFav = await seller1.agent.get('/api/v1/users/me/favorites')
       expect(resSellerFav.status).toBe(403)
 
-      const resCustFav = await customer1.agent.get('/api/v1/users/favorites')
+      const resCustFav = await customer1.agent.get('/api/v1/users/me/favorites')
       expect(resCustFav.status).toBe(200)
 
       // Customer orders list
@@ -187,45 +187,45 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
       expect(resCustOrders.status).toBe(200)
 
       // Saved addresses list
-      const resGuestAddr = await guest.get('/api/v1/users/addresses')
+      const resGuestAddr = await guest.get('/api/v1/users/me/addresses')
       expect(resGuestAddr.status).toBe(401)
 
-      const resSellerAddr = await seller1.agent.get('/api/v1/users/addresses')
+      const resSellerAddr = await seller1.agent.get('/api/v1/users/me/addresses')
       expect(resSellerAddr.status).toBe(403)
 
-      const resCustAddr = await customer1.agent.get('/api/v1/users/addresses')
+      const resCustAddr = await customer1.agent.get('/api/v1/users/me/addresses')
       expect(resCustAddr.status).toBe(200)
     })
 
     it('Seller-restricted endpoints reject guests (401) and customers (403)', async () => {
       // Products management
-      const resGuestProd = await guest.get('/api/v1/products/manage')
+      const resGuestProd = await guest.get('/api/v1/products/manage/products')
       expect(resGuestProd.status).toBe(401)
 
-      const resCustProd = await customer1.agent.get('/api/v1/products/manage')
+      const resCustProd = await customer1.agent.get('/api/v1/products/manage/products')
       expect(resCustProd.status).toBe(403)
 
-      const resSellerProd = await seller1.agent.get('/api/v1/products/manage')
+      const resSellerProd = await seller1.agent.get('/api/v1/products/manage/products')
       expect(resSellerProd.status).toBe(200)
 
       // Seller orders
-      const resGuestOrd = await guest.get('/api/v1/orders/seller/list')
+      const resGuestOrd = await guest.get('/api/v1/orders/seller')
       expect(resGuestOrd.status).toBe(401)
 
-      const resCustOrd = await customer1.agent.get('/api/v1/orders/seller/list')
+      const resCustOrd = await customer1.agent.get('/api/v1/orders/seller')
       expect(resCustOrd.status).toBe(403)
 
-      const resSellerOrd = await seller1.agent.get('/api/v1/orders/seller/list')
+      const resSellerOrd = await seller1.agent.get('/api/v1/orders/seller')
       expect(resSellerOrd.status).toBe(200)
 
       // Seller earnings
-      const resGuestEarn = await guest.get('/api/v1/earnings/seller')
+      const resGuestEarn = await guest.get('/api/v1/earnings/seller/overview')
       expect(resGuestEarn.status).toBe(401)
 
-      const resCustEarn = await customer1.agent.get('/api/v1/earnings/seller')
+      const resCustEarn = await customer1.agent.get('/api/v1/earnings/seller/overview')
       expect(resCustEarn.status).toBe(403)
 
-      const resSellerEarn = await seller1.agent.get('/api/v1/earnings/seller')
+      const resSellerEarn = await seller1.agent.get('/api/v1/earnings/seller/overview')
       expect(resSellerEarn.status).toBe(200)
     })
 
@@ -234,9 +234,9 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
         '/api/v1/admin/customers',
         '/api/v1/admin/overview',
         '/api/v1/admin/payouts',
-        '/api/v1/orders/admin/all',
+        '/api/v1/orders/admin',
         '/api/v1/payments/admin',
-        '/api/v1/contact/admin/custom-requests',
+        '/api/v1/admin/custom-requests',
       ]
 
       for (const endpoint of adminEndpoints) {
@@ -279,12 +279,12 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
       await order1.save()
 
       const resSeller2 = await seller2.agent
-        .patch(`/api/v1/orders/${order1._id}/seller-status`)
+        .patch(`/api/v1/orders/seller/${order1._id}/fulfillment`)
         .send({ status: 'preparing' })
       expect(resSeller2.status).toBe(404)
 
       const resSeller1 = await seller1.agent
-        .patch(`/api/v1/orders/${order1._id}/seller-status`)
+        .patch(`/api/v1/orders/seller/${order1._id}/fulfillment`)
         .send({ status: 'preparing' })
       expect(resSeller1.status).toBe(200)
     })
@@ -341,27 +341,27 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
 
     it('Addresses IDOR: customer2 cannot edit or delete customer1 address', async () => {
       const resUpdateOther = await customer2.agent
-        .put(`/api/v1/users/addresses/${address1._id}`)
+        .put(`/api/v1/users/me/addresses/${address1._id}`)
         .send({ name: 'اختراق العنوان' })
       expect(resUpdateOther.status).toBe(404)
 
       const resDeleteOther = await customer2.agent
-        .delete(`/api/v1/users/addresses/${address1._id}`)
+        .delete(`/api/v1/users/me/addresses/${address1._id}`)
       expect(resDeleteOther.status).toBe(404)
 
       const resUpdateOwner = await customer1.agent
-        .put(`/api/v1/users/addresses/${address1._id}`)
+        .put(`/api/v1/users/me/addresses/${address1._id}`)
         .send({ name: 'عنوان معدل للمالك' })
       expect(resUpdateOwner.status).toBe(200)
     })
 
     it('Favorites Isolation: customer2 list does not leak customer1 favorites', async () => {
-      const resCust1 = await customer1.agent.get('/api/v1/users/favorites')
+      const resCust1 = await customer1.agent.get('/api/v1/users/me/favorites')
       expect(resCust1.body.data.items || resCust1.body.data).toBeDefined()
       const cust1Favs = Array.isArray(resCust1.body.data) ? resCust1.body.data : resCust1.body.data.items
       expect(cust1Favs.length).toBeGreaterThan(0)
 
-      const resCust2 = await customer2.agent.get('/api/v1/users/favorites')
+      const resCust2 = await customer2.agent.get('/api/v1/users/me/favorites')
       const cust2Favs = Array.isArray(resCust2.body.data) ? resCust2.body.data : resCust2.body.data.items
       expect(cust2Favs.length).toBe(0)
     })
@@ -380,24 +380,24 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
     it('Products IDOR: seller2 cannot edit, delete, or toggle publish on seller1 product', async () => {
       // Update
       const resEdit = await seller2.agent
-        .patch(`/api/v1/products/${product1._id}`)
+        .patch(`/api/v1/products/manage/products/${product1._id}`)
         .send({ price: 999 })
       expect(resEdit.status).toBe(404)
 
       // Publish toggle
       const resPub = await seller2.agent
-        .patch(`/api/v1/products/${product1._id}/publish`)
+        .patch(`/api/v1/products/manage/products/${product1._id}/publish`)
         .send({ published: false })
       expect(resPub.status).toBe(404)
 
       // Delete
       const resDel = await seller2.agent
-        .delete(`/api/v1/products/${product1._id}`)
+        .delete(`/api/v1/products/manage/products/${product1._id}`)
       expect(resDel.status).toBe(404)
 
       // Seller 1 owns it, so she can update it
       const resOwnerEdit = await seller1.agent
-        .patch(`/api/v1/products/${product1._id}`)
+        .patch(`/api/v1/products/manage/products/${product1._id}`)
         .send({ price: 160 })
       expect(resOwnerEdit.status).toBe(200)
       expect(resOwnerEdit.body.data.price).toBe(160)
@@ -411,13 +411,33 @@ describe('Comprehensive Authorization Matrix & IDOR Test Suite', () => {
 
       // Seller 1 querying admin sellers overview
       const resSellerAdmin = await seller1.agent
-        .get('/api/v1/earnings/sellers')
+        .get('/api/v1/admin/sellers/earnings')
       expect(resSellerAdmin.status).toBe(403)
 
       // Admin can access drilldown
       const resAdmin = await admin.agent
         .get(`/api/v1/admin/sellers/${seller2.user._id}/orders`)
       expect(resAdmin.status).toBe(200)
+    })
+
+    it('Payouts IDOR: seller2 cannot view seller1 payouts by passing query params', async () => {
+      // Create payout for seller1
+      await Payout.create({
+        sellerId: seller1.user._id,
+        sellerName: seller1.user.name,
+        amount: 50,
+        reference: `VF-IDOR-${Date.now()}`,
+        recordedBy: admin.user._id,
+      })
+
+      // Seller2 queries /earnings/seller/payouts attempting to inspect seller1
+      const resSeller2 = await seller2.agent
+        .get(`/api/v1/earnings/seller/payouts?sellerId=${seller1.user._id}`)
+      expect(resSeller2.status).toBe(200)
+      // Must not leak seller1's payouts
+      const items = resSeller2.body.data.items || resSeller2.body.data
+      const leaked = items.some((p) => p.sellerId === seller1.user._id.toString())
+      expect(leaked).toBe(false)
     })
   })
 })

@@ -28,6 +28,10 @@ export const ERROR_MESSAGES = {
     ar: 'العنصر المطلوب غير موجود',
     en: 'Requested resource not found',
   },
+  PAYOUT_EXCEEDS_DUE: {
+    ar: 'مبلغ التحويل يتجاوز المستحق للبائعة',
+    en: "Payout amount exceeds the seller's due balance",
+  },
   ERR_NOT_FOUND: {
     ar: 'العنصر المطلوب غير موجود',
     en: 'Requested resource not found',
@@ -198,4 +202,7 @@ export function getErrorMessage(code, lang = 'ar') {
   }
   return code
 }
+
+export { REASON_DICTIONARY, getFriendlyReason } from './reasons.js'
+
 

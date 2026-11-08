@@ -3,6 +3,7 @@ import {
   Check,
   Eye,
   Phone,
+  ShieldAlert,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -14,10 +15,11 @@ import { Lightbox } from '../../../components/ui/Lightbox'
 import { PriceTag } from '../../../components/ui/PriceTag'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { useFormat } from '../../../hooks/useFormat'
+import { usePrivateReceipt } from '../../../hooks/usePrivateReceipt'
 
 /**
  * جدول فودافون كاش المتجاوب لإدارة وتدقيق الإيصالات
- * يدعم عرض تنبيه عدم تطابق المبلغ، معاينة الإيصال عبر Lightbox، والإجراءات المباشرة
+ * يدعم عرض تنبيه عدم تطابق المبلغ، شارات التحذير الأمنية، معاينة الإيصال عبر Lightbox مع الدعم للبث الموثق
  */
 export function PaymentsTable({
   payments = [],
@@ -25,9 +27,11 @@ export function PaymentsTable({
   onApprove,
   onReject,
 }) {
-  const { t } = useTranslation('admin-core')
+  const { t, i18n } = useTranslation('admin-core')
+  const isEn = i18n.language === 'en'
   const { formatDate } = useFormat()
-  const [activeLightboxImg, setActiveLightboxImg] = useState(null)
+  const [activeReceiptTarget, setActiveReceiptTarget] = useState(null)
+  const { imageUrl: privateReceiptUrl } = usePrivateReceipt(activeReceiptTarget)
 
   const columns = [
     {
@@ -72,6 +76,13 @@ export function PaymentsTable({
           p.transferredAmount !== undefined &&
           Number(p.transferredAmount) !== Number(p.total)
 
+        const flags = p.flags || []
+        const flagLabels = {
+          amount_mismatch: isEn ? 'Amount Mismatch' : 'المبلغ غير مطابق',
+          duplicate_reference: isEn ? 'Duplicate Reference' : 'الرقم المرجعي مكرر',
+          duplicate_screenshot: isEn ? 'Duplicate Receipt' : 'صورة الإيصال مكررة',
+        }
+
         return (
           <div className="space-y-1">
             <span
@@ -84,12 +95,19 @@ export function PaymentsTable({
               <PriceTag amount={p.transferredAmount} size="sm" />
             </span>
 
-            {hasMismatch && (
+            {hasMismatch && !flags.includes('amount_mismatch') && (
               <Badge variant="danger" size="sm" className="gap-1 flex items-center">
                 <AlertCircle className="w-3 h-3 shrink-0" />
                 <span>{t('payments.mismatch.badge')}</span>
               </Badge>
             )}
+
+            {flags.map((flag) => (
+              <Badge key={flag} variant="danger" size="sm" className="gap-1 flex items-center">
+                <ShieldAlert className="w-3 h-3 shrink-0" />
+                <span>{flagLabels[flag] || flag}</span>
+              </Badge>
+            ))}
           </div>
         )
       },
@@ -107,10 +125,10 @@ export function PaymentsTable({
       header: t('payments.table.receipt'),
       key: 'screenshotUrl',
       render: (p) =>
-        p.screenshotUrl ? (
+        p.screenshotUrl || p.id || p.orderId ? (
           <button
             type="button"
-            onClick={() => setActiveLightboxImg(p.screenshotUrl)}
+            onClick={() => setActiveReceiptTarget(p.id || p.orderId)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-subtle hover:bg-surface-border text-xs font-bold text-brand-orange-text dark:text-brand-orange transition-colors cursor-zoom-in"
           >
             <Eye className="w-3.5 h-3.5" />
@@ -261,7 +279,7 @@ export function PaymentsTable({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setActiveLightboxImg(p.screenshotUrl)}
+              onClick={() => setActiveReceiptTarget(p.id || p.orderId)}
               className="w-full gap-2 text-xs"
             >
               <Eye className="w-3.5 h-3.5" />
@@ -310,11 +328,11 @@ export function PaymentsTable({
         emptyTitle={t('payments.empty')}
       />
 
-      {/* معاينة صورة الإيصال مكبرة */}
+      {/* معاينة صورة الإيصال مكبرة مع دعم البث الموثق */}
       <Lightbox
-        isOpen={Boolean(activeLightboxImg)}
-        onClose={() => setActiveLightboxImg(null)}
-        src={activeLightboxImg}
+        isOpen={Boolean(activeReceiptTarget)}
+        onClose={() => setActiveReceiptTarget(null)}
+        src={privateReceiptUrl}
         alt="إيصال فودافون كاش"
       />
     </>

@@ -1,6 +1,4 @@
 import express from 'express'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import cookieParser from 'cookie-parser'
 import { requestId } from './middlewares/requestId.js'
 import { httpLogger } from './middlewares/logger.js'
@@ -10,10 +8,6 @@ import { globalLimiter } from './middlewares/rateLimiter.js'
 import { notFound } from './middlewares/notFound.js'
 import { errorHandler } from './middlewares/errorHandler.js'
 import apiRouter from './routes/index.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const rootDir = path.resolve(__dirname, '../')
-const publicStorageDir = path.join(rootDir, 'storage/public')
 
 /**
  * Express Application Factory
@@ -41,8 +35,6 @@ export function createApp() {
   // 4. Global NoSQL Injection Sanitizer
   app.use(sanitize)
 
-  // 5. Static Public Storage
-  app.use('/storage/public', express.static(publicStorageDir))
 
   // Root health redirect for developer convenience
   app.get('/health', (req, res) => {

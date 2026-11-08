@@ -1,234 +1,121 @@
-import { GOVERNORATES, ORDER_STATUS } from '../config/constants'
-import { db } from '../mocks/db'
-import { delay, generateOrderNumber } from '../utils'
+import apiClient from './api'
+import paymentService from './paymentService'
 
-function getCurrentUser() {
-  try {
-    return JSON.parse(localStorage.getItem('lh_current_user'))
-  } catch {
-    return null
-  }
-}
-
-/**
- * خدمة الطلبات وإدارة دورة حياة الشراء والدفع
- */
 export const orderService = {
-  async createOrder({ items, delivery, notes = '', governorate = '' }) {
-    await delay(450)
-    const currentUser = getCurrentUser()
-    const customerId = currentUser ? currentUser.id : ''
+  /**
+   * Customer: Create a new order
+   */
+  async createOrder({ items, delivery, notes = '' }) {
+    const formattedItems = (items || []).map((it) => ({
+      productId: it.productId || it.id,
+      qty: Number(it.qty || it.quantity || 1),
+      unitPrice: it.unitPrice || it.price,
+      name: it.name,
+      image: it.image,
+      sellerId: it.sellerId,
+    }))
 
-    // حساب تكلفة الشحن حسب المحافظة
-    const selectedGov = GOVERNORATES.find(
-      (g) => g.name === (governorate || delivery.governorate)
-    )
-    const shipping = selectedGov ? selectedGov.shippingRate : 40
-
-    const subtotal = items.reduce((acc, item) => acc + item.unitPrice * item.qty, 0)
-    const total = subtotal + shipping
-
-    const orderId = `ord_${Date.now()}`
-    const orderNumber = generateOrderNumber(db.data.orders.length + 101)
-
-    const newOrder = {
-      id: orderId,
-      number: orderNumber,
-      customerId,
-      items: items.map((it) => ({
-        productId: it.productId || it.id,
-        name: it.name,
-        qty: it.qty || 1,
-        unitPrice: it.unitPrice || it.price,
-        sellerId: it.sellerId || 'seller_1',
-        image: it.image || (it.images && it.images[0]) || '',
-      })),
-      delivery: {
-        name: delivery.name,
-        phone: delivery.phone,
-        governorate: delivery.governorate || governorate,
-        city: delivery.city || '',
-        address: delivery.address || '',
-        nurseryName: delivery.nurseryName || '',
-      },
-      subtotal,
-      shipping,
-      total,
-      status: 'pending_payment',
-      payment: null,
-      timeline: [
-        {
-          status: 'pending_payment',
-          title: 'تم إنشاء الطلب وبانتظار تحويل فودافون كاش ورفع الإيصال',
-          timestamp: new Date().toISOString(),
-        },
-      ],
-      notes,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const formattedDelivery = {
+      name: delivery.name,
+      phone: delivery.phone,
+      governorate: delivery.governorate,
+      city: delivery.city,
+      address: delivery.address,
+      nurseryName: delivery.nurseryName || '',
     }
 
-    db.data.orders.unshift(newOrder)
-
-    // إضافة إشعار للإدارة بوجود طلب جديد
-    db.data.notifications.unshift({
-      id: `notif_${Date.now()}`,
-      role: 'admin',
-      title: 'طلب جديد مسجل بالمنصة',
-      message: `طلب جديد ${orderNumber} بانتظار تحويل فودافون كاش من العميل.`,
-      type: 'order',
-      link: '/admin/orders',
-      read: false,
-      createdAt: new Date().toISOString(),
+    return apiClient.post('/orders', {
+      items: formattedItems,
+      delivery: formattedDelivery,
+      notes: notes || '',
     })
-
-    db.save()
-    return newOrder
   },
 
-  async submitPayment(orderId, { senderPhone, reference, transferredAmount, screenshotFile }) {
-    await delay(500)
-    const order = db.data.orders.find((o) => o.id === orderId || o.number === orderId)
-    if (!order) throw new Error('ERR_ORDER_NOT_FOUND')
-
-    const screenshotUrl = typeof screenshotFile === 'string'
-      ? screenshotFile
-      : screenshotFile ? URL.createObjectURL(screenshotFile) : ''
-
-    order.payment = {
-      senderPhone,
-      reference,
-      transferredAmount: Number(transferredAmount) || order.total,
-      screenshotUrl,
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-    }
-
-    order.timeline.push({
-      status: 'pending_payment',
-      title: 'تم إرفاق إيصال تحويل فودافون كاش وبانتظار مراجعة الإدارة',
-      timestamp: new Date().toISOString(),
-    })
-    order.updatedAt = new Date().toISOString()
-
-    // إشعار للإدارة
-    db.data.notifications.unshift({
-      id: `notif_${Date.now()}`,
-      role: 'admin',
-      title: 'إيصال فودافون كاش جديد للمراجعة',
-      message: `تم رفع إيصال للطلب ${order.number} بمبلغ ${transferredAmount || order.total} ج.م.`,
-      type: 'payment',
-      link: '/admin/payments',
-      read: false,
-      createdAt: new Date().toISOString(),
-    })
-
-    db.save()
-    return order
+  /**
+   * Customer: Get my orders
+   */
+  async getMyOrders(params = {}) {
+    return apiClient.get('/orders/my', { params })
   },
 
-  async getMyOrders() {
-    await delay(350)
-    const user = getCurrentUser()
-    if (!user) return []
-    return db.data.orders.filter((o) => o.customerId === user.id)
-  },
-
+  /**
+   * Get single order by ID (customer, seller or admin)
+   */
   async getOrder(id) {
-    await delay(300)
-    const order = db.data.orders.find((o) => o.id === id || o.number === id)
-    if (!order) throw new Error('ERR_ORDER_NOT_FOUND')
-    return order
+    return apiClient.get(`/orders/${id}`)
   },
 
-  async getSellerOrders({ status = 'all', q = '' } = {}) {
-    await delay(350)
-    const user = getCurrentUser()
-    const sellerId = user && user.role === 'seller' ? user.id : 'seller_1'
-
-    let orders = db.data.orders.filter((o) =>
-      o.items.some((item) => item.sellerId === sellerId)
-    )
-
-    if (status !== 'all') {
-      orders = orders.filter((o) => o.status === status)
-    }
-
-    if (q) {
-      const query = q.trim().toLowerCase()
-      orders = orders.filter(
-        (o) =>
-          o.number.toLowerCase().includes(query) ||
-          o.delivery.name.toLowerCase().includes(query) ||
-          (o.delivery.nurseryName && o.delivery.nurseryName.toLowerCase().includes(query))
-      )
-    }
-
-    return orders
+  /**
+   * Customer: Cancel an order before payment
+   */
+  async cancelOrder(id, { reason = '' } = {}) {
+    return apiClient.post(`/orders/${id}/cancel`, { reason })
   },
 
+  /**
+   * Seller: Get seller orders
+   */
+  async getSellerOrders(params = {}) {
+    return apiClient.get('/orders/seller', { params })
+  },
+
+  /**
+   * Seller: Update fulfillment status (preparing | shipped)
+   */
   async setSellerOrderStatus(orderId, newStatus) {
-    await delay(400)
-    if (newStatus !== 'preparing' && newStatus !== 'shipped') {
-      throw new Error('ERR_UNAUTHORIZED')
-    }
-
-    const order = db.data.orders.find((o) => o.id === orderId)
-    if (!order) throw new Error('ERR_ORDER_NOT_FOUND')
-
-    // قاعدة العمل: لا يمكن للبائعة تغيير الحالة إلا بعد تأكيد الدفع من الإدارة
-    if (order.status !== 'payment_confirmed' && order.status !== 'preparing') {
-      throw new Error('ERR_PAYMENT_REQUIRED')
-    }
-
-    order.status = newStatus
-    order.timeline.push({
+    return apiClient.patch(`/orders/seller/${orderId}/fulfillment`, {
       status: newStatus,
-      title: ORDER_STATUS[newStatus].label,
-      timestamp: new Date().toISOString(),
     })
-    order.updatedAt = new Date().toISOString()
-
-    db.save()
-    return order
   },
 
-  async getAllOrders(filters = {}) {
-    await delay(350)
-    let list = [...db.data.orders]
-
-    if (filters.status && filters.status !== 'all') {
-      list = list.filter((o) => o.status === filters.status)
-    }
-
-    if (filters.q) {
-      const q = filters.q.trim().toLowerCase()
-      list = list.filter(
-        (o) =>
-          o.number.toLowerCase().includes(q) ||
-          o.delivery.name.toLowerCase().includes(q) ||
-          o.delivery.phone.includes(q)
-      )
-    }
-
-    return list
+  /**
+   * Admin: Get all orders
+   */
+  async getAllOrders(params = {}) {
+    return apiClient.get('/orders/admin', { params })
   },
 
+  /**
+   * Admin: Get single order
+   */
+  async getAdminOrder(id) {
+    return apiClient.get(`/orders/admin/${id}`)
+  },
+
+  /**
+   * Admin: Update order status
+   */
   async updateOrderStatus(id, status) {
-    await delay(350)
-    const order = db.data.orders.find((o) => o.id === id)
-    if (!order) throw new Error('ERR_ORDER_NOT_FOUND')
+    return apiClient.patch(`/orders/admin/${id}/status`, { status })
+  },
 
-    order.status = status
-    order.timeline.push({
-      status,
-      title: ORDER_STATUS[status] ? ORDER_STATUS[status].label : status,
-      timestamp: new Date().toISOString(),
-    })
-    order.updatedAt = new Date().toISOString()
+  /**
+   * Admin: Cancel an order
+   */
+  async adminCancelOrder(id, { reason = '' } = {}) {
+    return apiClient.post(`/orders/admin/${id}/cancel`, { reason })
+  },
 
-    db.save()
-    return order
+  /**
+   * Admin: Refund an order
+   */
+  async adminRefundOrder(id, { reference, note = '' }) {
+    return apiClient.post(`/orders/admin/${id}/refund`, { reference, note })
+  },
+
+  /**
+   * Submit payment proof (calls paymentService.submitPayment)
+   */
+  async submitPayment(orderId, payload) {
+    return paymentService.submitPayment(orderId, payload)
+  },
+
+  /**
+   * Reupload payment proof (calls paymentService.submitPayment)
+   */
+  async reuploadReceipt(orderId, payload) {
+    return paymentService.submitPayment(orderId, payload)
   },
 }
 
+export default orderService

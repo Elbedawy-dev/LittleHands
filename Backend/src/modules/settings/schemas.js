@@ -101,6 +101,8 @@ export const updateSettingsSchema = z
     // Alias used by the existing admin form
     deliveryTime: z.string().trim().min(1).max(200),
     maintenanceMode: z.boolean(),
+    emailNotifications: z.boolean(),
+    inSiteNotifications: z.boolean(),
     notifications: z
       .object({
         orderCreated: z.boolean(),

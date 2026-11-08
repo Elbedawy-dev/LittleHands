@@ -30,7 +30,7 @@ import { calcCommission } from '../../utils'
 export default function SellerOrdersPage() {
   const { t } = useTranslation('seller')
   const { user } = useAuth()
-  const sellerId = user?.id || 'seller_1'
+  const sellerId = user?.id || ''
   const { formatMoney, formatDate, formatNumber } = useFormat()
 
   const [orders, setOrders] = useState([])

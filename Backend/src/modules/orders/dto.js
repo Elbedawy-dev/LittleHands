@@ -57,12 +57,18 @@ export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) 
     const isPaymentConfirmed = ['payment_confirmed', 'preparing', 'shipped', 'delivered'].includes(o.status)
     if (!isPaymentConfirmed) {
       delivery = {
-        name: delivery.name || '',
-        governorate: delivery.governorate || '',
-        city: '***',
-        address: '*** (محجوب حتى تأكيد الدفع)',
-        phone: '01*********',
-        nurseryName: delivery.nurseryName || '',
+        name: null,
+        phone: null,
+        address: null,
+        city: null,
+        governorate: null,
+        nurseryName: null,
+        masked: true,
+      }
+    } else {
+      delivery = {
+        ...delivery,
+        masked: false,
       }
     }
   }
@@ -81,9 +87,9 @@ export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) 
     status: o.status,
     timeline: (o.timeline || []).map((t) => ({
       status: t.status,
-      title: t.title || '',
-      description: t.description || t.note || '',
-      timestamp: (t.timestamp || t.at || new Date()).toISOString ? (t.timestamp || t.at || new Date()).toISOString() : String(t.timestamp || t.at),
+      note: t.note || t.title || t.description || '',
+      at: (t.at || t.timestamp || new Date()).toISOString ? (t.at || t.timestamp || new Date()).toISOString() : String(t.at || t.timestamp),
+      byId: t.byId?.toString ? t.byId.toString() : (t.byId || null),
     })),
     notes: o.notes || '',
     createdAt: o.createdAt?.toISOString ? o.createdAt.toISOString() : o.createdAt,
@@ -110,6 +116,21 @@ export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) 
     }
   } else if (viewerRole === 'admin') {
     dto.cancelReason = o.cancelReason || null
+    if (o.refund && o.refund.required) {
+      dto.refund = {
+        required: o.refund.required,
+        amount: o.refund.amount,
+        status: o.refund.status,
+        note: o.refund.note || '',
+        reference: o.refund.reference || '',
+        refundedAt: o.refund.refundedAt?.toISOString
+          ? o.refund.refundedAt.toISOString()
+          : o.refund.refundedAt || null,
+        refundedBy: o.refund.refundedBy?.toString
+          ? o.refund.refundedBy.toString()
+          : o.refund.refundedBy || null,
+      }
+    }
     if (o.idempotencyKey) {
       dto.idempotencyKey = o.idempotencyKey
     }

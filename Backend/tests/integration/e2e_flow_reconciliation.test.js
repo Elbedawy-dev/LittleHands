@@ -3,17 +3,19 @@ import request from 'supertest'
 import sharp from 'sharp'
 import { createApp } from '../../src/app.js'
 import { authedAgent } from '../helpers/authedAgent.js'
-import { createUser, createProduct } from '../helpers/factories.js'
+import { createProduct } from '../helpers/factories.js'
 import { Product } from '../../src/db/models/Product.js'
 import { Order } from '../../src/db/models/Order.js'
 import { Setting } from '../../src/db/models/Setting.js'
 import { OtpCode } from '../../src/db/models/OtpCode.js'
+import { Notification } from '../../src/db/models/Notification.js'
+import { email } from '../../src/infra/email/index.js'
 import { jobs } from '../../src/jobs/index.js'
 
 describe('End-to-End User Flow & Financial Reconciliation', () => {
   let app
   let guest
-  let adminAgent, adminUser
+  let adminAgent, _adminUser
   let seller1Agent, seller1User
   let seller2Agent, seller2User
 
@@ -45,10 +47,10 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
 
     const adminSetup = await authedAgent(app, 'admin', { email: 'e2e_admin@test.eg' })
     adminAgent = adminSetup.agent
-    adminUser = adminSetup.user
+    _adminUser = adminSetup.user
 
     const s1Setup = await authedAgent(app, 'seller', {
-      name: 'ورشة الأمل للألعاب',
+      name: 'ورشة الأمل للوسائل',
       email: 's1_e2e@test.eg',
       phone: '01011112222',
     })
@@ -80,6 +82,7 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
     expect(regRes.status).toBe(201)
     const customerUser = regRes.body.data.user
     expect(customerUser.emailVerified).toBe(false)
+    expect(email.getCaptured().some((e) => e.to === 'mariam@nursery.eg' && e.templateKey === 'verify-email')).toBe(true)
 
     // Customer authenticated agent
     const customerAgent = request.agent(app)
@@ -110,7 +113,7 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
     // 3. Products in stock
     const p1 = await createProduct({
       sellerId: seller1User._id,
-      name: { ar: 'مكعبات خشبية', en: 'Wooden Blocks' },
+      name: { ar: 'لوحة تفاعلية للحروف', en: 'Interactive Letters Board' },
       price: 150,
       stock: 10,
     })
@@ -158,6 +161,10 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
     expect(orderData.shipping).toBe(40)
     expect(orderData.total).toBe(590)
     expect(orderData.status).toBe('pending_payment')
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(email.getCaptured().some((e) => e.to === 'mariam@nursery.eg' && e.templateKey === 'customer-order-received')).toBe(true)
+    const custOrderNotif = await Notification.findOne({ userId: customerUser.id, type: 'order' })
+    expect(custOrderNotif).toBeDefined()
 
     // 5. Customer submits Vodafone Cash receipt proof
     const receiptImage = await createDummyImage()
@@ -175,31 +182,34 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
     expect(adminPayments.status).toBe(200)
 
     const confirmRes = await adminAgent
-      .post(`/api/v1/payments/${orderId}/confirm`)
+      .post(`/api/v1/payments/admin/${orderId}/confirm`)
       .send()
     expect(confirmRes.status).toBe(200)
     expect(confirmRes.body.data.status).toBe('payment_confirmed')
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(email.getCaptured().some((e) => e.to === 'mariam@nursery.eg' && e.templateKey === 'customer-payment-confirmed')).toBe(true)
+    expect(email.getCaptured().some((e) => e.to === 's1_e2e@test.eg' && e.templateKey === 'seller-new-order')).toBe(true)
 
     // 7. Seller 1 and Seller 2 fulfill items
     // Seller 1 marks preparing then shipped
     const s1PrepRes = await seller1Agent
-      .patch(`/api/v1/orders/${orderId}/seller-status`)
+      .patch(`/api/v1/orders/seller/${orderId}/fulfillment`)
       .send({ status: 'preparing' })
     expect(s1PrepRes.status).toBe(200)
 
     const s1ShipRes = await seller1Agent
-      .patch(`/api/v1/orders/${orderId}/seller-status`)
+      .patch(`/api/v1/orders/seller/${orderId}/fulfillment`)
       .send({ status: 'shipped' })
     expect(s1ShipRes.status).toBe(200)
 
     // Seller 2 marks preparing then shipped
     const s2PrepRes = await seller2Agent
-      .patch(`/api/v1/orders/${orderId}/seller-status`)
+      .patch(`/api/v1/orders/seller/${orderId}/fulfillment`)
       .send({ status: 'preparing' })
     expect(s2PrepRes.status).toBe(200)
 
     const s2ShipRes = await seller2Agent
-      .patch(`/api/v1/orders/${orderId}/seller-status`)
+      .patch(`/api/v1/orders/seller/${orderId}/fulfillment`)
       .send({ status: 'shipped' })
     expect(s2ShipRes.status).toBe(200)
 
@@ -213,12 +223,13 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
       .send({ status: 'delivered' })
     expect(deliverRes.status).toBe(200)
     expect(deliverRes.body.data.status).toBe('delivered')
+    expect(email.getCaptured().some((e) => e.to === 'mariam@nursery.eg' && e.templateKey === 'customer-shipped')).toBe(true)
 
     // 9. FINANCIAL RECONCILIATION TO THE PIASTER
     // Seller 1 items: 2 * 150 = 300 EGP
     // Commission 20%: 60 EGP
     // Net: 240 EGP
-    const s1Earnings = await seller1Agent.get('/api/v1/earnings/seller')
+    const s1Earnings = await seller1Agent.get('/api/v1/earnings/seller/overview')
     expect(s1Earnings.status).toBe(200)
     expect(s1Earnings.body.data.totalSales).toBe(300)
     expect(s1Earnings.body.data.commission).toBe(60)
@@ -229,7 +240,7 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
     // Seller 2 items: 1 * 250 = 250 EGP
     // Commission 20%: 50 EGP
     // Net: 200 EGP
-    const s2Earnings = await seller2Agent.get('/api/v1/earnings/seller')
+    const s2Earnings = await seller2Agent.get('/api/v1/earnings/seller/overview')
     expect(s2Earnings.status).toBe(200)
     expect(s2Earnings.body.data.totalSales).toBe(250)
     expect(s2Earnings.body.data.commission).toBe(50)
@@ -261,9 +272,13 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
         note: 'دفعة أسبوعية من الأرباح',
       })
     expect(payoutRes.status).toBe(201)
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(email.getCaptured().some((e) => e.to === 's1_e2e@test.eg' && e.templateKey === 'payout-recorded')).toBe(true)
+    const s1PayoutNotif = await Notification.findOne({ userId: seller1User._id, type: 'payout' })
+    expect(s1PayoutNotif).toBeDefined()
 
     // Seller 1 due is now 40 EGP
-    const s1EarningsAfterPayout = await seller1Agent.get('/api/v1/earnings/seller')
+    const s1EarningsAfterPayout = await seller1Agent.get('/api/v1/earnings/seller/overview')
     expect(s1EarningsAfterPayout.body.data.paid).toBe(200)
     expect(s1EarningsAfterPayout.body.data.due).toBe(40)
 
@@ -313,7 +328,7 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
 
     // Admin rejects payment
     const rejectRes = await adminAgent
-      .post(`/api/v1/payments/${orderId}/reject`)
+      .post(`/api/v1/payments/admin/${orderId}/reject`)
       .send({ reason: 'amount_mismatch', notes: 'المبلغ المحول غير مطابق لقيمة الطلب' })
     expect(rejectRes.status).toBe(200)
     expect(rejectRes.body.data.status).toBe('payment_rejected')
@@ -329,7 +344,7 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
 
     // Admin confirms
     const confirmRes = await adminAgent
-      .post(`/api/v1/payments/${orderId}/confirm`)
+      .post(`/api/v1/payments/admin/${orderId}/confirm`)
       .send()
     expect(confirmRes.status).toBe(200)
     expect(confirmRes.body.data.status).toBe('payment_confirmed')

@@ -16,6 +16,7 @@ import arAdminCore from '../locales/ar/admin-core.json'
 import arAdminManage from '../locales/ar/admin-manage.json'
 import arEmails from '../locales/ar/emails.json'
 import arErrorsPage from '../locales/ar/errors-page.json'
+import arErrors from '../locales/ar/errors.json'
 
 // English namespaces
 import enCommon from '../locales/en/common.json'
@@ -32,6 +33,7 @@ import enAdminCore from '../locales/en/admin-core.json'
 import enAdminManage from '../locales/en/admin-manage.json'
 import enEmails from '../locales/en/emails.json'
 import enErrorsPage from '../locales/en/errors-page.json'
+import enErrors from '../locales/en/errors.json'
 
 const savedLanguage = (() => {
   try {
@@ -60,6 +62,7 @@ i18n
         'admin-manage': arAdminManage,
         emails: arEmails,
         'errors-page': arErrorsPage,
+        errors: arErrors,
       },
       en: {
         common: enCommon,
@@ -76,6 +79,7 @@ i18n
         'admin-manage': enAdminManage,
         emails: enEmails,
         'errors-page': enErrorsPage,
+        errors: enErrors,
       },
     },
     lng: savedLanguage,
@@ -96,6 +100,7 @@ i18n
       'admin-manage',
       'emails',
       'errors-page',
+      'errors',
     ],
     interpolation: {
       escapeValue: false,

@@ -49,7 +49,7 @@
  * @property {string} [nameEn] - English product name (legacy compatibility)
  * @property {string} slug - URL slug
  * @property {string} categoryId - Slug matching CATEGORIES (alphabet-boards, etc.)
- * @property {string} sellerId - Seller identifier ('seller_1' or 'seller_2')
+ * @property {string} sellerId - Seller identifier
  * @property {LocalizedString|string} [sellerName] - Seller display name
  * @property {number} price - Retail price in EGP
  * @property {LocalizedString|string} description - Localized detailed educational description {ar, en}
@@ -95,7 +95,7 @@
  * @property {LocalizedString|string} name - Snapshot product name {ar, en}
  * @property {number} qty - Quantity ordered
  * @property {number} unitPrice - Price per unit in EGP
- * @property {string} sellerId - 'seller_1' or 'seller_2'
+ * @property {string} sellerId - Seller unique identifier
  * @property {string} [image] - Primary image URL or placeholder
  */
 
@@ -133,7 +133,7 @@
 
 /**
  * @typedef {Object} SellerEarningsSummary
- * @property {string} sellerId - 'seller_1' or 'seller_2'
+ * @property {string} sellerId - Seller unique identifier
  * @property {string} sellerName - 'البائعة الأولى' or 'البائعة الثانية'
  * @property {number} grossSales - Total sales amount
  * @property {number} platformCommission - 20% platform share

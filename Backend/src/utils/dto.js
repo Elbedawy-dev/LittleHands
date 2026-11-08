@@ -49,6 +49,7 @@ export function mapUserDTO(user, viewerRole = 'public', viewerId = null) {
       locale: u.locale,
       emailVerified: !!u.emailVerified,
       status: u.status,
+      mustChangePassword: !!u.mustChangePassword,
       notificationPrefs: u.notificationPrefs,
       seller: u.role === 'seller' ? {
         ...base.seller,
@@ -85,7 +86,8 @@ export function mapProductDTO(product, _viewerRole = 'public', _viewerSellerId =
     images: Array.isArray(p.images) ? p.images.map((img) => (typeof img === 'string' ? img : img.url)) : [],
     inStock: p.stock !== undefined ? p.stock > 0 : p.inStock !== false,
     stockCount: p.stock !== undefined ? p.stock : p.stockCount || 0,
-    isPublished: p.published !== undefined ? p.published : p.isPublished !== false,
+    published: p.published !== undefined ? Boolean(p.published) : Boolean(p.isPublished),
+    isPublished: p.published !== undefined ? Boolean(p.published) : Boolean(p.isPublished),
     isFeatured: !!p.isFeatured,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
@@ -140,12 +142,18 @@ export function mapOrderDTO(order, viewerRole = 'customer', viewerUserId = null)
     const isPaymentConfirmed = ['payment_confirmed', 'preparing', 'shipped', 'delivered'].includes(o.status)
     if (!isPaymentConfirmed) {
       delivery = {
-        name: delivery.name,
-        governorate: delivery.governorate,
-        city: '***',
-        address: '*** (محجوب حتى تأكيد الدفع)',
-        phone: '01*********',
-        nurseryName: delivery.nurseryName,
+        name: null,
+        phone: null,
+        address: null,
+        city: null,
+        governorate: null,
+        nurseryName: null,
+        masked: true,
+      }
+    } else {
+      delivery = {
+        ...delivery,
+        masked: false,
       }
     }
   }
@@ -162,7 +170,12 @@ export function mapOrderDTO(order, viewerRole = 'customer', viewerUserId = null)
     shipping: o.shipping,
     total: o.total,
     status: o.status,
-    timeline: o.timeline || [],
+    timeline: (o.timeline || []).map((t) => ({
+      status: t.status,
+      note: t.note || t.title || t.description || '',
+      at: (t.at || t.timestamp || new Date()).toISOString ? (t.at || t.timestamp || new Date()).toISOString() : String(t.at || t.timestamp),
+      byId: t.byId?.toString ? t.byId.toString() : (t.byId || null),
+    })),
     notes: o.notes || '',
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,

@@ -1,32 +1,40 @@
-import { db } from '../mocks/db'
-import { delay } from '../utils'
+import apiClient from './api'
 
-/**
- * خدمة إعدادات المنصة وأسعار الشحن
- */
 export const settingsService = {
+  /**
+   * Get settings scoped to caller role (public for guest/customer, full for seller/admin)
+   */
   async getSettings() {
-    await delay(200)
-    return { ...db.data.settings }
+    return apiClient.get('/settings')
   },
 
-  async updateSettings(values) {
-    await delay(350)
-    db.data.settings = { ...db.data.settings, ...values }
-    db.save()
-    return { ...db.data.settings }
+  /**
+   * Get public settings (always safe, no commission rate)
+   */
+  async getPublicSettings() {
+    return apiClient.get('/settings/public')
   },
 
+  /**
+   * Get shipping rates map / zones
+   */
   async getShippingRates() {
-    await delay(200)
-    return { ...db.data.settings.shippingRates }
+    return apiClient.get('/settings/shipping-rates')
   },
 
+  /**
+   * Admin: Update platform settings
+   */
+  async updateSettings(values) {
+    return apiClient.put('/admin/settings', values)
+  },
+
+  /**
+   * Admin: Update shipping rates
+   */
   async updateShippingRates(rates) {
-    await delay(350)
-    db.data.settings.shippingRates = { ...db.data.settings.shippingRates, ...rates }
-    db.save()
-    return { ...db.data.settings.shippingRates }
+    return apiClient.put('/admin/settings/shipping-rates', rates)
   },
 }
 
+export default settingsService

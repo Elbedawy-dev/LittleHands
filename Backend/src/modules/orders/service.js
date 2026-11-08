@@ -131,9 +131,12 @@ export const orderService = {
         orderItems.push({
           productId: product._id,
           name: product.name,
-          image: Array.isArray(product.images) && product.images.length > 0
-            ? (typeof product.images[0] === 'string' ? product.images[0] : product.images[0].url || '')
-            : '',
+          image:
+            Array.isArray(product.images) && product.images.length > 0
+              ? typeof product.images[0] === 'string'
+                ? product.images[0]
+                : product.images[0].url || ''
+              : '',
           qty: item.qty,
           unitPrice,
           sellerId: product.sellerId,
@@ -156,16 +159,15 @@ export const orderService = {
       // 6. Generate formatted order number
       const number = await Counter.nextOrderNumber()
 
-      // 7. Initialise timeline
+      // 7. Initialise timeline (no hardcoded Arabic text: status, note, actor, byId)
       const timeline = [
         {
           status: 'pending_payment',
-          title: 'تم إنشاء الطلب وبانتظار تحويل فودافون كاش ورفع الإيصال',
+          note: '',
+          actor: 'customer',
+          byId: currentUser._id,
           at: new Date(),
           timestamp: new Date(),
-          byId: currentUser._id,
-          note: '',
-          description: '',
         },
       ]
 
@@ -199,6 +201,8 @@ export const orderService = {
         subtotal,
         shipping: shippingRate,
       })
+
+      eventBus.emit(EVENT_TYPES.ORDER_CREATED, { order })
 
       return order
     } catch (err) {
@@ -247,10 +251,10 @@ export const orderService = {
   async getOrder(orderId, currentUser) {
     if (!currentUser) throw new AppError('UNAUTHENTICATED', 401)
 
-    let order = await Order.findOne({
-      $or: [{ _id: orderId.match(/^[0-9a-fA-F]{24}$/) ? orderId : null }, { number: orderId }],
-    })
+    const isObjectId = typeof orderId === 'string' && /^[0-9a-fA-F]{24}$/.test(orderId)
+    const filter = isObjectId ? { $or: [{ _id: orderId }, { number: orderId }] } : { number: orderId }
 
+    const order = await Order.findOne(filter)
     if (!order) {
       throw new AppError('ORDER_NOT_FOUND', 404)
     }
@@ -261,33 +265,28 @@ export const orderService = {
         throw new AppError('ORDER_NOT_FOUND', 404)
       }
     } else if (currentUser.role === 'seller') {
-      const containsMyItems = order.items.some(
+      const containsSellerItem = order.items.some(
         (it) => it.sellerId.toString() === currentUser._id.toString()
       )
-      if (!containsMyItems) {
+      if (!containsSellerItem) {
         throw new AppError('ORDER_NOT_FOUND', 404)
       }
     }
 
-    const orderObj = order.toObject()
+    // Attach latest payment
+    const payment = await Payment.findOne({ orderId: order._id }).sort({ attempt: -1 })
+    const oObj = order.toObject()
+    oObj.payment = payment || null
 
-    // Attach payments
     if (currentUser.role === 'admin') {
-      const payments = await Payment.find({ orderId: order._id }).sort({ attempt: 1 })
-      orderObj.payments = payments
-      orderObj.payment = payments.length > 0 ? payments[payments.length - 1] : null
-    } else if (currentUser.role === 'customer') {
-      const latestPayment = await Payment.findOne({ orderId: order._id }).sort({ attempt: -1 })
-      orderObj.payment = latestPayment || null
-    } else {
-      orderObj.payment = null
+      oObj.payments = await Payment.find({ orderId: order._id }).sort({ attempt: 1 })
     }
 
-    return orderObj
+    return oObj
   },
 
   /**
-   * Returns orders relevant to the authenticated seller
+   * Returns paginated orders for a seller (containing her items only)
    */
   async getSellerOrders(currentUser, { status = 'all', q = '', page = 1, pageSize = 10 } = {}) {
     if (!currentUser || currentUser.role !== 'seller') {
@@ -322,6 +321,7 @@ export const orderService = {
 
   /**
    * Updates fulfillment entry for a seller and derives new overall order status
+   * Implements atomic conditional transition.
    */
   async setSellerOrderStatus(orderId, newStatus, currentUser) {
     if (!currentUser || currentUser.role !== 'seller') {
@@ -332,32 +332,32 @@ export const orderService = {
       throw new AppError('VALIDATION_ERROR', 400, 'Invalid fulfillment status')
     }
 
-    const order = await Order.findOne({
+    const orderDoc = await Order.findOne({
       $or: [{ _id: orderId.match(/^[0-9a-fA-F]{24}$/) ? orderId : null }, { number: orderId }],
     })
 
-    if (!order) {
+    if (!orderDoc) {
       throw new AppError('ORDER_NOT_FOUND', 404)
     }
 
     // Must contain seller items
-    const sellerEntryIndex = order.sellerFulfillment.findIndex(
+    const sellerEntry = orderDoc.sellerFulfillment.find(
       (sf) => sf.sellerId.toString() === currentUser._id.toString()
     )
-    if (sellerEntryIndex === -1) {
+    if (!sellerEntry) {
       throw new AppError('ORDER_NOT_FOUND', 404)
     }
 
     // Allowed only after payment_confirmed
-    if (['pending_payment', 'payment_rejected', 'cancelled'].includes(order.status)) {
+    if (['pending_payment', 'payment_rejected', 'cancelled'].includes(orderDoc.status)) {
       throw new AppError('PAYMENT_REQUIRED', 422)
     }
 
-    if (order.status === 'delivered') {
+    if (orderDoc.status === 'delivered') {
       throw new AppError('INVALID_ORDER_TRANSITION', 422, 'Order is already delivered')
     }
 
-    const currentFulfillmentStatus = order.sellerFulfillment[sellerEntryIndex].status
+    const currentFulfillmentStatus = sellerEntry.status
 
     // Only forward transitions: pending -> preparing -> shipped
     const validFulfillmentTransitions = {
@@ -373,14 +373,36 @@ export const orderService = {
       )
     }
 
-    order.sellerFulfillment[sellerEntryIndex].status = newStatus
-    order.sellerFulfillment[sellerEntryIndex].updatedAt = new Date()
+    // Atomic conditional update on sellerFulfillment item
+    const updatedOrder = await Order.findOneAndUpdate(
+      {
+        _id: orderDoc._id,
+        status: { $in: ['payment_confirmed', 'preparing'] },
+        sellerFulfillment: {
+          $elemMatch: {
+            sellerId: currentUser._id,
+            status: currentFulfillmentStatus,
+          },
+        },
+      },
+      {
+        $set: {
+          'sellerFulfillment.$.status': newStatus,
+          'sellerFulfillment.$.updatedAt': new Date(),
+        },
+      },
+      { new: true }
+    )
+
+    if (!updatedOrder) {
+      throw new AppError('INVALID_ORDER_TRANSITION', 422, 'Order fulfillment update conflict')
+    }
 
     // Status Derivation:
     // - preparing as soon as ANY seller starts
     // - shipped when ALL involved sellers shipped
-    const allShipped = order.sellerFulfillment.every((sf) => sf.status === 'shipped')
-    const anyActive = order.sellerFulfillment.some(
+    const allShipped = updatedOrder.sellerFulfillment.every((sf) => sf.status === 'shipped')
+    const anyActive = updatedOrder.sellerFulfillment.some(
       (sf) => sf.status === 'preparing' || sf.status === 'shipped'
     )
 
@@ -391,32 +413,49 @@ export const orderService = {
       derivedStatus = 'preparing'
     }
 
-    const oldStatus = order.status
+    const oldStatus = updatedOrder.status
     if (derivedStatus !== oldStatus) {
-      order.status = derivedStatus
-      order.timeline.push({
-        status: derivedStatus,
-        title: derivedStatus === 'shipped' ? 'تم الشحن' : 'جاري التجهيز',
-        byId: currentUser._id,
-        at: new Date(),
-        timestamp: new Date(),
-      })
-      eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
-        order,
-        from: oldStatus,
-        to: derivedStatus,
-        actorId: currentUser._id,
-      })
+      const finalOrder = await Order.findOneAndUpdate(
+        { _id: updatedOrder._id, status: oldStatus },
+        {
+          $set: { status: derivedStatus },
+          $push: {
+            timeline: {
+              status: derivedStatus,
+              note: '',
+              actor: 'seller',
+              byId: currentUser._id,
+              at: new Date(),
+              timestamp: new Date(),
+            },
+          },
+        },
+        { new: true }
+      )
+
+      if (finalOrder) {
+        eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
+          order: finalOrder,
+          from: oldStatus,
+          to: derivedStatus,
+          actorId: currentUser._id,
+        })
+        eventBus.emit(EVENT_TYPES.ORDER_FULFILLMENT_UPDATED, {
+          order: finalOrder,
+          sellerId: currentUser._id,
+          status: newStatus,
+        })
+        return finalOrder
+      }
     }
 
     eventBus.emit(EVENT_TYPES.ORDER_FULFILLMENT_UPDATED, {
-      order,
+      order: updatedOrder,
       sellerId: currentUser._id,
       status: newStatus,
     })
 
-    await order.save()
-    return order
+    return updatedOrder
   },
 
   /**
@@ -480,7 +519,7 @@ export const orderService = {
   },
 
   /**
-   * Admin status update adhering to state machine
+   * Admin status update adhering to state machine with single atomic conditional update
    */
   async updateOrderStatus(orderId, newStatus, currentUser) {
     if (!currentUser || currentUser.role !== 'admin') {
@@ -491,11 +530,11 @@ export const orderService = {
       throw new AppError('VALIDATION_ERROR', 400, 'Invalid order status')
     }
 
-    const order = await Order.findOne({
+    const orderDoc = await Order.findOne({
       $or: [{ _id: orderId.match(/^[0-9a-fA-F]{24}$/) ? orderId : null }, { number: orderId }],
     })
 
-    if (!order) {
+    if (!orderDoc) {
       throw new AppError('ORDER_NOT_FOUND', 404)
     }
 
@@ -509,120 +548,263 @@ export const orderService = {
       cancelled: [],
     }
 
-    const allowed = validTransitions[order.status] || []
+    const allowed = validTransitions[orderDoc.status] || []
     if (!allowed.includes(newStatus)) {
-      throw new AppError('INVALID_ORDER_TRANSITION', 422, `Cannot transition from ${order.status} to ${newStatus}`)
+      throw new AppError(
+        'INVALID_ORDER_TRANSITION',
+        422,
+        `Cannot transition from ${orderDoc.status} to ${newStatus}`
+      )
     }
 
-    // Restores stock on cancel
-    if (newStatus === 'cancelled') {
-      for (const item of order.items) {
-        await Product.updateOne({ _id: item.productId }, { $inc: { stock: item.qty } })
-      }
-      eventBus.emit(EVENT_TYPES.ORDER_CANCELLED, { order })
-    } else if (newStatus === 'preparing' || newStatus === 'shipped') {
-      for (const sf of order.sellerFulfillment) {
-        if (newStatus === 'shipped' || sf.status === 'pending') {
-          sf.status = newStatus
-          sf.updatedAt = new Date()
+    const isCancelling = newStatus === 'cancelled'
+    const paymentWasConfirmed = ['payment_confirmed', 'preparing'].includes(orderDoc.status)
+
+    const updateSet = { status: newStatus }
+    if (isCancelling) {
+      updateSet.cancelReason = 'Cancelled by admin'
+      if (paymentWasConfirmed) {
+        updateSet.refund = {
+          required: true,
+          amount: orderDoc.total,
+          status: 'pending',
+          note: 'Cancelled by admin',
         }
       }
+    } else if (newStatus === 'preparing' || newStatus === 'shipped') {
+      // Sync seller fulfillment
+      updateSet['sellerFulfillment.$[].status'] = newStatus
+      updateSet['sellerFulfillment.$[].updatedAt'] = new Date()
     }
 
-    const oldStatus = order.status
-    order.status = newStatus
-    order.timeline.push({
-      status: newStatus,
-      title: newStatus,
-      byId: currentUser._id,
-      at: new Date(),
-      timestamp: new Date(),
-    })
+    // Atomic conditional update
+    const updatedOrder = await Order.findOneAndUpdate(
+      { _id: orderDoc._id, status: orderDoc.status },
+      {
+        $set: updateSet,
+        $push: {
+          timeline: {
+            status: newStatus,
+            note: '',
+            actor: 'admin',
+            byId: currentUser._id,
+            at: new Date(),
+            timestamp: new Date(),
+          },
+        },
+      },
+      { new: true }
+    )
 
-    await order.save()
+    if (!updatedOrder) {
+      throw new AppError('INVALID_ORDER_TRANSITION', 422, 'Order transition conflict')
+    }
+
+    // WINNER restores stock on cancellation
+    if (isCancelling) {
+      for (const item of updatedOrder.items) {
+        await Product.updateOne({ _id: item.productId }, { $inc: { stock: item.qty } })
+      }
+      eventBus.emit(EVENT_TYPES.ORDER_CANCELLED, { order: updatedOrder })
+    }
 
     eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
-      order,
-      from: oldStatus,
+      order: updatedOrder,
+      from: orderDoc.status,
       to: newStatus,
       actorId: currentUser._id,
     })
 
-    await audit.log(currentUser._id, 'ORDER_STATUS_UPDATED', 'Order', order._id.toString(), {
-      from: oldStatus,
+    await audit.log(currentUser._id, 'ORDER_STATUS_UPDATED', 'Order', updatedOrder._id.toString(), {
+      from: orderDoc.status,
       to: newStatus,
     })
 
-    return order
+    return updatedOrder
   },
 
   /**
-   * Order cancellation with stock restoration
+   * Order cancellation with single atomic conditional update and stock restoration
    */
   async cancelOrder(orderId, reason = '', currentUser) {
     if (!currentUser) throw new AppError('UNAUTHENTICATED', 401)
 
-    const order = await Order.findOne({
+    const orderDoc = await Order.findOne({
       $or: [{ _id: orderId.match(/^[0-9a-fA-F]{24}$/) ? orderId : null }, { number: orderId }],
     })
 
-    if (!order) {
+    if (!orderDoc) {
       throw new AppError('ORDER_NOT_FOUND', 404)
     }
 
-    // Role authorization check
+    let filter
+    let refundPayload = null
+
     if (currentUser.role === 'customer') {
-      if (order.customerId.toString() !== currentUser._id.toString()) {
+      if (orderDoc.customerId.toString() !== currentUser._id.toString()) {
         throw new AppError('ORDER_NOT_FOUND', 404)
       }
-      if (!['pending_payment', 'payment_rejected'].includes(order.status)) {
-        throw new AppError('CANNOT_CANCEL_ORDER', 422, 'Cannot cancel order after payment confirmation')
+
+      // Customer may cancel ONLY while NO payment proof is pending or confirmed
+      const hasPayment = await Payment.exists({
+        orderId: orderDoc._id,
+        status: { $in: ['pending', 'confirmed'] },
+      })
+      if (hasPayment) {
+        throw new AppError(
+          'ORDER_HAS_PAYMENT',
+          422,
+          'Cannot cancel order with pending or confirmed payment proof'
+        )
+      }
+
+      if (!['pending_payment', 'payment_rejected'].includes(orderDoc.status)) {
+        throw new AppError('CANNOT_CANCEL_ORDER', 422, 'Cannot cancel order in current state')
+      }
+
+      filter = {
+        _id: orderDoc._id,
+        customerId: currentUser._id,
+        status: { $in: ['pending_payment', 'payment_rejected'] },
       }
     } else if (currentUser.role === 'admin') {
-      if (['shipped', 'delivered', 'cancelled'].includes(order.status)) {
+      if (['shipped', 'delivered', 'cancelled'].includes(orderDoc.status)) {
         throw new AppError('CANNOT_CANCEL_ORDER', 422, 'Order cannot be cancelled in its current state')
+      }
+
+      const paymentConfirmed = ['payment_confirmed', 'preparing'].includes(orderDoc.status)
+      if (paymentConfirmed) {
+        if (!reason || !reason.trim()) {
+          throw new AppError(
+            'VALIDATION_ERROR',
+            400,
+            'Cancellation reason is required when payment was confirmed'
+          )
+        }
+        refundPayload = {
+          required: true,
+          amount: orderDoc.total,
+          status: 'pending',
+          note: reason.trim(),
+        }
+      }
+
+      filter = {
+        _id: orderDoc._id,
+        status: { $in: ['pending_payment', 'payment_rejected', 'payment_confirmed', 'preparing'] },
       }
     } else {
       throw new AppError('FORBIDDEN', 403)
     }
 
-    // Restore stock for each item
-    for (const item of order.items) {
+    const cancelNote = reason ? reason.trim() : (currentUser.role === 'customer' ? 'Cancelled by customer' : 'Cancelled by admin')
+
+    const updateSet = {
+      status: 'cancelled',
+      cancelReason: cancelNote,
+    }
+    if (refundPayload) {
+      updateSet.refund = refundPayload
+    }
+
+    // SINGLE CONDITIONAL UPDATE (EXPECTED current status in filter, set and push timeline in same update)
+    const updatedOrder = await Order.findOneAndUpdate(
+      filter,
+      {
+        $set: updateSet,
+        $push: {
+          timeline: {
+            status: 'cancelled',
+            note: cancelNote,
+            actor: currentUser.role,
+            byId: currentUser._id,
+            at: new Date(),
+            timestamp: new Date(),
+          },
+        },
+      },
+      { new: true }
+    )
+
+    if (!updatedOrder) {
+      throw new AppError('CANNOT_CANCEL_ORDER', 422, 'Order cancellation conflict: order already transitioned')
+    }
+
+    // ONLY the request that wins the transition restores stock (never twice)
+    for (const item of updatedOrder.items) {
       await Product.updateOne({ _id: item.productId }, { $inc: { stock: item.qty } })
     }
 
-    const oldStatus = order.status
-    order.status = 'cancelled'
-    order.cancelReason = reason || 'Order cancelled'
-    order.timeline.push({
-      status: 'cancelled',
-      title: 'تم إلغاء الطلب',
-      note: order.cancelReason,
-      byId: currentUser._id,
-      at: new Date(),
-      timestamp: new Date(),
-    })
-
-    await order.save()
-
-    eventBus.emit(EVENT_TYPES.ORDER_CANCELLED, { order })
+    eventBus.emit(EVENT_TYPES.ORDER_CANCELLED, { order: updatedOrder })
     eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
-      order,
-      from: oldStatus,
+      order: updatedOrder,
+      from: orderDoc.status,
       to: 'cancelled',
       actorId: currentUser._id,
     })
 
-    await audit.log(currentUser._id, 'ORDER_CANCELLED', 'Order', order._id.toString(), {
-      reason: order.cancelReason,
+    await audit.log(currentUser._id, 'ORDER_CANCELLED', 'Order', updatedOrder._id.toString(), {
+      reason: cancelNote,
     })
 
-    return order
+    return updatedOrder
+  },
+
+  /**
+   * Admin records refund completion for cancelled order
+   */
+  async refundOrder(orderId, { reference, note = '' }, currentUser) {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new AppError('FORBIDDEN', 403)
+    }
+
+    const orderDoc = await Order.findOne({
+      $or: [{ _id: orderId.match(/^[0-9a-fA-F]{24}$/) ? orderId : null }, { number: orderId }],
+    })
+
+    if (!orderDoc) {
+      throw new AppError('ORDER_NOT_FOUND', 404)
+    }
+
+    if (!orderDoc.refund || !orderDoc.refund.required) {
+      throw new AppError('REFUND_NOT_REQUIRED', 422, 'Order does not require a refund')
+    }
+
+    if (orderDoc.refund.status === 'completed') {
+      throw new AppError('ALREADY_REFUNDED', 422, 'Order refund is already completed')
+    }
+
+    const updatedOrder = await Order.findOneAndUpdate(
+      { _id: orderDoc._id, 'refund.status': 'pending' },
+      {
+        $set: {
+          'refund.status': 'completed',
+          'refund.reference': reference,
+          'refund.note': note || orderDoc.refund.note || '',
+          'refund.refundedAt': new Date(),
+          'refund.refundedBy': currentUser._id,
+        },
+      },
+      { new: true }
+    )
+
+    if (!updatedOrder) {
+      throw new AppError('ALREADY_REFUNDED', 422, 'Refund conflict: already completed')
+    }
+
+    await audit.log(currentUser._id, 'ORDER_REFUNDED', 'Order', updatedOrder._id.toString(), {
+      reference,
+      amount: updatedOrder.refund.amount,
+      note,
+    })
+
+    return updatedOrder
   },
 }
 
 /**
  * Background / Cron Job Export: Cancels orders pending payment with no proof older than TTL
+ * Implements single atomic conditional update and single stock restoration.
  */
 export async function cancelExpiredUnpaidOrders() {
   const ttlHours = env.PENDING_ORDER_TTL_HOURS || 48
@@ -638,31 +820,44 @@ export async function cancelExpiredUnpaidOrders() {
   for (const order of expiredOrders) {
     const paymentCount = await Payment.countDocuments({ orderId: order._id })
     if (paymentCount === 0) {
-      // Restore stock
-      for (const item of order.items) {
-        await Product.updateOne({ _id: item.productId }, { $inc: { stock: item.qty } }).catch(() => {})
+      // SINGLE CONDITIONAL UPDATE: filter on expected status pending_payment
+      const updatedOrder = await Order.findOneAndUpdate(
+        { _id: order._id, status: 'pending_payment' },
+        {
+          $set: {
+            status: 'cancelled',
+            cancelReason: 'EXPIRED_UNPAID',
+          },
+          $push: {
+            timeline: {
+              status: 'cancelled',
+              note: 'EXPIRED_UNPAID',
+              actor: 'system',
+              byId: null,
+              at: new Date(),
+              timestamp: new Date(),
+            },
+          },
+        },
+        { new: true }
+      )
+
+      if (updatedOrder) {
+        // Stock is restored only by the winning request
+        for (const item of updatedOrder.items) {
+          await Product.updateOne({ _id: item.productId }, { $inc: { stock: item.qty } }).catch(() => {})
+        }
+        cancelledCount++
+
+        eventBus.emit(EVENT_TYPES.ORDER_CANCELLED, { order: updatedOrder })
+        eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
+          order: updatedOrder,
+          from: 'pending_payment',
+          to: 'cancelled',
+          actorId: null,
+        })
+        await audit.log(null, 'ORDER_EXPIRED_CANCELLED', 'Order', updatedOrder._id.toString())
       }
-
-      const oldStatus = order.status
-      order.status = 'cancelled'
-      order.cancelReason = 'EXPIRED_UNPAID'
-      order.timeline.push({
-        status: 'cancelled',
-        title: 'تم إلغاء الطلب تلقائياً لانتهاء مهلة السداد',
-        at: new Date(),
-        timestamp: new Date(),
-      })
-      await order.save()
-      cancelledCount++
-
-      eventBus.emit(EVENT_TYPES.ORDER_CANCELLED, { order })
-      eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
-        order,
-        from: oldStatus,
-        to: 'cancelled',
-        actorId: null,
-      })
-      await audit.log(null, 'ORDER_EXPIRED_CANCELLED', 'Order', order._id.toString())
     }
   }
 

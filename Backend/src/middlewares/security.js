@@ -31,7 +31,9 @@ export const corsMiddleware = cors({
     'X-Requested-With',
     'X-Request-Id',
     'Accept-Language',
+    'Idempotency-Key',
   ],
+  exposedHeaders: ['X-Request-Id'],
 })
 
 export default { helmetMiddleware, corsMiddleware }

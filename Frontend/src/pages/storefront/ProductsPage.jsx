@@ -14,6 +14,7 @@ import { FilterSidebar } from '../../features/storefront/FilterSidebar'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import { catalogService } from '../../services/catalogService'
+import { sellerService } from '../../services/sellerService'
 
 /**
  * صفحة استعراض وبحث وتصفية الوسائل التعليمية (ProductsPage)
@@ -28,7 +29,14 @@ export default function ProductsPage() {
   const debouncedSearch = useDebounce(searchTerm, 350)
 
   const [products, setProducts] = useState([])
+  const [sellers, setSellers] = useState([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    sellerService.getSellers().then((res) => {
+      setSellers(res.items || res || [])
+    }).catch(() => {})
+  }, [])
   const [error, setError] = useState(null)
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -218,6 +226,7 @@ export default function ProductsPage() {
         {/* الشريط الجانبي للشاشات الكبيرة (Desktop Sidebar) */}
         <aside className="hidden lg:block lg:col-span-3 bg-surface p-6 rounded-[28px] border border-surface-border shadow-soft sticky top-24">
           <FilterSidebar
+            sellers={sellers}
             filters={filtersState}
             onFilterChange={updateQueryParam}
             onReset={handleResetFilters}
@@ -305,6 +314,7 @@ export default function ProductsPage() {
         side="bottom"
       >
         <FilterSidebar
+          sellers={sellers}
           filters={filtersState}
           onFilterChange={updateQueryParam}
           onReset={handleResetFilters}

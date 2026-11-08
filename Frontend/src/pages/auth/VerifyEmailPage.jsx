@@ -1,7 +1,7 @@
 import { AlertCircle, ArrowRight, CheckCircle2, RotateCcw, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { OTPInput } from '../../components/ui/OTPInput'
 import { useAuth } from '../../context/AuthContext'
@@ -10,7 +10,9 @@ import { authService } from '../../services/authService'
 export default function VerifyEmailPage() {
   const { t } = useTranslation('auth')
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const next = searchParams.get('next') || '/account'
+  const { user, refreshUser } = useAuth()
 
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,7 +21,7 @@ export default function VerifyEmailPage() {
   const [resending, setResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
 
-  const targetEmail = user?.email || ''
+  const targetEmail = user?.email || searchParams.get('email') || ''
 
   // عداد تنازلي لإعادة إرسال الرمز
   useEffect(() => {
@@ -36,15 +38,16 @@ export default function VerifyEmailPage() {
     e.preventDefault()
     setError('')
 
-    if (code.length < 6) {
-      setError('يرجى إدخال كافة أرقام رمز التحقق (6 أرقام كاملة)')
+    if (code.length < 4) {
+      setError('يرجى إدخال كافة أرقام رمز التحقق')
       return
     }
 
     setLoading(true)
     try {
-      await authService.verifyEmail(code)
-      navigate('/account', { replace: true })
+      await authService.verifyEmail(code, targetEmail)
+      if (refreshUser) await refreshUser()
+      navigate(next, { replace: true })
     } catch (err) {
       setError(err.message || 'رمز التحقق غير صحيح أو انتهت صلاحيته')
     } finally {

@@ -15,41 +15,34 @@ const router = Router()
 // All routes here strictly require admin authentication
 router.use(authenticate, authorize('admin'))
 
-// Seller Accounts & Status Management (B1)
+// Admin accounts: POST /admin/sellers, GET /admin/sellers/accounts, PATCH /admin/users/:id/status
 router.post('/sellers', csrfGuard, validate(createSellerSchema), userController.createSeller)
 router.get('/sellers/accounts', userController.getSellerAccounts)
 router.patch('/users/:id/status', csrfGuard, validate(updateUserStatusSchema), userController.updateUserStatus)
 
-// Customers overview & list (B4)
+// Customers overview & list: GET /admin/customers
 router.get('/customers', adminController.getCustomers)
 
-// Dashboard analytics overview (B4)
+// Dashboard analytics overview: GET /admin/overview
 router.get('/overview', adminController.getOverview)
 
-// Sellers earnings & drilldown (B4)
+// Sellers earnings & drilldown: GET /admin/sellers/earnings, GET /admin/sellers/:id/orders
 router.get('/sellers/earnings', adminController.getSellersEarnings)
 router.get('/sellers/:id/orders', adminController.getSellerOrdersDrilldown)
 
-// Payouts management (B4)
+// Payouts management: GET /admin/payouts, POST /admin/payouts
 router.get('/payouts', adminController.getPayouts)
 router.post('/payouts', csrfGuard, adminController.recordPayout)
 
-// Settings management under /admin (B4)
-router.get('/settings', settingsController.getSettings)
+// Settings management: PUT /admin/settings, PUT /admin/settings/shipping-rates
 router.put('/settings', csrfGuard, settingsController.updateSettings)
-router.patch('/settings', csrfGuard, settingsController.updateSettings)
-
-router.get('/settings/shipping-rates', settingsController.getShippingRates)
 router.put('/settings/shipping-rates', csrfGuard, settingsController.updateShippingRates)
-router.patch('/settings/shipping-rates', csrfGuard, settingsController.updateShippingRates)
 
-// Categories management (B2)
-router.put('/categories/reorder', csrfGuard, validate(reorderCategoriesSchema), adminController.reorderCategories)
+// Categories management: PUT /admin/categories/:slug, PUT /admin/categories/order
 router.put('/categories/order', csrfGuard, validate(reorderCategoriesSchema), adminController.reorderCategories)
-router.patch('/categories/:id', csrfGuard, validate(updateCategorySchema), adminController.updateCategory)
 router.put('/categories/:slug', csrfGuard, validate(updateCategorySchema), adminController.updateCategory)
 
-// Custom Requests (B2)
+// Custom Requests: GET /admin/custom-requests, PATCH /admin/custom-requests/:id
 router.get('/custom-requests', validate({ query: customRequestQuerySchema }), contactController.getCustomRequests)
 router.patch('/custom-requests/:id', csrfGuard, validate(updateCustomRequestStatusSchema), contactController.updateCustomRequestStatus)
 

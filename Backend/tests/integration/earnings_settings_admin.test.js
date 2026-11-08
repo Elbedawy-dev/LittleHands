@@ -195,7 +195,7 @@ describe('B4: earnings, settings, admin', () => {
       const own = (await s1.get('/api/v1/earnings/seller/overview')).body.data
       expect([own.totalSales, own.net, own.due]).toEqual([0, 0, 0])
 
-      const payouts = await s1.get('/api/v1/earnings/payouts').query({ sellerId: seller2._id.toString() })
+      const payouts = await s1.get('/api/v1/earnings/seller/payouts').query({ sellerId: seller2._id.toString() })
       expect(payouts.status).toBe(200)
       expect(payouts.body.data.items).toHaveLength(0)
       const own2 = await s1.get('/api/v1/earnings/seller/payouts').query({ sellerId: seller2._id.toString() })
@@ -483,7 +483,7 @@ describe('B4: earnings, settings, admin', () => {
         const res = await admin.put('/api/v1/admin/settings').send(bad)
         expect(res.status, JSON.stringify(bad)).toBe(400)
       }
-      const state = (await admin.get('/api/v1/admin/settings')).body.data
+      const state = (await admin.get('/api/v1/settings')).body.data
       expect(state.commissionRate).toBe(0.25)
 
       // Wallet can be cleared

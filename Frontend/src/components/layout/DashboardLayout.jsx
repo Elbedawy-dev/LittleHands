@@ -5,6 +5,7 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  MessageSquare,
   Moon,
   Package,
   Settings,
@@ -79,6 +80,7 @@ export function DashboardLayout({ role: propRole }) {
     { href: '/admin/sellers', labelKey: 'nav:admin.sellers', icon: <Wallet className="w-5 h-5" /> },
     { href: '/admin/customers', labelKey: 'nav:admin.customers', icon: <Users className="w-5 h-5" /> },
     { href: '/admin/categories', labelKey: 'nav:admin.categories', icon: <FolderTree className="w-5 h-5" /> },
+    { href: '/admin/custom-requests', labelKey: 'nav:admin.customRequests', icon: <MessageSquare className="w-5 h-5" /> },
     { href: '/admin/notifications', labelKey: 'nav:admin.notifications', icon: <Bell className="w-5 h-5" /> },
     { href: '/admin/settings', labelKey: 'nav:admin.settings', icon: <Settings className="w-5 h-5" /> },
   ]

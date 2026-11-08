@@ -50,9 +50,9 @@ export function CartProvider({ children }) {
           price: product.price,
           unitPrice: product.price,
           qty,
-          sellerId: product.sellerId || 'seller_1',
-          sellerName: product.sellerName || 'البائعة الأولى',
-          sellerNameEn: product.sellerNameEn || (product.sellerId === 'seller_2' ? 'Second Seller' : 'First Seller'),
+          sellerId: product.sellerId || '',
+          sellerName: product.sellerName || '',
+          sellerNameEn: product.sellerNameEn || '',
           image: (product.images && product.images[0]) || '',
           categoryId: product.categoryId,
         },
@@ -82,12 +82,12 @@ export function CartProvider({ children }) {
   const itemsBySeller = useMemo(() => {
     const grouped = {}
     items.forEach((item) => {
-      const sid = item.sellerId || 'seller_1'
+      const sid = item.sellerId || ''
       if (!grouped[sid]) {
         grouped[sid] = {
           sellerId: sid,
-          sellerName: item.sellerName || 'البائعة',
-          sellerNameEn: item.sellerNameEn || (sid === 'seller_2' ? 'Second Seller' : 'First Seller'),
+          sellerName: item.sellerName || '',
+          sellerNameEn: item.sellerNameEn || '',
           items: [],
           subtotal: 0,
         }

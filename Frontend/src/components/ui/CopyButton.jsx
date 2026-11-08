@@ -8,6 +8,7 @@ export function CopyButton({
   copiedLabel = 'تم النسخ!',
   size = 'sm',
   className,
+  onCopy,
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -15,6 +16,7 @@ export function CopyButton({
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
+      if (onCopy) onCopy(text)
       setTimeout(() => setCopied(false), 2000)
     } catch (e) {
       console.warn('Clipboard copy failed:', e)

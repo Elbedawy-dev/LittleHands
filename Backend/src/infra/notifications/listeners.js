@@ -3,6 +3,8 @@ import { notifications } from './index.js'
 import { email } from '../email/index.js'
 import { User } from '../../db/models/User.js'
 import { env } from '../../config/env.js'
+import { getFriendlyReason } from '../../config/reasons.js'
+
 
 let registered = false
 
@@ -44,7 +46,7 @@ export function registerNotificationListeners() {
         link: `/orders/${order.id || order._id}`,
       })
 
-      if (customerEmail) {
+      if (customerEmail && !payment) {
         await email.sendTemplate(
           'customer-order-received',
           customerEmail,
@@ -272,6 +274,11 @@ export function registerNotificationListeners() {
         customer = await User.findById(order.customerId)
       }
 
+      const locale = customer?.locale || 'ar'
+      const friendlyReasonAr = getFriendlyReason(payment?.rejectReason, 'ar') || 'بيانات التحويل غير مطابقة'
+      const friendlyReasonEn = getFriendlyReason(payment?.rejectReason, 'en') || 'Payment details did not match'
+      const localizedReason = locale === 'en' ? friendlyReasonEn : friendlyReasonAr
+
       await notifications.notify(order.customerId, {
         type: 'payment',
         role: 'customer',
@@ -280,11 +287,18 @@ export function registerNotificationListeners() {
           en: 'Payment receipt update',
         },
         message: {
-          ar: `تعذر اعتماد إيصال فودافون كاش للطلب رقم ${order.number}${payment?.rejectReason ? `: ${payment.rejectReason}` : ''}`,
-          en: `Could not verify payment receipt for order ${order.number}${payment?.rejectReason ? `: ${payment.rejectReason}` : ''}`,
+          ar: `تعذر اعتماد إيصال فودافون كاش للطلب رقم ${order.number}: ${friendlyReasonAr}`,
+          en: `Could not verify payment receipt for order ${order.number}: ${friendlyReasonEn}`,
         },
-        params: { orderNumber: order.number, reason: payment?.rejectReason },
+        params: {
+          orderNumber: order.number,
+          reason: localizedReason,
+          rejectReason: payment?.rejectReason,
+          rejectReasonCode: payment?.rejectReason,
+          status: 'rejected',
+        },
         link: `/orders/${order.id || order._id}`,
+        dedupKey: `${order.customerId}:payment:${order.number}:rejected:${payment?.rejectReason || ''}`,
       })
 
       // Send email if notifyCustomer is true
@@ -295,11 +309,16 @@ export function registerNotificationListeners() {
           {
             customerName: customer.name || order.delivery?.name || 'عميلتنا العزيزة',
             orderNumber: order.number,
-            rejectionReason: payment?.rejectReason || 'بيانات التحويل غير مطابقة',
+            rejectionReason: localizedReason,
+            rejectionReasonCode: payment?.rejectReason || '',
             adminNotes: payment?.rejectNotes || '',
             orderUrl: `${env.CLIENT_URL}/orders/${order.id || order._id}`,
           },
-          { locale: customer.locale || 'ar', user: customer }
+          {
+            locale,
+            user: customer,
+            dedupKey: `${customer.email}:customer-payment-rejected:${order.number}:${payment?.rejectReason || ''}`,
+          }
         )
       }
     } catch (err) {
@@ -307,52 +326,14 @@ export function registerNotificationListeners() {
     }
   })
 
-  // 5. Order Fulfillment Updated (e.g. seller marked item as shipped)
-  eventBus.on(EVENT_TYPES.ORDER_FULFILLMENT_UPDATED, async (payload) => {
-    try {
-      const { order, status } = payload || {}
-      if (!order || status !== 'shipped') return
-
-      let customer = null
-      if (order.customerId && User && typeof User.findById === 'function') {
-        customer = await User.findById(order.customerId)
-      }
-
-      await notifications.notify(order.customerId, {
-        type: 'shipping',
-        role: 'customer',
-        title: {
-          ar: 'تم شحن جزء من طلبك',
-          en: 'Part of your order has shipped',
-        },
-        message: {
-          ar: `تم شحن جزء من طلبك رقم ${order.number} وهو في الطريق إليكِ.`,
-          en: `Part of your order ${order.number} is on its way.`,
-        },
-        params: { orderNumber: order.number },
-        link: `/orders/${order.id || order._id}`,
-      })
-
-      if (customer?.email) {
-        await email.sendTemplate(
-          'customer-shipped',
-          customer.email,
-          {
-            customerName: customer.name || order.delivery?.name || 'عميلتنا العزيزة',
-            orderNumber: order.number,
-            deliveryAddress: order.delivery?.address || '',
-            nurseryName: order.delivery?.nurseryName || '',
-            customerPhone: order.delivery?.phone || '',
-          },
-          { locale: customer.locale || 'ar', user: customer }
-        )
-      }
-    } catch (err) {
-      console.error('[EVENT_LISTENER] Error handling order.fulfillmentUpdated:', err)
-    }
+  // 5. Order Fulfillment Updated (seller marked items as shipped)
+  // Per architecture contract: ORDER_FULFILLMENT_UPDATED sends nothing to the customer.
+  // The customer receives the shipped notification/email only when the whole order becomes shipped via ORDER_STATUS_CHANGED.
+  eventBus.on(EVENT_TYPES.ORDER_FULFILLMENT_UPDATED, async (_payload) => {
+    // Intentionally no customer notification or email here.
   })
 
-  // 6. Order Status Changed (e.g. shipped, delivered, cancelled)
+  // 6. Order Status Changed (single source of truth for shipped, delivered, cancelled)
   eventBus.on(EVENT_TYPES.ORDER_STATUS_CHANGED, async (payload) => {
     try {
       const { order, to } = payload || {}
@@ -362,6 +343,10 @@ export function registerNotificationListeners() {
       if (order.customerId && User && typeof User.findById === 'function') {
         customer = await User.findById(order.customerId)
       }
+
+      const locale = customer?.locale || 'ar'
+      const customerName = customer?.name || order.delivery?.name || 'عميلتنا العزيزة'
+      const customerEmail = customer?.email
 
       if (to === 'shipped') {
         await notifications.notify(order.customerId, {
@@ -375,22 +360,27 @@ export function registerNotificationListeners() {
             ar: `تم تسليم طلبك رقم ${order.number} لمندوب الشحن وهو في الطريق إليكِ الآن.`,
             en: `Your order ${order.number} has been shipped and is on its way.`,
           },
-          params: { orderNumber: order.number },
+          params: { orderNumber: order.number, status: 'shipped' },
           link: `/orders/${order.id || order._id}`,
+          dedupKey: `${order.customerId}:shipping:${order.number}:shipped`,
         })
 
-        if (customer?.email) {
+        if (customerEmail) {
           await email.sendTemplate(
             'customer-shipped',
-            customer.email,
+            customerEmail,
             {
-              customerName: customer.name || order.delivery?.name || 'عميلتنا العزيزة',
+              customerName,
               orderNumber: order.number,
               deliveryAddress: order.delivery?.address || '',
               nurseryName: order.delivery?.nurseryName || '',
               customerPhone: order.delivery?.phone || '',
             },
-            { locale: customer.locale || 'ar', user: customer }
+            {
+              locale,
+              user: customer,
+              dedupKey: `${customerEmail}:customer-shipped:${order.number}:shipped`,
+            }
           )
         }
       } else if (to === 'delivered') {
@@ -405,10 +395,20 @@ export function registerNotificationListeners() {
             ar: `تم تسليم طلبك رقم ${order.number} بنجاح. شكراً لاختياركِ أيدي صغيرة!`,
             en: `Your order ${order.number} has been delivered. Thank you for choosing Little Hands!`,
           },
-          params: { orderNumber: order.number },
+          params: { orderNumber: order.number, status: 'delivered' },
           link: `/orders/${order.id || order._id}`,
+          dedupKey: `${order.customerId}:shipping:${order.number}:delivered`,
         })
       } else if (to === 'cancelled') {
+        const friendlyCancelAr = getFriendlyReason(order.cancelReason, 'ar')
+        const friendlyCancelEn = getFriendlyReason(order.cancelReason, 'en')
+        const localizedCancelReason = locale === 'en' ? (friendlyCancelEn || friendlyCancelAr) : (friendlyCancelAr || friendlyCancelEn)
+
+        const refundNoteAr = order.refund?.required ? ' سيتواصل معك فريق الإدارة بخصوص رد المبلغ.' : ''
+        const refundNoteEn = order.refund?.required ? ' The management team will contact you regarding the refund.' : ''
+        const cancelReasonSuffixAr = friendlyCancelAr ? ` — سبب الإلغاء: ${friendlyCancelAr}` : ''
+        const cancelReasonSuffixEn = friendlyCancelEn ? ` — Reason: ${friendlyCancelEn}` : ''
+
         await notifications.notify(order.customerId, {
           type: 'order',
           role: 'customer',
@@ -417,23 +417,34 @@ export function registerNotificationListeners() {
             en: 'Order cancelled',
           },
           message: {
-            ar: `تم إلغاء طلبك رقم ${order.number}.`,
-            en: `Your order ${order.number} has been cancelled.`,
+            ar: `تم إلغاء طلبك رقم ${order.number}${cancelReasonSuffixAr}.${refundNoteAr}`,
+            en: `Your order ${order.number} has been cancelled${cancelReasonSuffixEn}.${refundNoteEn}`,
           },
-          params: { orderNumber: order.number },
+          params: {
+            orderNumber: order.number,
+            status: 'cancelled',
+            cancelReason: localizedCancelReason,
+            cancelReasonCode: order.cancelReason || '',
+          },
           link: `/orders/${order.id || order._id}`,
+          dedupKey: `${order.customerId}:order:${order.number}:cancelled`,
         })
 
-        if (customer?.email) {
+        if (customerEmail) {
           await email.sendTemplate(
             'order-cancelled',
-            customer.email,
+            customerEmail,
             {
-              customerName: customer.name || order.delivery?.name || 'عميلتنا العزيزة',
+              customerName,
               orderNumber: order.number,
-              cancelReason: order.cancelReason || '',
+              cancelReason: localizedCancelReason,
+              cancelReasonCode: order.cancelReason || '',
             },
-            { locale: customer.locale || 'ar', user: customer }
+            {
+              locale,
+              user: customer,
+              dedupKey: `${customerEmail}:order-cancelled:${order.number}:cancelled`,
+            }
           )
         }
       }
@@ -443,46 +454,10 @@ export function registerNotificationListeners() {
   })
 
   // 7. Order Cancelled
-  eventBus.on(EVENT_TYPES.ORDER_CANCELLED, async (payload) => {
-    try {
-      const { order } = payload || {}
-      if (!order) return
-
-      let customer = null
-      if (order.customerId && User && typeof User.findById === 'function') {
-        customer = await User.findById(order.customerId)
-      }
-
-      await notifications.notify(order.customerId, {
-        type: 'order',
-        role: 'customer',
-        title: {
-          ar: 'تم إلغاء الطلب',
-          en: 'Order cancelled',
-        },
-        message: {
-          ar: `تم إلغاء طلبك رقم ${order.number}.`,
-          en: `Your order ${order.number} has been cancelled.`,
-        },
-        params: { orderNumber: order.number },
-        link: `/orders/${order.id || order._id}`,
-      })
-
-      if (customer?.email) {
-        await email.sendTemplate(
-          'order-cancelled',
-          customer.email,
-          {
-            customerName: customer.name || order.delivery?.name || 'عميلتنا العزيزة',
-            orderNumber: order.number,
-            cancelReason: order.cancelReason || '',
-          },
-          { locale: customer.locale || 'ar', user: customer }
-        )
-      }
-    } catch (err) {
-      console.error('[EVENT_LISTENER] Error handling order.cancelled:', err)
-    }
+  // Per architecture contract: ORDER_STATUS_CHANGED is the single source of truth for customer cancellation notifications/emails.
+  // ORDER_CANCELLED listener sends nothing to the customer to prevent duplicate events.
+  eventBus.on(EVENT_TYPES.ORDER_CANCELLED, async (_payload) => {
+    // Intentionally no customer notification or email here.
   })
 
   // 8. Payout Recorded

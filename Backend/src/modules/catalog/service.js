@@ -14,12 +14,11 @@ export const catalogService = {
    * Auto-seeds from fixed dictionary if database collection is empty.
    */
   async getCategories() {
-    let categories = await Category.find().sort({ order: 1, createdAt: 1 })
+    const categories = await Category.find().sort({ order: 1, createdAt: 1 })
 
     if (!categories || categories.length === 0) {
-      // Auto-seed default categories
-      await Category.insertMany(CATEGORIES)
-      categories = await Category.find().sort({ order: 1, createdAt: 1 })
+      // Read-only in-memory fallback: never write to the database during GET
+      return CATEGORIES.map(toCategoryDTO)
     }
 
     return categories.map(toCategoryDTO)
@@ -268,16 +267,19 @@ export const catalogService = {
       throw new AppError('ERR_PRODUCT_NOT_FOUND', 404)
     }
 
+    const viewerIdStr = (viewer?._id || viewer?.id)?.toString()
+    const productSellerIdStr = (product.sellerId?._id || product.sellerId)?.toString()
+
     const isAdmin = viewer?.role === 'admin'
     const isOwnerSeller =
       viewer?.role === 'seller' &&
-      viewer._id?.toString() === product.sellerId._id?.toString()
+      Boolean(viewerIdStr && productSellerIdStr && viewerIdStr === productSellerIdStr)
 
     if (!product.published && !isAdmin && !isOwnerSeller) {
       throw new AppError('ERR_PRODUCT_NOT_FOUND', 404)
     }
 
-    if (product.sellerId.status !== 'active' && !isAdmin) {
+    if (product.sellerId.status !== 'active' && !isAdmin && !isOwnerSeller) {
       throw new AppError('ERR_PRODUCT_NOT_FOUND', 404)
     }
 

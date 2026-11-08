@@ -1,8 +1,7 @@
 import { Router } from 'express'
 import multer from 'multer'
 import { productController } from './controller.js'
-import { catalogController } from '../catalog/controller.js'
-import { authenticate, authorize, optionalAuth } from '../../middlewares/auth.js'
+import { authenticate, authorize } from '../../middlewares/auth.js'
 import { csrfGuard } from '../../middlewares/csrfGuard.js'
 import { validate } from '../../middlewares/validate.js'
 import {
@@ -11,7 +10,6 @@ import {
   publishProductSchema,
   manageableProductsQuerySchema,
 } from './schemas.js'
-import { productListQuerySchema } from '../catalog/schemas.js'
 
 const router = Router()
 
@@ -24,14 +22,10 @@ const upload = multer({
   },
 })
 
+// Canonical routes:
+// product management: GET /products/manage/products, POST /products/manage/products, PATCH /products/manage/products/:id, DELETE /products/manage/products/:id, PATCH /products/manage/products/:id/publish, POST /products/manage/products/images
+
 // Manageable products list for Sellers and Admins
-router.get(
-  '/manage',
-  authenticate,
-  authorize('seller', 'admin'),
-  validate({ query: manageableProductsQuerySchema }),
-  productController.getManageableProducts
-)
 router.get(
   '/manage/products',
   authenticate,
@@ -49,22 +43,6 @@ router.post(
   upload.array('images', 6),
   productController.uploadImages
 )
-router.post(
-  '/upload-images',
-  authenticate,
-  authorize('seller', 'admin'),
-  csrfGuard,
-  upload.array('images', 6),
-  productController.uploadImages
-)
-router.post(
-  '/images',
-  authenticate,
-  authorize('seller', 'admin'),
-  csrfGuard,
-  upload.array('images', 6),
-  productController.uploadImages
-)
 
 // Manageable product mutations
 router.post(
@@ -75,6 +53,7 @@ router.post(
   validate(productMutationSchema),
   productController.createProduct
 )
+
 router.patch(
   '/manage/products/:id',
   authenticate,
@@ -83,6 +62,7 @@ router.patch(
   validate(productUpdateSchema),
   productController.updateProduct
 )
+
 router.delete(
   '/manage/products/:id',
   authenticate,
@@ -90,6 +70,7 @@ router.delete(
   csrfGuard,
   productController.deleteProduct
 )
+
 router.patch(
   '/manage/products/:id/publish',
   authenticate,
@@ -98,44 +79,5 @@ router.patch(
   validate(publishProductSchema),
   productController.setPublished
 )
-
-// Base mutations
-router.post(
-  '/',
-  authenticate,
-  authorize('seller', 'admin'),
-  csrfGuard,
-  validate(productMutationSchema),
-  productController.createProduct
-)
-router.patch(
-  '/:id',
-  authenticate,
-  authorize('seller', 'admin'),
-  csrfGuard,
-  validate(productUpdateSchema),
-  productController.updateProduct
-)
-router.delete(
-  '/:id',
-  authenticate,
-  authorize('seller', 'admin'),
-  csrfGuard,
-  productController.deleteProduct
-)
-router.patch(
-  '/:id/publish',
-  authenticate,
-  authorize('seller', 'admin'),
-  csrfGuard,
-  validate(publishProductSchema),
-  productController.setPublished
-)
-
-// Public discovery endpoints when accessed via /api/v1/products
-router.get('/featured', catalogController.getFeaturedProducts)
-router.get('/:id/related', catalogController.getRelatedProducts)
-router.get('/:id', optionalAuth, catalogController.getProduct)
-router.get('/', validate({ query: productListQuerySchema }), catalogController.getProducts)
 
 export default router

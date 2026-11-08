@@ -12,12 +12,12 @@ export function validateProductionEnv(customEnv = process.env) {
     errors.push('JWT_REFRESH_SECRET must be at least 32 characters in production')
   }
 
-  // 2. Client Origins must not contain localhost or 127.0.0.1
+  // 2. Client Origins must not contain localhost
   const hasLocalhost = validated.CLIENT_ORIGINS_ARRAY.some(
-    (origin) => origin.includes('localhost') || origin.includes('127.0.0.1')
+    (origin) => origin.includes('localhost')
   )
   if (hasLocalhost) {
-    errors.push('CLIENT_ORIGINS must not contain localhost or 127.0.0.1 in production')
+    errors.push('CLIENT_ORIGINS must not contain localhost in production')
   }
 
   // 3. Email driver must be SMTP with credentials
@@ -29,19 +29,29 @@ export function validateProductionEnv(customEnv = process.env) {
     if (!validated.SMTP_PASS) errors.push('SMTP_PASS is required when EMAIL_DRIVER=smtp')
   }
 
+  // 3b. Storage driver must be cloudinary in production
+  if (validated.STORAGE_DRIVER !== 'cloudinary') {
+    errors.push('STORAGE_DRIVER must be set to "cloudinary" in production')
+  }
+
   // 4. Require email verification
   if (validated.REQUIRE_EMAIL_VERIFICATION !== true) {
     errors.push('REQUIRE_EMAIL_VERIFICATION must be true in production')
   }
 
-  // 5. MongoDB URI must not be localhost
-  if (validated.MONGODB_URI.includes('localhost') || validated.MONGODB_URI.includes('127.0.0.1')) {
-    errors.push('MONGODB_URI must not point to localhost in production')
+  // 5. MongoDB URI must be Atlas
+  if (!validated.MONGODB_URI.startsWith('mongodb+srv://') && !validated.MONGODB_URI.includes('.mongodb.net')) {
+    errors.push('MONGODB_URI must be a MongoDB Atlas URI in production')
   }
 
-  // 6. Admin password must not be default
-  if (validated.ADMIN_PASSWORD === 'AdminPass123!') {
-    errors.push('ADMIN_PASSWORD must not use default placeholder password in production')
+  // 6. Admin credentials validation (if provided)
+  if (validated.ADMIN_PASSWORD) {
+    if (validated.ADMIN_PASSWORD === 'AdminPass123!') {
+      errors.push('ADMIN_PASSWORD must not use default placeholder password in production')
+    }
+    if (validated.ADMIN_PASSWORD.length < 12 || !/(?=.*[A-Za-z])(?=.*\d)/.test(validated.ADMIN_PASSWORD)) {
+      errors.push('ADMIN_PASSWORD must be at least 12 characters and contain both letters and digits')
+    }
   }
 
   if (errors.length > 0) {

@@ -1,22 +1,26 @@
 import {
   AlertCircle,
   ArrowRight,
+  Ban,
   CheckCircle2,
   Clock,
   Eye,
   FileText,
   MapPin,
   Upload,
+  XCircle,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
-import { OrderTimeline } from '../../components/order/OrderTimeline'
+import { OrderTimeline, translateReason } from '../../components/order/OrderTimeline'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Input } from '../../components/ui/Input'
 import { Lightbox } from '../../components/ui/Lightbox'
+import { Modal } from '../../components/ui/Modal'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { ProductImage } from '../../components/ui/ProductImage'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -25,12 +29,13 @@ import { getGovernorateName } from '../../config/constants'
 import { useLanguage } from '../../context/LanguageContext'
 import { useSettings } from '../../context/SettingsContext'
 import { useFormat } from '../../hooks/useFormat'
+import { usePrivateReceipt } from '../../hooks/usePrivateReceipt'
 import { orderService } from '../../services/orderService'
 import { pickLocale } from '../../utils'
 
 export default function AccountOrderDetailsPage() {
   const { id } = useParams()
-  const { t, i18n } = useTranslation(['profile', 'common'])
+  const { t, i18n } = useTranslation(['profile', 'common', 'errors'])
   const isEn = i18n.language === 'en'
   const { language } = useLanguage()
   const { formatDate } = useFormat()
@@ -40,6 +45,15 @@ export default function AccountOrderDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [lightboxOpen, setLightboxOpen] = useState(false)
+
+  // إلغاء الطلب
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelling, setCancelling] = useState(false)
+
+  // البث الموثق لإيصال الدفع الخاص
+  const paymentTargetId = order?.payment?.id || order?.id || null
+  const { imageUrl: privateReceiptUrl } = usePrivateReceipt(lightboxOpen ? paymentTargetId : null)
 
   // حالة نموذج إعادة رفع الإيصال في حالة الرفض (payment_rejected)
   const [reuploadData, setReuploadData] = useState({
@@ -76,6 +90,24 @@ export default function AccountOrderDetailsPage() {
   useEffect(() => {
     fetchOrderDetails()
   }, [fetchOrderDetails])
+
+  // معالجة إلغاء الطلب من قِبل العميل
+  const handleCancelOrder = async (e) => {
+    e.preventDefault()
+    setCancelling(true)
+    try {
+      await orderService.cancelOrder(order.id, { reason: cancelReason.trim() })
+      toast.success(isEn ? 'Order cancelled successfully' : 'تم إلغاء الطلب بنجاح')
+      setCancelModalOpen(false)
+      setCancelReason('')
+      await fetchOrderDetails()
+    } catch (err) {
+      console.error('Failed to cancel order:', err)
+      toast.error(err.message || (isEn ? 'Failed to cancel order' : 'تعذر إلغاء الطلب'))
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   // معالجة اختيار صورة الإيصال الجديدة
   const handleFileChange = (e) => {
@@ -197,13 +229,31 @@ export default function AccountOrderDetailsPage() {
             <div className="font-bold text-rose-900 dark:text-rose-200">
               {t('profile:orders.rejectedReason', 'سبب الرفض:')}{' '}
               <span className="font-semibold text-rose-700 dark:text-rose-300">
-                {order.payment?.rejectionReason || (isEn ? 'Screenshot unclear' : 'لقطة الشاشة غير واضحة ورقم العملية مقتطع')}
+                {translateReason(order.payment?.rejectReasonCode, order.payment?.rejectReason || order.payment?.rejectionReason, isEn) || (isEn ? 'Screenshot unclear' : 'لقطة الشاشة غير واضحة ورقم العملية مقتطع')}
               </span>
             </div>
             {order.payment?.adminNotes && (
               <div className="text-text-muted">
                 {t('profile:orders.rejectedAdminNotes', 'ملاحظات المدقق:')} {order.payment.adminNotes}
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* تنبيه خاص في حالة إلغاء الطلب */}
+      {order.status === 'cancelled' && (
+        <div className="p-4 rounded-[20px] bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 flex items-start gap-3 shadow-soft">
+          <XCircle className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold text-sm block mb-1">{isEn ? 'This order has been cancelled.' : 'تم إلغاء هذا الطلب.'}</span>
+            {(order.cancelReason || order.cancelReasonCode) && (
+              <p className="text-text-muted">
+                {isEn ? 'Reason:' : 'سبب الإلغاء:'}{' '}
+                <span className="font-semibold text-text-main">
+                  {translateReason(order.cancelReasonCode, order.cancelReason, isEn)}
+                </span>
+              </p>
             )}
           </div>
         </div>
@@ -218,6 +268,26 @@ export default function AccountOrderDetailsPage() {
                 {order.number}
               </h1>
               <StatusBadge status={order.status} size="md" />
+
+              {/* زر إلغاء الطلب أو تنبيه عدم إمكانية الإلغاء */}
+              {order.status === 'pending_payment' && (
+                order.payment && order.payment.status && order.payment.status !== 'rejected' ? (
+                  <span className="text-[11px] text-text-muted bg-surface-subtle px-2.5 py-1 rounded-full border border-surface-border">
+                    {isEn ? 'Cannot cancel order after payment proof is submitted' : 'لا يمكن إلغاء الطلب بعد إرسال إيصال الدفع'}
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCancelModalOpen(true)}
+                    className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 gap-1 rounded-full"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    <span>{isEn ? 'Cancel Order' : 'إلغاء الطلب'}</span>
+                  </Button>
+                )
+              )}
             </div>
             <div className="flex items-center gap-3 mt-1.5 text-xs text-text-muted">
               <span>{isEn ? 'Order Date:' : 'تاريخ الطلب:'} {formatDate(order.createdAt)}</span>
@@ -527,15 +597,60 @@ export default function AccountOrderDetailsPage() {
         </Card>
       )}
 
-      {/* معاينة الصورة في Lightbox */}
-      {order.payment?.screenshotUrl && (
+      {/* معاينة الصورة في Lightbox مع دعم البث الموثق */}
+      {(order.payment?.screenshotUrl || paymentTargetId) && (
         <Lightbox
           isOpen={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
-          src={order.payment.screenshotUrl}
+          src={privateReceiptUrl || order.payment?.screenshotUrl}
           alt={isEn ? `Order ${order.number} Receipt` : `إيصال تحويل الطلب ${order.number}`}
         />
       )}
+
+      {/* نافذة تأكيد إلغاء الطلب من العميل */}
+      <Modal
+        isOpen={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        title={isEn ? 'Cancel Order' : 'تأكيد إلغاء الطلب'}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleCancelOrder} className="space-y-4 p-2">
+          <p className="text-xs text-text-muted leading-relaxed">
+            {isEn
+              ? 'Are you sure you want to cancel this order? This action cannot be undone.'
+              : 'هل أنت متأكدة من رغبتك في إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء بعد تنفيذه.'}
+          </p>
+
+          <Input
+            id="cancel-reason"
+            label={isEn ? 'Cancellation Reason (Optional)' : 'سبب الإلغاء (اختياري)'}
+            placeholder={isEn ? 'Why do you want to cancel?' : 'يرجى كتابة سبب الإلغاء إن رغبت'}
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            disabled={cancelling}
+          />
+
+          <div className="flex gap-2 justify-end pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCancelModalOpen(false)}
+              disabled={cancelling}
+            >
+              {isEn ? 'Keep Order' : 'تراجع'}
+            </Button>
+            <Button
+              type="submit"
+              variant="danger"
+              size="sm"
+              loading={cancelling}
+            >
+              {isEn ? 'Yes, Cancel Order' : 'نعم، قم بإلغاء الطلب'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

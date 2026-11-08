@@ -20,6 +20,8 @@ const AUDITED_FIELDS = [
   'payoutScheduleText',
   'deliveryTimeText',
   'maintenanceMode',
+  'emailNotifications',
+  'inSiteNotifications',
 ]
 
 /** Atomic get-or-create of the settings singleton (defaults come from the model + fixed zone config). */
@@ -91,6 +93,8 @@ export const settingsService = {
       'whatsappNumber',
       'payoutScheduleText',
       'maintenanceMode',
+      'emailNotifications',
+      'inSiteNotifications',
     ]
     for (const key of simple) {
       if (values[key] !== undefined) doc[key] = values[key]

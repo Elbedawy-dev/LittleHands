@@ -5,7 +5,7 @@ import { AppError } from '../utils/appError.js'
 function createLimiter({ windowMs, max, messageCode = 'TOO_MANY_REQUESTS' }) {
   return rateLimit({
     windowMs,
-    max: env.NODE_ENV === 'test' ? 10000 : max,
+    max: env.NODE_ENV === 'test' || env.NODE_ENV === 'development' ? 10000 : max,
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res, next) => {

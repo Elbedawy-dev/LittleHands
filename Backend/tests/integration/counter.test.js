@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest'
-import { nextOrderNumber } from '../../src/db/models/index.js'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { nextOrderNumber, Counter } from '../../src/db/models/index.js'
 
 describe('Order Number Generation & Concurrency', () => {
+  beforeEach(async () => {
+    await Counter.syncIndexes()
+  })
+
   it('generates sequential order numbers in format LH-{year}-{seq padded to 3}', async () => {
     const orderNum1 = await nextOrderNumber(2026)
     const orderNum2 = await nextOrderNumber(2026)

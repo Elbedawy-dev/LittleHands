@@ -69,7 +69,7 @@ export function ProductInfo({ product }) {
       {/* شريحة البائعة الحرفية وشارة التوفر والمفضلة */}
       <div className="flex items-center justify-between gap-3">
         <Link
-          to={`/sellers/${product.sellerId || 'seller_1'}`}
+          to={`/sellers/${product.sellerId || ''}`}
           className="inline-flex items-center gap-2 p-1.5 pe-3 rounded-full bg-surface-subtle border border-surface-border hover:border-brand-orange/50 transition-colors group"
         >
           <Avatar

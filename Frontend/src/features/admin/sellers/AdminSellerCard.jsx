@@ -13,6 +13,7 @@ import { getDisplayName } from '../../../utils'
 export function AdminSellerCard({
   seller,
   onRecordPayout,
+  onToggleStatus,
 }) {
   const { t, i18n } = useTranslation('admin-core')
 
@@ -21,10 +22,14 @@ export function AdminSellerCard({
   const netEarnings = seller.netEarnings || 0
   const totalPaidOut = seller.totalPaidOut || 0
   const pendingBalance = seller.pendingBalance || 0
+  const isSuspended = seller.status === 'suspended'
 
   // نسبة ما تم سداده من صافي مستحقات البائعة
   const payoutPercentage =
     netEarnings > 0 ? Math.min(100, Math.round((totalPaidOut / netEarnings) * 100)) : 0
+
+  const avatarInitial = seller.sellerName?.[0] || seller.name?.[0] || 'ب'
+  const sellerBio = (typeof seller.bio === 'object' ? (seller.bio?.ar || seller.bio?.en || '') : seller.bio) || ''
 
   return (
     <Card padding="lg" className="flex flex-col justify-between space-y-6">
@@ -33,25 +38,42 @@ export function AdminSellerCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-brand-orange/10 dark:bg-brand-orange/20 text-brand-orange flex items-center justify-center font-heading font-black text-xl shrink-0">
-              {seller.sellerId === 'seller_1' ? '1' : '2'}
+              {avatarInitial}
             </div>
             <div>
               <h3 className="font-heading font-black text-lg text-text-main">
-                {getDisplayName({ id: seller.sellerId, sellerId: seller.sellerId, name: seller.sellerName, nameEn: seller.nameEn }, i18n.language)}
+                {getDisplayName({ id: seller.sellerId || seller.id, sellerId: seller.sellerId || seller.id, name: seller.sellerName || seller.name, nameEn: seller.nameEn }, i18n.language)}
               </h3>
               <span className="text-xs text-text-muted">
-                {(typeof seller.bio === 'object' ? (seller.bio?.ar || seller.bio?.en || '') : seller.bio) ||
-                  (seller.sellerId === 'seller_1'
-                    ? t('sellers.cards.seller1Specialty')
-                    : t('sellers.cards.seller2Specialty'))}
+                {sellerBio}
               </span>
             </div>
           </div>
 
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold text-xs shrink-0">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{t('sellers.cards.verifiedSeller')}</span>
-          </span>
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full font-bold text-xs shrink-0 ${
+              isSuspended
+                ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300'
+                : 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300'
+            }`}>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{isSuspended ? (i18n.language === 'en' ? 'Suspended' : 'معطل') : (i18n.language === 'en' ? 'Active' : 'نشط')}</span>
+            </span>
+
+            {onToggleStatus && (
+              <button
+                type="button"
+                onClick={() => onToggleStatus(seller.userId || seller.id || seller.sellerId, isSuspended ? 'active' : 'suspended')}
+                className={`text-[11px] font-bold underline cursor-pointer transition-colors ${
+                  isSuspended ? 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-700' : 'text-rose-600 dark:text-rose-400 hover:text-rose-700'
+                }`}
+              >
+                {isSuspended
+                  ? (i18n.language === 'en' ? 'Activate Account' : 'تفعيل الحساب')
+                  : (i18n.language === 'en' ? 'Suspend Account' : 'إيقاف الحساب')}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* شبكة الأرقام المالية والحسابات (Reconciled Numbers: 100 = 20 + 80) */}
@@ -79,30 +101,24 @@ export function AdminSellerCard({
         </div>
 
         {/* سطر محفظة فودافون كاش الرسمية للبائعة */}
-        <div className="p-3.5 rounded-2xl bg-surface-subtle border border-surface-border flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-text-muted">
-            <Phone className="w-4 h-4 text-brand-orange shrink-0" />
-            <span className="font-medium">{t('sellers.cards.walletNumber')}</span>
-          </div>
+        {seller.walletNumber ? (
+          <div className="p-3.5 rounded-2xl bg-surface-subtle border border-surface-border flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-text-muted">
+              <Phone className="w-4 h-4 text-brand-orange shrink-0" />
+              <span className="font-medium">{t('sellers.cards.walletNumber')}</span>
+            </div>
 
-          <div className="flex items-center gap-2">
-            {seller.walletNumber || seller.phone ? (
-              <>
-                <span
-                  dir="ltr"
-                  className="font-mono font-bold text-text-main text-sm [unicode-bidi:isolate]"
-                >
-                  {seller.walletNumber || seller.phone}
-                </span>
-                <CopyButton text={seller.walletNumber || seller.phone} />
-              </>
-            ) : (
-              <span className="text-xs text-text-muted italic">
-                {t('sellers.cards.noWalletConfigured', 'لم يتم ضبط الرقم بعد')}
+            <div className="flex items-center gap-2">
+              <span
+                dir="ltr"
+                className="font-mono font-bold text-text-main text-sm [unicode-bidi:isolate]"
+              >
+                {seller.walletNumber}
               </span>
-            )}
+              <CopyButton text={seller.walletNumber} />
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {/* شريط نسبة السداد والتحويلات */}
         <div className="space-y-1.5">

@@ -20,10 +20,8 @@ const payoutSchema = new mongoose.Schema(
     },
     reference: {
       type: String,
-      required: true,
       trim: true,
-      unique: true,
-      index: true,
+      default: '',
     },
     date: {
       type: String,
@@ -45,6 +43,17 @@ const payoutSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+  }
+)
+
+payoutSchema.index({ sellerId: 1, createdAt: -1 })
+payoutSchema.index(
+  { sellerId: 1, reference: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      reference: { $type: 'string', $gt: '' },
+    },
   }
 )
 

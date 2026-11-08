@@ -1,41 +1,31 @@
-import { db } from '../mocks/db'
-import { delay } from '../utils'
+import apiClient from './api'
 
-/**
- * خدمة طلبات التفصيل المخصص والتواصل مع الحاضنات
- */
 export const contactService = {
+  /**
+   * Public: Submit a custom nursery request
+   */
   async sendCustomRequest({ name, phone, nurseryName = '', details }) {
-    await delay(450)
-    const request = {
-      id: `req_${Date.now()}`,
+    return apiClient.post('/contact/custom-requests', {
       name,
       phone,
-      nurseryName,
+      nurseryName: nurseryName || '',
       details,
-      createdAt: new Date().toISOString(),
-      status: 'pending',
-    }
-
-    if (!db.data.customRequests) {
-      db.data.customRequests = []
-    }
-    db.data.customRequests.push(request)
-
-    // إشعار للإدارة
-    db.data.notifications.unshift({
-      id: `notif_${Date.now()}`,
-      role: 'admin',
-      title: 'طلب تفصيل وسيلة خاصة جديد',
-      message: `طلب من ${name} (${nurseryName || 'حضانة'})، هاتف: ${phone}`,
-      type: 'custom_request',
-      link: '/admin/orders',
-      read: false,
-      createdAt: new Date().toISOString(),
     })
+  },
 
-    db.save()
-    return { success: true, request }
+  /**
+   * Admin: Get custom requests
+   */
+  async getCustomRequests(params = {}) {
+    return apiClient.get('/admin/custom-requests', { params })
+  },
+
+  /**
+   * Admin: Update status of a custom request ('new' | 'pending' | 'contacted' | 'closed')
+   */
+  async updateCustomRequestStatus(id, status) {
+    return apiClient.patch(`/admin/custom-requests/${id}`, { status })
   },
 }
 
+export default contactService

@@ -154,6 +154,15 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    refund: {
+      required: { type: Boolean, default: false },
+      amount: { type: Number, default: 0 },
+      status: { type: String, enum: ['pending', 'completed'], default: null },
+      note: { type: String, default: '' },
+      reference: { type: String, default: '' },
+      refundedAt: { type: Date, default: null },
+      refundedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    },
     idempotencyKey: {
       type: String,
       sparse: true,
@@ -168,6 +177,7 @@ const orderSchema = new mongoose.Schema(
 // Compound indexes for customer orders, multi-seller item fulfillment, and status filtering
 orderSchema.index({ customerId: 1, createdAt: -1 })
 orderSchema.index({ 'items.sellerId': 1, status: 1, createdAt: -1 })
+orderSchema.index({ status: 1, 'items.sellerId': 1, createdAt: -1 })
 orderSchema.index({ status: 1, createdAt: -1 })
 
 orderSchema.plugin(toJSONPlugin)

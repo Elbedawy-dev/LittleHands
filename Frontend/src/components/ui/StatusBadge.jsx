@@ -23,6 +23,7 @@ export function StatusBadge({ status, size = 'md', className }) {
     shipped: <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />,
     delivered: <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />,
     payment_rejected: <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />,
+    cancelled: <XCircle className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />,
   }
 
   const sizes = {

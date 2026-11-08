@@ -47,21 +47,45 @@ export const jobs = {
             createdAt: { $lt: cutoff },
           })
 
+          let cancelled = 0
           for (const order of expiredOrders) {
-            order.status = 'cancelled'
-            order.cancelReason = 'EXPIRED_UNPAID'
-            order.timeline.push({
-              status: 'cancelled',
-              title: 'إلغاء تلقائي لانتهاء مهلة السداد',
-              note: 'تم إلغاء الطلب تلقائياً لمرور 48 ساعة دون إتمام تحويل فودافون كاش',
-              at: new Date(),
-            })
-            await order.save()
-            eventBus.emit(EVENT_TYPES.ORDER_CANCELLED, { order })
+            const paymentCount = await Payment.countDocuments({ orderId: order._id })
+            if (paymentCount === 0) {
+              const updated = await Order.findOneAndUpdate(
+                { _id: order._id, status: 'pending_payment' },
+                {
+                  $set: { status: 'cancelled', cancelReason: 'EXPIRED_UNPAID' },
+                  $push: {
+                    timeline: {
+                      status: 'cancelled',
+                      note: 'EXPIRED_UNPAID',
+                      actor: 'system',
+                      byId: null,
+                      at: new Date(),
+                    },
+                  },
+                },
+                { new: true }
+              )
+              if (updated) {
+                cancelled++
+                const { Product } = await import('../db/models/Product.js')
+                for (const item of updated.items) {
+                  await Product.updateOne({ _id: item.productId }, { $inc: { stock: item.qty } }).catch(() => {})
+                }
+                eventBus.emit(EVENT_TYPES.ORDER_STATUS_CHANGED, {
+                  order: updated,
+                  from: 'pending_payment',
+                  to: 'cancelled',
+                  actorId: null,
+                })
+                eventBus.emit(EVENT_TYPES.ORDER_CANCELLED, { order: updated })
+              }
+            }
           }
 
-          console.info(`[JOB:cancelExpiredOrders] Cancelled ${expiredOrders.length} expired unpaid orders. Duration: ${Date.now() - startTime}ms`)
-          return { success: true, count: expiredOrders.length }
+          console.info(`[JOB:cancelExpiredOrders] Cancelled ${cancelled} expired unpaid orders. Duration: ${Date.now() - startTime}ms`)
+          return { success: true, count: cancelled }
         }
 
         console.info(`[JOB:cancelExpiredOrders] Completed. Duration: ${Date.now() - startTime}ms`)

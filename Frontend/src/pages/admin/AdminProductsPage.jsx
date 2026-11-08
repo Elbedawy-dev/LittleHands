@@ -10,6 +10,7 @@ import { useSettings } from '../../context/SettingsContext'
 import { ProductFilters, ProductListTable, ProductStats } from '../../features/admin/products'
 import { orderService } from '../../services/orderService'
 import { productService } from '../../services/productService'
+import { adminService } from '../../services/adminService'
 
 /**
  * صفحة إدارة كتالوج الوسائل التعليمية لكلا البائعتين الحرفيتين
@@ -21,10 +22,11 @@ export default function AdminProductsPage() {
 
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
+  const [sellers, setSellers] = useState([])
   const [loading, setLoading] = useState(true)
 
   // حالات الفلاتر والبحث
-  const [selectedSeller, setSelectedSeller] = useState('all') // 'all' | 'seller_1' | 'seller_2'
+  const [selectedSeller, setSelectedSeller] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all') // 'all' | 'published' | 'draft'
@@ -37,12 +39,14 @@ export default function AdminProductsPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const [allProducts, allOrders] = await Promise.all([
+      const [allProducts, allOrders, sellerAccounts] = await Promise.all([
         productService.getManageableProducts(),
         orderService.getAllOrders().catch(() => []),
+        adminService.getSellerAccounts().catch(() => []),
       ])
-      setProducts(allProducts)
-      setOrders(allOrders)
+      setProducts(allProducts || [])
+      setOrders(allOrders || [])
+      setSellers(sellerAccounts?.items || sellerAccounts || [])
     } catch {
       toast.error(t('products.errorLoading'))
     } finally {
@@ -56,10 +60,13 @@ export default function AdminProductsPage() {
 
   // حساب أعداد الوسائل لكل بائعة لألسنة التصفية
   const sellerCounts = useMemo(() => {
-    const all = products.length
-    const seller_1 = products.filter((p) => p.sellerId === 'seller_1').length
-    const seller_2 = products.filter((p) => p.sellerId === 'seller_2').length
-    return { all, seller_1, seller_2 }
+    const counts = { all: products.length }
+    products.forEach((p) => {
+      if (p.sellerId) {
+        counts[p.sellerId] = (counts[p.sellerId] || 0) + 1
+      }
+    })
+    return counts
   }, [products])
 
   // تصفية الوسائل حسب الشروط المحددة
@@ -156,6 +163,7 @@ export default function AdminProductsPage() {
 
       {/* شريط الفلاتر والبحث وألسنة البائعات */}
       <ProductFilters
+        sellers={sellers}
         selectedSeller={selectedSeller}
         onSelectSeller={setSelectedSeller}
         searchQuery={searchQuery}

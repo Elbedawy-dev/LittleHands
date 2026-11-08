@@ -28,8 +28,15 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
   const { isRtl } = useLanguage()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+  const { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications } = useNotifications()
   const { formatRelativeTime } = useFormat()
+
+  // Refetch notifications list when the dropdown opens
+  useEffect(() => {
+    if (open && fetchNotifications) {
+      fetchNotifications()
+    }
+  }, [open, fetchNotifications])
 
   const currentRole = user ? user.role : 'customer'
   const [activeTab, setActiveTab] = useState('all') // 'all' | 'unread'

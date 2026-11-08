@@ -8,7 +8,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(5000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  MONGODB_URI: z.string().min(1, 'MONGODB_URI is required').default('mongodb://localhost:27017/little_hands_dev'),
+  MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   CLIENT_ORIGINS: z.string().default('http://localhost:5173'),
   CLIENT_URL: z.string().default('http://localhost:5173'),
   COOKIE_SAMESITE: z
@@ -39,17 +39,17 @@ const envSchema = z.object({
     .default(false),
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
-  STORAGE_DRIVER: z.enum(['local', 'cloudinary']).default('local'),
+  STORAGE_DRIVER: z.enum(['cloudinary', 'memory']).default('cloudinary'),
   CLOUDINARY_CLOUD_NAME: z.string().optional().default(''),
   CLOUDINARY_API_KEY: z.string().optional().default(''),
   CLOUDINARY_API_SECRET: z.string().optional().default(''),
-  ADMIN_NAME: z.string().min(2).default('Admin'),
-  ADMIN_EMAIL: z.string().email().default('admin@littlehands.eg'),
+  ADMIN_NAME: z.string().min(2).optional(),
+  ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PHONE: z
     .string()
     .regex(/^01[0125]\d{8}$/, 'ADMIN_PHONE must be a valid Egyptian mobile number')
-    .default('01000000001'),
-  ADMIN_PASSWORD: z.string().min(8, 'ADMIN_PASSWORD must be at least 8 characters').default('AdminPass123!'),
+    .optional(),
+  ADMIN_PASSWORD: z.string().optional(),
 })
 
 export function validateEnv(customEnv = process.env) {
@@ -83,7 +83,8 @@ try {
       ...process.env,
       JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'test_jwt_access_secret_min_32_characters_here!',
       JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'test_jwt_refresh_secret_min_32_characters_here!',
-      MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/little_hands_test',
+      MONGODB_URI: process.env.MONGODB_URI || 'mongodb://in-memory-test-server/little_hands_test',
+      STORAGE_DRIVER: process.env.STORAGE_DRIVER || 'memory',
     })
   } else {
     console.error(error.message)

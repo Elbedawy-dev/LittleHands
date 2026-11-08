@@ -1,130 +1,119 @@
-import { db } from '../mocks/db'
-import { delay } from '../utils'
+import apiClient from './api.js'
+
+export function normalizeProduct(p) {
+  if (!p) return null
+  const id = p.id || p._id
+  const images = Array.isArray(p.images)
+    ? p.images.map((img) => (typeof img === 'string' ? img : img.url || ''))
+    : []
+  const rawImages = Array.isArray(p.images)
+    ? p.images.map((img) => (typeof img === 'string' ? { url: img, key: img.split('/').pop() } : img))
+    : []
+
+  return {
+    ...p,
+    id,
+    _id: id,
+    images,
+    rawImages,
+    inStock: p.stock !== undefined ? p.stock > 0 : p.inStock !== false,
+    stock: p.stock !== undefined ? p.stock : p.stockCount || 0,
+    stockCount: p.stock !== undefined ? p.stock : p.stockCount || 0,
+    published: p.published !== undefined ? Boolean(p.published) : Boolean(p.isPublished),
+    isPublished: p.published !== undefined ? Boolean(p.published) : Boolean(p.isPublished),
+    stages: Array.isArray(p.stages) ? p.stages : p.stage ? [p.stage] : [],
+  }
+}
 
 /**
  * خدمة استعراض الكتالوج والتصنيفات والوسائل التعليمية
  */
 export const catalogService = {
+  /**
+   * جلب تصنيفات الوسائل التعليمية
+   * GET /catalog/categories
+   */
   async getCategories() {
-    await delay(250)
-    return [...db.data.categories]
+    const res = await apiClient.get('/catalog/categories')
+    return Array.isArray(res) ? res : res?.items || []
   },
 
-  async getProducts({
-    q = '',
-    category = '',
-    sellerId = '',
-    minPrice,
-    maxPrice,
-    stage = '',
-    inStock,
-    sort = 'newest',
-    page = 1,
-    pageSize = 12,
-  } = {}) {
-    await delay(350)
-    let filtered = db.data.products.filter((p) => p.isPublished)
-
-    if (q) {
-      const query = q.trim().toLowerCase()
-      filtered = filtered.filter((p) => {
-        const nameAr = typeof p.name === 'object' ? p.name?.ar || '' : p.name || ''
-        const nameEn = typeof p.name === 'object' ? p.name?.en || '' : p.nameEn || ''
-        const descAr = typeof p.description === 'object' ? p.description?.ar || '' : p.description || ''
-        const descEn = typeof p.description === 'object' ? p.description?.en || '' : p.descriptionEn || ''
-        return (
-          nameAr.toLowerCase().includes(query) ||
-          nameEn.toLowerCase().includes(query) ||
-          descAr.toLowerCase().includes(query) ||
-          descEn.toLowerCase().includes(query)
-        )
-      })
+  /**
+   * تصفية وبحث في كتالوج الوسائل التعليمية مع دعم الترقيم والفرز
+   * GET /catalog/products
+   */
+  async getProducts(params = {}) {
+    const query = {
+      q: params.q || '',
+      category: params.category || '',
+      sellerId: params.sellerId || '',
+      stage: params.stage || '',
+      minPrice: params.minPrice,
+      maxPrice: params.maxPrice,
+      inStock: params.inStock,
+      sort: params.sort || 'newest',
+      page: params.page || 1,
+      pageSize: params.pageSize || 12,
     }
 
-    if (category) {
-      filtered = filtered.filter((p) => p.categoryId === category)
-    }
+    // Clean undefined / empty query params
+    Object.keys(query).forEach((key) => {
+      if (query[key] === undefined || query[key] === '') {
+        delete query[key]
+      }
+    })
 
-    if (sellerId) {
-      filtered = filtered.filter((p) => p.sellerId === sellerId)
-    }
+    const res = await apiClient.get('/catalog/products', { params: query })
 
-    if (typeof minPrice === 'number' && !isNaN(minPrice)) {
-      filtered = filtered.filter((p) => p.price >= minPrice)
-    }
-
-    if (typeof maxPrice === 'number' && !isNaN(maxPrice)) {
-      filtered = filtered.filter((p) => p.price <= maxPrice)
-    }
-
-    if (stage) {
-      filtered = filtered.filter((p) => p.stages && p.stages.includes(stage))
-    }
-
-    if (typeof inStock === 'boolean') {
-      filtered = filtered.filter((p) => p.inStock === inStock)
-    }
-
-    // الترتيب
-    if (sort === 'price_asc') {
-      filtered.sort((a, b) => a.price - b.price)
-    } else if (sort === 'price_desc') {
-      filtered.sort((a, b) => b.price - a.price)
-    } else if (sort === 'oldest') {
-      filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-    } else {
-      // newest
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    }
-
-    const total = filtered.length
-    const startIndex = (page - 1) * pageSize
-    const items = filtered.slice(startIndex, startIndex + pageSize)
+    const rawItems = res?.items || (Array.isArray(res) ? res : [])
+    const items = rawItems.map(normalizeProduct)
+    const total = res?.total !== undefined ? res.total : items.length
+    const page = res?.page || query.page || 1
+    const pageSize = res?.pageSize || query.pageSize || 12
+    const totalPages = res?.totalPages || Math.ceil(total / pageSize) || 1
 
     return {
       items,
       total,
       page,
       pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      totalPages,
     }
   },
 
+  /**
+   * جلب تفاصيل وسيلة تعليمية واحدة
+   * GET /catalog/products/:id
+   */
   async getProduct(id) {
-    await delay(300)
-    const product = db.data.products.find((p) => p.id === id || p.slug === id)
-    if (!product) {
-      throw new Error('ERR_PRODUCT_NOT_FOUND')
-    }
-    return product
+    const res = await apiClient.get(`/catalog/products/${id}`)
+    const product = res?.product || res
+    return normalizeProduct(product)
   },
 
+  /**
+   * جلب الوسائل التعليمية المميزة للصفحة الرئيسية
+   * GET /catalog/products/featured
+   */
   async getFeaturedProducts(limit = 6) {
-    await delay(300)
-    const featured = db.data.products
-      .filter((p) => p.isPublished && p.isFeatured)
-      .slice(0, limit)
-    return featured
+    const res = await apiClient.get('/catalog/products/featured', { params: { limit } })
+    const items = Array.isArray(res) ? res : res?.items || []
+    return items.map(normalizeProduct)
   },
 
+  /**
+   * جلب الوسائل التعليمية ذات الصلة
+   * GET /catalog/products/:id/related
+   */
   async getRelatedProducts(id, limit = 4) {
-    await delay(300)
-    const current = db.data.products.find((p) => p.id === id)
-    if (!current) return []
-
-    const related = db.data.products
-      .filter((p) => p.id !== id && p.isPublished && p.categoryId === current.categoryId)
-      .slice(0, limit)
-
-    // إذا لم يتوفر عدد كافٍ من نفس التصنيف، جلب من تصنيفات أخرى
-    if (related.length < limit) {
-      const others = db.data.products
-        .filter((p) => p.id !== id && p.isPublished && !related.some((r) => r.id === p.id))
-        .slice(0, limit - related.length)
-      return [...related, ...others]
+    try {
+      const res = await apiClient.get(`/catalog/products/${id}/related`, { params: { limit } })
+      const items = Array.isArray(res) ? res : res?.items || []
+      return items.map(normalizeProduct)
+    } catch {
+      return []
     }
-
-    return related
   },
 }
 
+export default catalogService

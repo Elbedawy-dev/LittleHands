@@ -62,6 +62,15 @@ apiClient.interceptors.response.use(
     }
 
     if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+        const payload = response.data.data
+          if (payload && !Array.isArray(payload) && Array.isArray(payload.items) && 'total' in payload) {
+            const { items, ...pageInfo } = payload
+            const list = [...items]
+            Object.assign(list, pageInfo)
+            if (response.data.meta) list.meta = response.data.meta
+            Object.defineProperty(list, 'items', { value: list, enumerable: false })
+            return list
+          }
       // If meta is present (e.g. pagination or payment counts), attach it to data object if object
       if (response.data.meta && response.data.data && typeof response.data.data === 'object' && !Array.isArray(response.data.data)) {
         return {

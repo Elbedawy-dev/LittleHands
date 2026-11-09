@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { authService } from '../services/authService'
+import { userService } from '../services/userService'
 import { ForcedChangePasswordModal } from '../components/auth/ForcedChangePasswordModal'
 
 const AuthContext = createContext({
@@ -57,9 +58,8 @@ export function AuthProvider({ children }) {
   }
 
   const updateProfile = async (data) => {
-    const updated = await authService.updateProfile(data)
-    setUser(updated)
-    return updated
+    await userService.updateProfile(data)
+    return refreshUser()
   }
 
   return (

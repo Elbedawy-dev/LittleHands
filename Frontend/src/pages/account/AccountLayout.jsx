@@ -67,8 +67,10 @@ export default function AccountLayout() {
 
     setUpdatingAvatar(true)
     try {
-      const avatarUrl = await processAvatarImage(file)
-      await updateProfile({ avatar: avatarUrl })
+      const dataUrl = await processAvatarImage(file)
+      const blob = await (await fetch(dataUrl)).blob()
+      await userService.uploadAvatar(new File([blob], 'avatar.jpg', { type: blob.type || 'image/jpeg' }))
+      await refreshUser()
     } catch (err) {
       console.error('Failed to update avatar:', err)
     } finally {

@@ -60,7 +60,9 @@ export default function ProfilePage() {
     setProfileError('')
     try {
       const dataUrl = await processAvatarImage(file)
-      await updateProfile({ avatar: dataUrl })
+      const blob = await (await fetch(dataUrl)).blob()
+      await userService.uploadAvatar(new File([blob], 'avatar.jpg', { type: blob.type || 'image/jpeg' }))
+      await refreshUser()
       setProfileSuccess(true)
       setTimeout(() => setProfileSuccess(false), 4000)
     } catch (err) {

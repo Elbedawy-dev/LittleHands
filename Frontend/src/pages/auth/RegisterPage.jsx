@@ -69,8 +69,8 @@ export default function RegisterPage() {
 
     if (!formData.password) {
       errors.password = t('errors.passwordRequired', 'يرجى إدخال كلمة المرور')
-    } else if (formData.password.length < 6) {
-      errors.password = t('errors.passwordShort', 'يجب ألا تقل كلمة المرور عن 6 أحرف أو أرقام')
+    } else if (formData.password.length < 8) {
+      errors.password = t('errors.passwordShort', 'يجب ألا تقل كلمة المرور عن 8 أحرف أو أرقام')
     }
 
     if (!formData.confirmPassword) {
@@ -100,6 +100,7 @@ export default function RegisterPage() {
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim(),
+        password: formData.password, 
         role: 'customer',
         accountType: formData.accountType,
         nurseryName: formData.nurseryName.trim(),

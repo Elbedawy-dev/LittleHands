@@ -22,7 +22,7 @@ import { CommissionInfoCard } from '../../features/seller'
 import { useFormat } from '../../hooks/useFormat'
 import { earningsService } from '../../services/earningsService'
 import { orderService } from '../../services/orderService'
-import { calcCommission } from '../../utils'
+import { calcCommission, getFriendlyError } from '../../utils'
 
 /**
  * صفحة الأرباح والمستحقات والتحويلات المالية للبائعة
@@ -63,11 +63,11 @@ export default function SellerEarningsPage() {
       setOrders(myOrders)
       setPayouts(pays)
     } catch (err) {
-      setError(err.message || 'حدث خطأ أثناء تحميل الحسابات المالية')
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }, [sellerId])
+  }, [sellerId, t])
 
   useEffect(() => {
     loadFinancialData()
@@ -209,7 +209,7 @@ export default function SellerEarningsPage() {
             icon={<Receipt className="w-8 h-8 text-brand-orange" />}
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overscroll-contain modal-scrollbar">
             <table className="w-full text-start align-middle text-xs">
               <thead>
                 <tr className="bg-surface-subtle text-text-muted font-bold border-b border-surface-border">
@@ -335,7 +335,7 @@ export default function SellerEarningsPage() {
             icon={<Wallet className="w-8 h-8 text-brand-orange" />}
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overscroll-contain modal-scrollbar">
             <table className="w-full text-start align-middle text-xs">
               <thead>
                 <tr className="bg-surface-subtle text-text-muted font-bold border-b border-surface-border">

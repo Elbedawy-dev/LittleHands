@@ -7,7 +7,7 @@ import { Checkbox } from '../../components/ui/Checkbox'
 import { Input } from '../../components/ui/Input'
 import { PasswordInput } from '../../components/ui/PasswordInput'
 import { useAuth } from '../../context/AuthContext'
-import { formatErrorMessage } from '../../utils'
+import { getFriendlyError } from '../../utils'
 
 export default function LoginPage() {
   const { t } = useTranslation('auth')
@@ -66,7 +66,7 @@ export default function LoginPage() {
         navigate(nextUrl, { replace: true })
       }
     } catch (err) {
-      setFormError(formatErrorMessage(err))
+      setFormError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }

@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { OTPInput } from '../../components/ui/OTPInput'
 import { useAuth } from '../../context/AuthContext'
 import { authService } from '../../services/authService'
+import { getFriendlyError } from '../../utils'
 
 export default function VerifyEmailPage() {
   const { t } = useTranslation('auth')
@@ -49,7 +50,7 @@ export default function VerifyEmailPage() {
       if (refreshUser) await refreshUser()
       navigate(next, { replace: true })
     } catch (err) {
-      setError(err.message || 'رمز التحقق غير صحيح أو انتهت صلاحيته')
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
@@ -65,7 +66,7 @@ export default function VerifyEmailPage() {
       setCountdown(60)
       setTimeout(() => setResendSuccess(false), 3000)
     } catch (err) {
-      setError(err.message || 'تعذر إعادة الإرسال، يرجى المحاولة لاحقاً')
+      setError(getFriendlyError(err, t))
     } finally {
       setResending(false)
     }

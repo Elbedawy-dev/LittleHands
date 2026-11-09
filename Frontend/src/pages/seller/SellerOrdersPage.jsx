@@ -4,6 +4,7 @@ import {
   ShoppingBag,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -19,7 +20,7 @@ import { useAuth } from '../../context/AuthContext'
 import { OrderDetailsDrawer } from '../../features/seller'
 import { useFormat } from '../../hooks/useFormat'
 import { orderService } from '../../services/orderService'
-import { calcCommission } from '../../utils'
+import { calcCommission, getFriendlyError } from '../../utils'
 
 /**
  * صفحة إدارة ومتابعة طلبات الوسائل التعليمية للبائعة
@@ -59,11 +60,11 @@ export default function SellerOrdersPage() {
       )
       setOrders(myOrders)
     } catch (err) {
-      setError(err.message || 'حدث خطأ أثناء تحميل الطلبات')
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }, [sellerId, statusFilter, searchQuery])
+  }, [sellerId, statusFilter, searchQuery, t])
 
   useEffect(() => {
     fetchOrders()
@@ -90,7 +91,7 @@ export default function SellerOrdersPage() {
       const updated = await orderService.getOrder(orderId)
       setSelectedOrder(updated)
     } catch (err) {
-      alert(err.message || 'لا يمكن تحديث حالة الطلب')
+      toast.error(getFriendlyError(err, t))
     }
   }
 
@@ -177,7 +178,7 @@ export default function SellerOrdersPage() {
           {/* عرض الجدول للشاشات الكبيرة (Desktop Table) */}
           <div className="hidden md:block">
             <Card padding="none" className="overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overscroll-contain modal-scrollbar">
                 <table className="w-full text-start align-middle text-xs">
                   <thead>
                     <tr className="bg-surface-subtle text-text-muted font-bold border-b border-surface-border">

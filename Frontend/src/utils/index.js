@@ -181,7 +181,7 @@ export function delay(ms = 400) {
 /**
  * قراءة أو كتابة الذاكرة المحلية بأمان
  */
-export { formatErrorMessage } from './errors'
+export { getFriendlyError, formatErrorMessage } from './errors'
 export { processAvatarImage } from './avatar'
 
 export const storage = {

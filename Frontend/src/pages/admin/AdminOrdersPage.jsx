@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -7,6 +7,7 @@ import { AdminOrderFilters } from '../../features/admin/orders/AdminOrderFilters
 import { AdminOrdersTable } from '../../features/admin/orders/AdminOrdersTable'
 import { useDebounce } from '../../hooks/useDebounce'
 import { orderService } from '../../services/orderService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة إدارة وتدقيق كافة طلبات المنصة
@@ -30,22 +31,22 @@ export default function AdminOrdersPage() {
 
   const debouncedSearch = useDebounce(filters.q, 300)
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
       const data = await orderService.getAllOrders()
       setOrders(data)
     } catch (err) {
       console.error('Failed to load orders:', err)
-      toast.error('حدث خطأ أثناء تحميل سجل الطلبات')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
     fetchOrders()
-  }, [])
+  }, [fetchOrders])
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))

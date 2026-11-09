@@ -28,7 +28,7 @@ import { ORDER_STATUS } from '../../../config/constants'
 import { useFormat } from '../../../hooks/useFormat'
 import { usePrivateReceipt } from '../../../hooks/usePrivateReceipt'
 import { orderService } from '../../../services/orderService'
-import { calcCommission, getDisplayName } from '../../../utils'
+import { calcCommission, getDisplayName, getFriendlyError } from '../../../utils'
 
 /**
  * درج التفاصيل المتقدم للطلب (Admin Order Details Drawer)
@@ -117,7 +117,7 @@ export function AdminOrderDrawer({
       if (onStatusUpdated) onStatusUpdated()
     } catch (err) {
       console.error('Failed to update order status:', err)
-      toast.error(err.message || 'تعذر تحديث حالة الطلب')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsUpdatingStatus(false)
     }
@@ -144,7 +144,7 @@ export function AdminOrderDrawer({
       if (onStatusUpdated) onStatusUpdated()
     } catch (err) {
       console.error('Failed to record refund:', err)
-      toast.error(err.message || (isEn ? 'Failed to process refund' : 'تعذر تسجيل رد المبلغ'))
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsRefunding(false)
     }
@@ -171,7 +171,7 @@ export function AdminOrderDrawer({
           </div>
         }
       >
-        <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
+        <div className="p-6 space-y-6 overflow-y-auto overscroll-contain modal-scrollbar max-h-[calc(100vh-140px)]">
           {/* شريط الحالة والتحكم السريع بالحالة */}
           <div className="p-4 rounded-2xl bg-surface-subtle border border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -307,7 +307,7 @@ export function AdminOrderDrawer({
               </p>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overscroll-contain modal-scrollbar">
               <table className="w-full text-xs text-start border-collapse">
                 <thead>
                   <tr className="border-b border-surface-border bg-surface-subtle/50 text-text-muted">

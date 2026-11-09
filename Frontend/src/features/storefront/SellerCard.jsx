@@ -35,7 +35,7 @@ export function SellerCard({ seller }) {
       <div>
         {/* ترويسة البطاقة والصورة الرمزية والبيانات الواقعية فقط */}
         <div className="flex items-center gap-4 mb-4">
-          <Avatar name={sellerName} role="seller" size="xl" />
+          <Avatar src={seller.avatar} name={sellerName} role="seller" size="xl" />
           <div>
             <h3 className="font-heading font-black text-xl text-text-main">
               {sellerName}

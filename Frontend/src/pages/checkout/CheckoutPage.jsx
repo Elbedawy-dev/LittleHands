@@ -16,6 +16,7 @@ import { ReviewStep } from '../../features/checkout/ReviewStep'
 import { orderService } from '../../services/orderService'
 import { settingsService } from '../../services/settingsService'
 import { userService } from '../../services/userService'
+import { getFriendlyError } from '../../utils'
 
 const CHECKOUT_STORAGE_KEY = 'lh_checkout_flow_state'
 
@@ -213,7 +214,7 @@ export default function CheckoutPage() {
         navigate('/verify-email?next=/checkout')
         return
       }
-      setSubmitError(err.message || t('checkout:errors.failedOrder'))
+      setSubmitError(getFriendlyError(err, t))
     } finally {
       setIsSubmitting(false)
     }

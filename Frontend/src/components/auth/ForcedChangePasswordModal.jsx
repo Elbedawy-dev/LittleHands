@@ -5,9 +5,10 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 import { authService } from '../../services/authService'
+import { getFriendlyError } from '../../utils'
 
 export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isEn = i18n.language === 'en'
 
   const [current, setCurrent] = useState('')
@@ -44,7 +45,7 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
         onSuccess()
       }, 1500)
     } catch (err) {
-      setError(err.message || (isEn ? 'Failed to change password' : 'فشل تغيير كلمة المرور، تأكدي من كلمة المرور المؤقتة'))
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }

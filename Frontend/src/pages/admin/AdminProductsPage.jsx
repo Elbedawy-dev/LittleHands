@@ -11,6 +11,7 @@ import { ProductFilters, ProductListTable, ProductStats } from '../../features/a
 import { orderService } from '../../services/orderService'
 import { productService } from '../../services/productService'
 import { adminService } from '../../services/adminService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة إدارة كتالوج الوسائل التعليمية لكلا البائعتين الحرفيتين
@@ -47,8 +48,8 @@ export default function AdminProductsPage() {
       setProducts(allProducts || [])
       setOrders(allOrders || [])
       setSellers(sellerAccounts?.items || sellerAccounts || [])
-    } catch {
-      toast.error(t('products.errorLoading'))
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
@@ -115,8 +116,8 @@ export default function AdminProductsPage() {
         prev.map((item) => (item.id === product.id ? { ...item, isPublished: nextState } : item))
       )
       toast.success(t('products.togglePublishSuccess'))
-    } catch {
-      toast.error(t('products.errorLoading'))
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
     }
   }
 
@@ -130,7 +131,7 @@ export default function AdminProductsPage() {
       toast.success(t('products.deleteSuccess'))
       setDeleteTarget(null)
     } catch (err) {
-      toast.error(err.message || t('products.errorLoading'))
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsDeleting(false)
     }

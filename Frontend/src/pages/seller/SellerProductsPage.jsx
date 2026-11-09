@@ -6,6 +6,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -25,7 +26,7 @@ import { useLanguage } from '../../context/LanguageContext'
 import { ProductCardSeller } from '../../features/seller'
 import { useFormat } from '../../hooks/useFormat'
 import { productService } from '../../services/productService'
-import { pickLocale } from '../../utils'
+import { getFriendlyError, pickLocale } from '../../utils'
 
 /**
  * صفحة إدارة الوسائل التعليمية للبائعة
@@ -62,11 +63,11 @@ export default function SellerProductsPage() {
       })
       setProducts(data)
     } catch (err) {
-      setError(err.message || 'حدث خطأ أثناء تحميل الوسائل')
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }, [sellerId, searchQuery, statusFilter])
+  }, [sellerId, searchQuery, statusFilter, t])
 
   useEffect(() => {
     loadProducts()
@@ -91,7 +92,7 @@ export default function SellerProductsPage() {
         prev.map((p) => (p.id === productId ? { ...p, isPublished: newPublishedState } : p))
       )
     } catch (err) {
-      alert(err.message || 'تعذر تغيير حالة النشر')
+      toast.error(getFriendlyError(err, t))
     }
   }
 
@@ -104,7 +105,7 @@ export default function SellerProductsPage() {
       setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id))
       setProductToDelete(null)
     } catch (err) {
-      alert(err.message || 'تعذر حذف الوسيلة')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsDeleting(false)
     }
@@ -212,7 +213,7 @@ export default function SellerProductsPage() {
           {/* العرض في الشاشات الكبيرة (Desktop Table) */}
           <div className="hidden md:block">
             <Card padding="none" className="overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overscroll-contain modal-scrollbar">
                 <table className="w-full text-start align-middle text-xs">
                   <thead>
                     <tr className="bg-surface-subtle text-text-muted font-bold border-b border-surface-border">

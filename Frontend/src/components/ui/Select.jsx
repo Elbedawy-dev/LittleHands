@@ -465,7 +465,7 @@ export const Select = forwardRef(function Select(
             }
             className={cn(
               'rounded-[18px] border border-surface-border bg-surface text-text-main shadow-float py-1.5 focus:outline-none animate-in fade-in-50 zoom-in-95 duration-150',
-              noScroll ? 'max-h-none overflow-visible' : 'max-h-60 overflow-y-auto overscroll-contain'
+              noScroll ? 'max-h-none overflow-visible' : 'max-h-60 overflow-y-auto overscroll-contain modal-scrollbar'
             )}
           >
             {finalPlaceholder && (

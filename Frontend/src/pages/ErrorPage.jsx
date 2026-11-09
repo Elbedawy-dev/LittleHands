@@ -20,15 +20,6 @@ export default function ErrorPage() {
     }
   }, [error])
 
-  const errorMessage =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-      ? error
-      : (error && error.statusText) || 'Unknown error'
-
-  const errorStack = error instanceof Error ? error.stack : null
-
   return (
     <div className="min-h-screen bg-surface-subtle flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <Card
@@ -72,25 +63,6 @@ export default function ErrorPage() {
             </Button>
           </Link>
         </div>
-
-        {/* Technical details shown ONLY in development */}
-        {import.meta.env.DEV && (
-          <details className="text-start mt-6 pt-4 border-t border-surface-border text-xs text-text-muted group">
-            <summary className="font-semibold cursor-pointer text-text-main hover:text-brand-orange transition-colors select-none">
-              {t('details')}
-            </summary>
-            <div className="mt-3 p-3.5 rounded-xl bg-surface-subtle/80 border border-surface-border font-mono text-[11px] overflow-x-auto space-y-1.5" dir="ltr">
-              <div className="font-bold text-rose-600 dark:text-rose-400">
-                {errorMessage}
-              </div>
-              {errorStack && (
-                <pre className="text-text-muted whitespace-pre-wrap text-[10px] max-h-48 overflow-y-auto">
-                  {errorStack}
-                </pre>
-              )}
-            </div>
-          </details>
-        )}
       </Card>
     </div>
   )

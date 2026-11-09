@@ -14,7 +14,7 @@ import {
   ShippingSettingsSection,
   WalletSettingsSection,
 } from '../../features/admin/settings'
-import { isValidEgyptianPhone } from '../../utils'
+import { getFriendlyError, isValidEgyptianPhone } from '../../utils'
 
 /**
  * صفحة إعدادات المنصة الموحدة مع زر حفظ رئيسي واحد
@@ -135,8 +135,8 @@ export default function AdminSettingsPage() {
       setSavedSuccess(true)
       toast.success(t('settings.saveSuccess'))
       setTimeout(() => setSavedSuccess(false), 4000)
-    } catch {
-      toast.error(t('settings.saveError'))
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsSaving(false)
     }

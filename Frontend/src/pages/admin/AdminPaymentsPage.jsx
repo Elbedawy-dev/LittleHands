@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../components/ui/Card'
@@ -12,6 +12,7 @@ import { PaymentRejectModal } from '../../features/admin/payments/PaymentRejectM
 import { PaymentsTable } from '../../features/admin/payments/PaymentsTable'
 import { useDebounce } from '../../hooks/useDebounce'
 import { paymentService } from '../../services/paymentService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة إدارة ومراجعة مدفوعات فودافون كاش
@@ -32,22 +33,22 @@ export default function AdminPaymentsPage() {
   const [rejectModalPayment, setRejectModalPayment] = useState(null)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     setLoading(true)
     try {
       const data = await paymentService.getPayments({ status: 'all' })
       setAllPayments(data)
     } catch (err) {
       console.error('Failed to load payments:', err)
-      toast.error('حدث خطأ أثناء تحميل سجل المدفوعات')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
     fetchPayments()
-  }, [])
+  }, [fetchPayments])
 
   // حساب الأعداد لكل تبويب
   const counts = useMemo(() => {
@@ -97,7 +98,7 @@ export default function AdminPaymentsPage() {
       fetchNotifications()
     } catch (err) {
       console.error('Failed to confirm payment:', err)
-      toast.error(err.message || 'تعذر تأكيد الدفع، يرجى المحاولة مرة أخرى')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsProcessing(false)
     }
@@ -123,7 +124,7 @@ export default function AdminPaymentsPage() {
       fetchNotifications()
     } catch (err) {
       console.error('Failed to reject payment:', err)
-      toast.error(err.message || 'تعذر تسجيل الرفض، يرجى المحاولة مرة أخرى')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsProcessing(false)
     }

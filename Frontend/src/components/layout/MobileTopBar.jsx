@@ -286,7 +286,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                   data-testid="mobile-drawer-panel"
                 >
                   {/* Upper scrollable section */}
-                  <div className="flex-1 overflow-y-auto overscroll-contain">
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scrollbar">
                     {/* Header: Logo mark + brand name (single line) + Close X button */}
                     <div className="p-4 flex items-center justify-between border-b border-surface-border">
                       <Logo asLink to="/" variant="full" size="sm" onClick={() => setDrawerOpen(false)} />

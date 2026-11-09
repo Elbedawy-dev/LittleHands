@@ -22,7 +22,7 @@ export function SellerProfileHeader({ seller, productsCount = 0 }) {
       {/* محتوى بيانات البائعة والصورة الرمزية المتداخلة */}
       <div className="px-6 sm:px-10 pb-8 pt-0 relative z-10 flex flex-col sm:flex-row items-center sm:items-end gap-6 -mt-16 sm:-mt-20 text-center sm:text-start">
         <div className="p-2 rounded-full bg-surface border-4 border-surface shadow-md shrink-0">
-          <Avatar name={displayName} role="seller" size="2xl" />
+          <Avatar src={seller.avatar} name={displayName} role="seller" size="2xl" />
         </div>
 
         <div className="flex-1 space-y-2">

@@ -125,7 +125,7 @@ export function MobileDrawer({ isOpen, onClose }) {
           dir={language === 'ar' ? 'rtl' : 'ltr'}
         >
           {/* Scrollable Upper Section */}
-          <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scrollbar">
             {/* 1. Header: Logo mark + one-line brand name + close button */}
             <div className="p-4 flex items-center justify-between border-b border-surface-border">
               <Logo asLink to="/" variant="full" size="sm" onClick={onClose} />

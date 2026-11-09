@@ -103,7 +103,7 @@ export function AccountBottomSheet({ isOpen, onClose }) {
           </div>
 
           {/* Action Links */}
-          <div className="p-4 space-y-1.5 overflow-y-auto overscroll-contain">
+          <div className="p-4 space-y-1.5 flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scrollbar">
             {/* Dashboard Link for Seller or Admin */}
             {user.role === 'seller' && (
               <Link

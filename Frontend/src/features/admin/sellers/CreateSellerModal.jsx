@@ -7,6 +7,7 @@ import { CopyButton } from '../../../components/ui/CopyButton'
 import { Input } from '../../../components/ui/Input'
 import { Modal } from '../../../components/ui/Modal'
 import { adminService } from '../../../services/adminService'
+import { getFriendlyError } from '../../../utils'
 
 /**
  * نافذة إنشاء حساب بائعة حرفية جديدة وتوليد بيانات الدخول المؤقتة
@@ -121,7 +122,7 @@ export function CreateSellerModal({
       } else if (err.code === 'VALIDATION_ERROR') {
         setFormAlert(t('sellers.createAccount.errors.generic'))
       } else {
-        setFormAlert(err.message || t('sellers.createAccount.errors.generic'))
+        setFormAlert(getFriendlyError(err, t))
       }
     } finally {
       setIsSubmitting(false)

@@ -24,6 +24,7 @@ import { useFormat } from '../../hooks/useFormat'
 import { earningsService } from '../../services/earningsService'
 import { orderService } from '../../services/orderService'
 import { paymentService } from '../../services/paymentService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة لوحة تحكم إدارة المنصة الشاملة (Admin Overview)
@@ -57,7 +58,7 @@ export default function AdminOverviewPage() {
       setRecentOrders(orders)
     } catch (err) {
       console.error('Failed to load admin overview:', err)
-      setError('تعذر تحميل بيانات لوحة التحكم، يرجى المحاولة مرة أخرى.')
+      setError(err || true)
     } finally {
       setLoading(false)
     }
@@ -87,13 +88,13 @@ export default function AdminOverviewPage() {
   if (error) {
     return (
       <div className="p-8 text-center rounded-[24px] bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300">
-        <p className="font-bold text-sm mb-3">{error}</p>
+        <p className="font-bold text-sm mb-3">{getFriendlyError(error, t)}</p>
         <button
           type="button"
           onClick={fetchData}
-          className="px-4 py-2 rounded-full bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors"
+          className="px-4 py-2 rounded-full bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors cursor-pointer"
         >
-          {t('common.actions.retry', 'إعادة المحاولة')}
+          {t('common:actions.retry', isRtl ? 'إعادة المحاولة' : 'Try Again')}
         </button>
       </div>
     )

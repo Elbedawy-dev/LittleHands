@@ -113,52 +113,50 @@ export function DashboardLayout({ role: propRole }) {
   ]
 
   const renderNavContent = () => (
-    <div className="flex flex-col justify-between h-full py-4">
-      <div>
-        {/* ترويسة اللوحة والشعار - سطر واحد بدون نص فرعي مكدس */}
-        <div className="px-6 pb-6 mb-6 border-b border-surface-border">
-          <Logo asLink to="/" variant="full" size="md" />
-        </div>
-
-        {/* روابط التنقل */}
-        <nav className="px-3 space-y-1">
-          {navItems.map((item) => {
-            const active = isItemActive(item)
-
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  'flex items-center justify-between px-4 py-3 rounded-[16px] text-sm font-bold transition-all duration-200 select-none',
-                  active
-                    ? 'bg-brand-orange text-white shadow-soft font-black'
-                    : 'text-text-muted hover:text-text-main hover:bg-surface-subtle'
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="shrink-0">{item.icon}</span>
-                  <span>{t(item.labelKey)}</span>
-                </div>
-
-                {item.badge !== undefined && item.badge !== null && (
-                  <span
-                    className={cn(
-                      'text-xs font-bold px-2 py-0.5 rounded-full',
-                      item.badgeColor || 'bg-white/20 text-white'
-                    )}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
-        </nav>
+    <div className="flex flex-col h-full min-h-0 py-4">
+      {/* ترويسة اللوحة والشعار - سطر واحد بدون نص فرعي مكدس */}
+      <div className="px-6 pb-5 mb-2 border-b border-surface-border shrink-0">
+        <Logo asLink to="/" variant="full" size="md" />
       </div>
 
+      {/* روابط التنقل */}
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scrollbar px-3 py-2 space-y-1">
+        {navItems.map((item) => {
+          const active = isItemActive(item)
+
+          return (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={cn(
+                'flex items-center justify-between px-4 py-3 rounded-[16px] text-sm font-bold transition-all duration-200 select-none',
+                active
+                  ? 'bg-brand-orange text-white shadow-soft font-black'
+                  : 'text-text-muted hover:text-text-main hover:bg-surface-subtle'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <span className="shrink-0">{item.icon}</span>
+                <span>{t(item.labelKey)}</span>
+              </div>
+
+              {item.badge !== undefined && item.badge !== null && (
+                <span
+                  className={cn(
+                    'text-xs font-bold px-2 py-0.5 rounded-full',
+                    item.badgeColor || 'bg-white/20 text-white'
+                  )}
+                >
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          )
+        })}
+      </nav>
+
       {/* أسفل الشريط الجانبي: معلومات الحساب والرجوع للمتجر */}
-      <div className="px-4 pt-4 border-t border-surface-border space-y-2">
+      <div className="px-4 pt-4 border-t border-surface-border space-y-2 shrink-0">
         <Link
           to="/"
           className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors"
@@ -189,7 +187,7 @@ export function DashboardLayout({ role: propRole }) {
 
       <div className="flex-1 flex min-w-0">
         {/* الشريط الجانبي الثابت للشاشات الكبيرة lg+ */}
-        <aside className="hidden lg:flex w-72 flex-col bg-surface border-e border-surface-border shrink-0 fixed top-0 bottom-0 start-0 z-30">
+        <aside className="hidden lg:flex w-72 h-dvh flex-col bg-surface border-e border-surface-border shrink-0 fixed top-0 bottom-0 start-0 z-30">
           {renderNavContent()}
         </aside>
 

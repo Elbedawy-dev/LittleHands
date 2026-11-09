@@ -10,6 +10,7 @@ import { ProductForm } from '../../features/products/ProductForm'
 import { catalogService } from '../../services/catalogService'
 import { productService } from '../../services/productService'
 import { sellerService } from '../../services/sellerService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة إضافة وتعديل وسيلة تعليمية من لوحة تحكم الإدارة
@@ -43,7 +44,7 @@ export default function AdminProductFormPage() {
           }
         }
       } catch (err) {
-        toast.error(err.message || t('products.errorLoading'))
+        toast.error(getFriendlyError(err, t))
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -69,7 +70,7 @@ export default function AdminProductFormPage() {
       toast.success(t('productForm.saveSuccess'))
       navigate('/admin/products')
     } catch (err) {
-      toast.error(err.message || t('productForm.saveError'))
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsSubmitting(false)
     }

@@ -67,7 +67,7 @@ export function DataTable({
   return (
     <div className={cn('w-full', className)}>
       {/* عرض الشاشات الكبيرة: جدول متناسق */}
-      <div className="hidden md:block overflow-x-auto rounded-[20px] border border-surface-border bg-surface">
+      <div className="hidden md:block overflow-x-auto overscroll-contain modal-scrollbar rounded-[20px] border border-surface-border bg-surface">
         <table className="w-full text-start border-collapse text-sm">
           <thead>
             <tr className="border-b border-surface-border bg-surface-subtle/50 text-text-muted">

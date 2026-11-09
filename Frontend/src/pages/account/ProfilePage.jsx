@@ -1,7 +1,6 @@
-import { AlertCircle, Camera, CheckCircle2, KeyRound, Lock, Save, User } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { AlertCircle, CheckCircle2, KeyRound, Lock, Save, User } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
@@ -11,14 +10,12 @@ import { Textarea } from '../../components/ui/Textarea'
 import { GOVERNORATES } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
 import { authService } from '../../services/authService'
-import { processAvatarImage } from '../../utils/avatar'
+import { getFriendlyError } from '../../utils'
 
 export default function ProfilePage() {
   const { t, i18n } = useTranslation('profile')
   const isEn = i18n.language === 'en'
   const { user, updateProfile } = useAuth()
-  const avatarInputRef = useRef(null)
-  const [avatarLoading, setAvatarLoading] = useState(false)
 
   // بيانات الملف الشخصي
   const [formData, setFormData] = useState({
@@ -53,25 +50,6 @@ export default function ProfilePage() {
       : `${g.name} (الشحن ${g.shippingRate} ج.م)`,
   }))
 
-  const handleAvatarFile = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setAvatarLoading(true)
-    setProfileError('')
-    try {
-      const dataUrl = await processAvatarImage(file)
-      const blob = await (await fetch(dataUrl)).blob()
-      await userService.uploadAvatar(new File([blob], 'avatar.jpg', { type: blob.type || 'image/jpeg' }))
-      await refreshUser()
-      setProfileSuccess(true)
-      setTimeout(() => setProfileSuccess(false), 4000)
-    } catch (err) {
-      setProfileError(err.message || (isEn ? 'Failed to update photo' : 'فشل تحديث الصورة الشخصية'))
-    } finally {
-      setAvatarLoading(false)
-    }
-  }
-
   // حفظ بيانات الملف الشخصي
   const handleProfileSubmit = async (e) => {
     e.preventDefault()
@@ -89,7 +67,7 @@ export default function ProfilePage() {
       setProfileSuccess(true)
       setTimeout(() => setProfileSuccess(false), 4000)
     } catch (err) {
-      setProfileError(err.message || (isEn ? 'Failed to save changes' : 'فشل حفظ التعديلات'))
+      setProfileError(getFriendlyError(err, t))
     } finally {
       setSavingProfile(false)
     }
@@ -124,7 +102,7 @@ export default function ProfilePage() {
       setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
       setTimeout(() => setPasswordSuccess(false), 4000)
     } catch (err) {
-      setPasswordError(err.message || (isEn ? 'Failed to update password' : 'فشل تحديث كلمة المرور'))
+      setPasswordError(getFriendlyError(err, t))
     } finally {
       setSavingPassword(false)
     }
@@ -132,54 +110,6 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      {/* بطاقة الصورة الشخصية للحساب */}
-      <Card padding="md" className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative group shrink-0">
-            <Avatar
-              src={user?.avatar}
-              name={user?.name || (isEn ? 'Account' : 'حساب العميلة')}
-              size="lg"
-            />
-            <button
-              type="button"
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={avatarLoading}
-              className="absolute -bottom-1 -end-1 p-2 rounded-full bg-brand-orange text-white shadow-soft hover:bg-brand-orange-hover active:scale-95 transition-all select-none cursor-pointer"
-              aria-label={t('header.updateAvatar', 'تحديث الصورة الشخصية')}
-            >
-              <Camera className="w-4 h-4" />
-            </button>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleAvatarFile}
-              className="hidden"
-            />
-          </div>
-          <div>
-            <h3 className="font-heading font-black text-base text-text-main" data-user-content="true">
-              {user?.name || (isEn ? 'Account' : 'حساب العميلة')}
-            </h3>
-            <p className="text-xs text-text-muted mt-0.5" data-user-content="true">
-              {user?.email || ''}
-            </p>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          loading={avatarLoading}
-          onClick={() => avatarInputRef.current?.click()}
-          startIcon={<Camera className="w-4 h-4" />}
-        >
-          {isEn ? 'Change Photo' : 'تغيير الصورة'}
-        </Button>
-      </Card>
-
       {/* النموذج الأول: البيانات الشخصية ومقر الحضانة */}
       <Card padding="lg">
         <div className="flex items-center justify-between pb-4 border-b border-surface-border mb-6">

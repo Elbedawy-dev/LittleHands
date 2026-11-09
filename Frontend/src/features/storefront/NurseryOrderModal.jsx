@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Textarea } from '../../components/ui/Textarea'
 import { contactService } from '../../services/contactService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * نافذة منبثقة لطلب تفصيل وتجهيز وسائل تعليمية بكميات للحضانات والروضات
@@ -74,8 +75,8 @@ export function NurseryOrderModal({ isOpen, onClose }) {
       // إعادة ضبط النموذج والإغلاق
       setFormData({ name: '', phone: '', nurseryName: '', details: '' })
       onClose()
-    } catch {
-      toast.error('حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى')
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsSubmitting(false)
     }

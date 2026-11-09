@@ -28,7 +28,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { useSettings } from '../../context/SettingsContext'
 import { sellerService } from '../../services/sellerService'
-import { cn } from '../../utils'
+import { cn, getFriendlyError } from '../../utils'
 import { processAvatarImage } from '../../utils/avatar'
 
 export default function SellerProfilePage() {
@@ -117,7 +117,7 @@ export default function SellerProfilePage() {
       setSuccessMsg(t('seller.saveSuccess'))
       setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
-      setErrorMsg(err.message || t('seller.saveError'))
+      setErrorMsg(getFriendlyError(err, t))
     } finally {
       setSaving(false)
     }
@@ -137,7 +137,7 @@ export default function SellerProfilePage() {
       setSuccessMsg(t('seller.avatarSuccess'))
       setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
-      setErrorMsg(err.message || t('seller.avatarError'))
+      setErrorMsg(getFriendlyError(err, t))
     }
   }
 
@@ -165,7 +165,7 @@ export default function SellerProfilePage() {
       setSuccessMsg(t('seller.walletSuccess'))
       setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
-      setWalletError(err.message || t('seller.walletErrorFailed'))
+      setWalletError(getFriendlyError(err, t))
     } finally {
       setUpdatingWallet(false)
     }

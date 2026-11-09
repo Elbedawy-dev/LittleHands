@@ -39,7 +39,7 @@ export function CheckoutSummaryCard({
       </div>
 
       {/* قائمة الوسائل المصغرة */}
-      <div className="divide-y divide-surface-border max-h-[280px] overflow-y-auto py-2 pe-1">
+      <div className="divide-y divide-surface-border max-h-[280px] overflow-y-auto overscroll-contain modal-scrollbar py-2 pe-1">
         {items.map((item) => {
           const categoryName = getCategoryName(item.categoryId)
           return (

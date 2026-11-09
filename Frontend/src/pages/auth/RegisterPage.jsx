@@ -9,6 +9,7 @@ import { PasswordInput } from '../../components/ui/PasswordInput'
 import { Select } from '../../components/ui/Select'
 import { GOVERNORATES } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
+import { getFriendlyError } from '../../utils'
 
 export default function RegisterPage() {
   const { i18n, t } = useTranslation('auth')
@@ -110,7 +111,7 @@ export default function RegisterPage() {
       // الانتقال المباشر لصفحة تأكيد البريد الإلكتروني
       navigate('/verify-email', { replace: true })
     } catch (err) {
-      setFormError(err.message || 'فشل إنشاء الحساب، يرجى المحاولة لاحقاً')
+      setFormError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }

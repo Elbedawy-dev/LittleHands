@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { authService } from '../../services/authService'
+import { getFriendlyError } from '../../utils'
 
 export default function ResetPasswordPage() {
   const { t, i18n } = useTranslation(['auth', 'common'])
@@ -42,7 +43,7 @@ export default function ResetPasswordPage() {
       await authService.resetPassword({ token, password })
       setSuccess(true)
     } catch (err) {
-      setError(err.message || (isEn ? 'Failed to reset password' : 'فشلت عملية إعادة تعيين كلمة المرور'))
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }

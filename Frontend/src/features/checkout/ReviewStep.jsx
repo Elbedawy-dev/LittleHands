@@ -184,7 +184,7 @@ export function ReviewStep({
           {t('checkout:review.itemsSummary')} ({items.length})
         </h4>
 
-        <div className="divide-y divide-surface-border border border-surface-border rounded-[20px] p-3 sm:p-4 bg-surface max-h-[220px] overflow-y-auto">
+        <div className="divide-y divide-surface-border border border-surface-border rounded-[20px] p-3 sm:p-4 bg-surface max-h-[220px] overflow-y-auto overscroll-contain modal-scrollbar">
           {items.map((it) => (
             <div key={it.productId} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs sm:text-sm">
               <div className="flex items-center gap-3 min-w-0">

@@ -153,7 +153,7 @@ export default function OrderSuccessPage() {
                 )}
               </div>
 
-              <div className="divide-y divide-surface-border max-h-[200px] overflow-y-auto">
+              <div className="divide-y divide-surface-border max-h-[200px] overflow-y-auto overscroll-contain modal-scrollbar">
                 {order.items.map((it, idx) => (
                   <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2.5 min-w-0">

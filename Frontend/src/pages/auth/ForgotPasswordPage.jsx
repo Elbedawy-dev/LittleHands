@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { authService } from '../../services/authService'
+import { getFriendlyError } from '../../utils'
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation('auth')
@@ -46,7 +47,7 @@ export default function ForgotPasswordPage() {
       setSubmitted(true)
       setCountdown(60)
     } catch (err) {
-      setError(err.message || 'البريد الإلكتروني غير مسجل في قاعدة البيانات')
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
@@ -60,7 +61,7 @@ export default function ForgotPasswordPage() {
       await authService.forgotPassword(email.trim())
       setCountdown(60)
     } catch (err) {
-      setError(err.message || 'فشلت إعادة الإرسال')
+      setError(getFriendlyError(err, t))
     } finally {
       setResending(false)
     }

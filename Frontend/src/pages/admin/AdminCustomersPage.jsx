@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { CustomerListTable, CustomerStats } from '../../features/admin/customers'
 import { adminService } from '../../services/adminService'
 import { orderService } from '../../services/orderService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة قاعدة بيانات العملاء والحضانات المشتركة (للقراءة فقط)
@@ -47,7 +48,7 @@ export default function AdminCustomersPage() {
           setCustomers(enriched)
         }
       } catch (err) {
-        toast.error(err.message || t('customers.errorLoading'))
+        toast.error(getFriendlyError(err, t))
       } finally {
         if (isMounted) {
           setLoading(false)

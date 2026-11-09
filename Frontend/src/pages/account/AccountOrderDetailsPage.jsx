@@ -31,7 +31,7 @@ import { useSettings } from '../../context/SettingsContext'
 import { useFormat } from '../../hooks/useFormat'
 import { usePrivateReceipt } from '../../hooks/usePrivateReceipt'
 import { orderService } from '../../services/orderService'
-import { pickLocale } from '../../utils'
+import { getFriendlyError, pickLocale } from '../../utils'
 
 export default function AccountOrderDetailsPage() {
   const { id } = useParams()
@@ -81,11 +81,11 @@ export default function AccountOrderDetailsPage() {
         })
       }
     } catch (err) {
-      setError(err.message || (isEn ? 'Failed to load order details' : 'تعذر تحميل تفاصيل الطلب'))
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }, [id, isEn])
+  }, [id, t])
 
   useEffect(() => {
     fetchOrderDetails()
@@ -103,7 +103,7 @@ export default function AccountOrderDetailsPage() {
       await fetchOrderDetails()
     } catch (err) {
       console.error('Failed to cancel order:', err)
-      toast.error(err.message || (isEn ? 'Failed to cancel order' : 'تعذر إلغاء الطلب'))
+      toast.error(getFriendlyError(err, t))
     } finally {
       setCancelling(false)
     }
@@ -161,7 +161,7 @@ export default function AccountOrderDetailsPage() {
       setReuploadSuccess(true)
       await fetchOrderDetails()
     } catch (err) {
-      setReuploadError(err.message || (isEn ? 'Failed to submit receipt' : 'فشل إرسال الإيصال الجديد'))
+      setReuploadError(getFriendlyError(err, t))
     } finally {
       setReuploading(false)
     }

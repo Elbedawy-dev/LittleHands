@@ -32,7 +32,7 @@ export default function AccountLayout() {
   const isEn = i18n.language === 'en'
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { user, updateProfile, logout } = useAuth()
+  const { user, refreshUser, logout } = useAuth()
   const { settings } = useSettings()
   const { formatNumber } = useFormat()
   const fileInputRef = useRef(null)
@@ -173,7 +173,7 @@ export default function AccountLayout() {
             </div>
           </div>
 
-          {/* وسيلة الدفع الحصرية وزر تسجيل الخروج */}
+          {/* وسيلة الدفع الحصرية */}
           <div className="flex flex-wrap md:flex-col items-start md:items-end justify-between w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-surface-border text-xs gap-3">
             <div className="flex flex-col items-start md:items-end gap-1">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 font-bold">
@@ -189,19 +189,6 @@ export default function AccountLayout() {
                 )}
               </span>
             </div>
-
-            <button
-              type="button"
-              onClick={async () => {
-                await logout()
-                navigate('/login')
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors cursor-pointer"
-              data-testid="account-header-logout-btn"
-            >
-              <LogOut className="w-3.5 h-3.5 rtl:rotate-180" />
-              <span>{t('common:actions.logout', 'تسجيل الخروج')}</span>
-            </button>
           </div>
         </div>
 
@@ -275,6 +262,22 @@ export default function AccountLayout() {
       {/* منفذ المحتوى للتبويب النشط */}
       <div className="pt-2">
         <Outlet />
+      </div>
+
+      {/* زر تسجيل الخروج في نهاية المحتوى قبل التذييل مباشرة (يختفي على الموبايل لوجوده في القائمة الجانبية) */}
+      <div className="hidden md:flex items-center justify-start pt-6 mt-8 border-t border-surface-border text-start">
+        <button
+          type="button"
+          onClick={async () => {
+            await logout()
+            navigate('/login')
+          }}
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors cursor-pointer text-start"
+          data-testid="account-header-logout-btn"
+        >
+          <LogOut className="w-4 h-4 shrink-0 me-0.5 rtl:rotate-180" />
+          <span>{t('common:actions.logout', 'تسجيل الخروج')}</span>
+        </button>
       </div>
     </div>
   )

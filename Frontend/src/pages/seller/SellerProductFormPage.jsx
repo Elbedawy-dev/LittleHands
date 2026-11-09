@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext'
 import { ProductForm } from '../../features/products/ProductForm'
 import { catalogService } from '../../services/catalogService'
 import { productService } from '../../services/productService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة إنشاء أو تعديل الوسيلة التعليمية للبائعة
@@ -33,15 +34,15 @@ export default function SellerProductFormPage() {
       catalogService
         .getProduct(id)
         .then((data) => {
-          if (!data) throw new Error('الوسيلة التعليمية غير موجودة')
+          if (!data) throw new Error('PRODUCT_NOT_FOUND')
           setInitialValues(data)
         })
         .catch((err) => {
-          setError(err.message || 'حدث خطأ أثناء تحميل بيانات الوسيلة')
+          setError(getFriendlyError(err, t))
         })
         .finally(() => setLoading(false))
     }
-  }, [id, isEdit])
+  }, [id, isEdit, t])
 
   const handleSubmit = async (values) => {
     setIsSubmitting(true)
@@ -57,7 +58,7 @@ export default function SellerProductFormPage() {
       }
       navigate('/seller/products')
     } catch (err) {
-      setError(err.message || 'حدث خطأ أثناء حفظ بيانات الوسيلة التعليمية')
+      setError(getFriendlyError(err, t))
     } finally {
       setIsSubmitting(false)
     }

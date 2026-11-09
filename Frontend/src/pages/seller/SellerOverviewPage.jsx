@@ -8,6 +8,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -24,8 +25,7 @@ import { CommissionInfoCard, OrderDetailsDrawer, SalesChart } from '../../featur
 import { useFormat } from '../../hooks/useFormat'
 import { earningsService } from '../../services/earningsService'
 import { orderService } from '../../services/orderService'
-import { getDisplayName } from '../../utils'
-import { calcCommission } from '../../utils'
+import { calcCommission, getDisplayName, getFriendlyError } from '../../utils'
 
 /**
  * لوحة التحكم الرئيسية للبائعة الحرفية
@@ -62,11 +62,11 @@ export default function SellerOverviewPage() {
       setOverview(ov)
       setOrders(myOrders)
     } catch (err) {
-      setError(err.message || 'حدث خطأ أثناء تحميل بيانات لوحة التحكم')
+      setError(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }, [sellerId])
+  }, [sellerId, t])
 
   useEffect(() => {
     loadData()
@@ -88,7 +88,7 @@ export default function SellerOverviewPage() {
       const updated = await orderService.getOrder(orderId)
       setSelectedOrder(updated)
     } catch (err) {
-      alert(err.message || 'لا يمكن تحديث حالة الطلب')
+      toast.error(getFriendlyError(err, t))
     }
   }
 
@@ -225,7 +225,7 @@ export default function SellerOverviewPage() {
             icon={<ShoppingBag className="w-8 h-8 text-brand-orange" />}
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overscroll-contain modal-scrollbar">
             <table className="w-full text-start align-middle text-xs">
               <thead>
                 <tr className="bg-surface-subtle text-text-muted font-bold border-b border-surface-border">

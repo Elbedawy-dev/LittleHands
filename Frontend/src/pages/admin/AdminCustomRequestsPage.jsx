@@ -17,6 +17,7 @@ import { Tabs } from '../../components/ui/Tabs'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useFormat } from '../../hooks/useFormat'
 import { contactService } from '../../services/contactService'
+import { getFriendlyError } from '../../utils'
 
 const STATUS_CONFIG = {
   new: {
@@ -42,7 +43,7 @@ const STATUS_CONFIG = {
 }
 
 export default function AdminCustomRequestsPage() {
-  const { i18n } = useTranslation(['admin-core', 'common'])
+  const { t, i18n } = useTranslation(['admin-core', 'common'])
   const isEn = i18n.language === 'en'
   const { formatDate } = useFormat()
 
@@ -61,11 +62,11 @@ export default function AdminCustomRequestsPage() {
       setRequests(list)
     } catch (err) {
       console.error('Failed to load custom requests:', err)
-      toast.error(isEn ? 'Failed to load custom requests' : 'تعذر تحميل طلبات التفصيل الخاصة')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }, [isEn])
+  }, [t])
 
   useEffect(() => {
     fetchRequests()
@@ -81,7 +82,7 @@ export default function AdminCustomRequestsPage() {
       )
     } catch (err) {
       console.error('Failed to update status:', err)
-      toast.error(err.message || (isEn ? 'Failed to update status' : 'تعذر تحديث حالة الطلب'))
+      toast.error(getFriendlyError(err, t))
     } finally {
       setUpdatingId(null)
     }

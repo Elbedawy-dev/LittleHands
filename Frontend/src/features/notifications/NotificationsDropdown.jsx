@@ -328,7 +328,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
             {renderHeaderAndTabs()}
 
             {/* Scrollable list region */}
-            <div className="flex-1 overflow-y-auto overscroll-contain">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scrollbar">
               {tabFiltered.length === 0 ? (
                 renderEmpty()
               ) : (
@@ -393,7 +393,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
       >
         {renderHeaderAndTabs()}
 
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="flex-1 min-h-0 max-h-[380px] overflow-y-auto overscroll-contain modal-scrollbar">
           {tabFiltered.length === 0 ? (
             renderEmpty()
           ) : (

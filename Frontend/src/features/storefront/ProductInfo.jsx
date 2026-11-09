@@ -12,7 +12,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { userService } from '../../services/userService'
-import { getDisplayName, pickLocale } from '../../utils'
+import { getDisplayName, getFriendlyError, pickLocale } from '../../utils'
 
 /**
  * قسم معلومات الوسيلة التعليمية وإجراءات الشراء والمفضلة
@@ -56,9 +56,9 @@ export function ProductInfo({ product }) {
 
     try {
       await userService.toggleFavorite(product.id)
-    } catch {
+    } catch (err) {
       setIsFavorite(!nextState)
-      toast.error('حدث خطأ أثناء تعديل المفضلة')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsFavLoading(false)
     }
@@ -73,6 +73,7 @@ export function ProductInfo({ product }) {
           className="inline-flex items-center gap-2 p-1.5 pe-3 rounded-full bg-surface-subtle border border-surface-border hover:border-brand-orange/50 transition-colors group"
         >
           <Avatar
+            src={product.sellerAvatar}
             name={getDisplayName({ id: product.sellerId, sellerId: product.sellerId, name: product.sellerName, nameEn: product.sellerNameEn }, language) || t('common:roles.seller')}
             role="seller"
             size="sm"

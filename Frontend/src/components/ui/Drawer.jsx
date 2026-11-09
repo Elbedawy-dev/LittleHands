@@ -138,7 +138,7 @@ export function Drawer({
               </div>
 
               {/* المحتوى */}
-              <div className="p-5 overflow-y-auto overscroll-contain flex-1">{children}</div>
+              <div className="p-5 overflow-y-auto overscroll-contain modal-scrollbar flex-1 min-h-0">{children}</div>
             </motion.div>
           </div>
         </div>

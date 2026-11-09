@@ -1,5 +1,5 @@
 import { UserPlus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -14,6 +14,7 @@ import { earningsService } from '../../services/earningsService'
 import { orderService } from '../../services/orderService'
 
 import { adminService } from '../../services/adminService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة البائعات وأرباح المنصة (Admin Sellers & Earnings)
@@ -36,7 +37,7 @@ export default function AdminSellersPage() {
   // حالة نافذة إنشاء حساب بائعة جديدة
   const [createSellerModalOpen, setCreateSellerModalOpen] = useState(false)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const [sellersData, payoutsData, ordersData] = await Promise.all([
@@ -49,15 +50,15 @@ export default function AdminSellersPage() {
       setOrders(ordersData)
     } catch (err) {
       console.error('Failed to load sellers earnings:', err)
-      toast.error('حدث خطأ أثناء تحميل بيانات البائعات والأرباح')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   const handleOpenPayoutModal = (seller) => {
     setSelectedSeller(seller)
@@ -87,7 +88,7 @@ export default function AdminSellersPage() {
       fetchNotifications()
     } catch (err) {
       console.error('Failed to record payout:', err)
-      toast.error(err.message || 'تعذر تسجيل التحويل')
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsSubmittingPayout(false)
     }
@@ -99,7 +100,7 @@ export default function AdminSellersPage() {
       toast.success(newStatus === 'active' ? 'تم تفعيل حساب البائعة بنجاح' : 'تم إيقاف حساب البائعة')
       await fetchData()
     } catch (err) {
-      toast.error(err.message || 'فشل تحديث حالة الحساب')
+      toast.error(getFriendlyError(err, t))
     }
   }
 

@@ -9,6 +9,7 @@ import { CategoryEditModal, CategoryItemCard } from '../../features/admin/catego
 import { adminService } from '../../services/adminService'
 import { catalogService } from '../../services/catalogService'
 import { productService } from '../../services/productService'
+import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة إدارة التصنيفات التعليمية الستة الثابتة
@@ -35,8 +36,8 @@ export default function AdminCategoriesPage() {
       ])
       setCategories(cats)
       setProducts(prods)
-    } catch {
-      toast.error(t('categories.errorLoading'))
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
     } finally {
       setLoading(false)
     }
@@ -68,8 +69,8 @@ export default function AdminCategoriesPage() {
       const ids = nextCategories.map((c) => c.id || c.slug)
       await adminService.reorderCategories(ids)
       toast.success(t('categories.reorderSuccess'))
-    } catch {
-      toast.error(t('categories.errorUpdating'))
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
       // إعادة تحميل الترتيب السابق في حال الفشل
       loadCategoriesData()
     }
@@ -88,8 +89,8 @@ export default function AdminCategoriesPage() {
       const ids = nextCategories.map((c) => c.id || c.slug)
       await adminService.reorderCategories(ids)
       toast.success(t('categories.reorderSuccess'))
-    } catch {
-      toast.error(t('categories.errorUpdating'))
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
       loadCategoriesData()
     }
   }
@@ -107,7 +108,7 @@ export default function AdminCategoriesPage() {
       toast.success(t('categories.saveSuccess'))
       setEditingCategory(null)
     } catch (err) {
-      toast.error(err.message || t('categories.errorUpdating'))
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsSavingEdit(false)
     }

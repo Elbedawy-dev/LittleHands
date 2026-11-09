@@ -34,7 +34,7 @@ export function ShippingSettingsSection({
       </div>
 
       {/* جدول تسعيرة المناطق */}
-      <div className="overflow-x-auto rounded-[20px] border border-surface-border bg-surface">
+      <div className="overflow-x-auto overscroll-contain modal-scrollbar rounded-[20px] border border-surface-border bg-surface">
         <table className="w-full text-start border-collapse text-sm">
           <thead>
             <tr className="border-b border-surface-border bg-surface-subtle/60 text-text-muted text-xs font-bold">

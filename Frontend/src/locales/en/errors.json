@@ -49,6 +49,17 @@
   "CANNOT_CANCEL_ORDER": "Order cannot be cancelled in its current state.",
   "NOT_IMPLEMENTED": "This endpoint is not implemented yet.",
   "INTERNAL_SERVER_ERROR": "An unexpected internal server error occurred.",
-  "DEFAULT": "An error occurred while processing your request. Please try again later."
+  "INTERNAL_ERROR": "An unexpected error occurred, please try again",
+  "ERR_INSUFFICIENT_STOCK": "Insufficient stock available for the requested quantity",
+  "ERR_FILE_REQUIRED": "Please select an image file first",
+  "ERR_INVALID_IMAGE_TYPE": "Please select a supported image format",
+  "ERR_FILE_TOO_LARGE": "Image size is too large, maximum allowed is 2MB",
+  "ERR_FILE_READ_FAILED": "Failed to read the image file, please try again",
+  "ERR_IMAGE_LOAD_FAILED": "Failed to process the image, please choose another image",
+  "ERR_PASSWORD_LENGTH": "New password must be at least 8 characters",
+  "EMAIL_TAKEN": "This email address is already registered",
+  "PHONE_TAKEN": "This phone number is already registered",
+  "STORAGE_ERROR": "Failed to upload file, please try again",
+  "DEFAULT": "An unexpected error occurred, please try again"
 }
 

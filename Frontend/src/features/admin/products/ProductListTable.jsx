@@ -52,7 +52,7 @@ export function ProductListTable({
   return (
     <div className="w-full">
       {/* عرض الشاشات المتوسطة والكبيرة (جدول منظم) */}
-      <div className="hidden lg:block overflow-x-auto rounded-[24px] border border-surface-border bg-surface shadow-soft">
+      <div className="hidden lg:block overflow-x-auto overscroll-contain modal-scrollbar rounded-[24px] border border-surface-border bg-surface shadow-soft">
         <table className="w-full text-start border-collapse text-sm">
           <thead>
             <tr className="border-b border-surface-border bg-surface-subtle/60 text-text-muted text-xs font-bold">

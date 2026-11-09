@@ -12,7 +12,7 @@ import { getGovernorateName } from '../../config/constants'
 import { useLanguage } from '../../context/LanguageContext'
 import { useFormat } from '../../hooks/useFormat'
 import { orderService } from '../../services/orderService'
-import { pickLocale } from '../../utils'
+import { getFriendlyError, pickLocale } from '../../utils'
 
 export default function AccountOrdersPage() {
   const { t } = useTranslation(['profile', 'common'])
@@ -30,7 +30,7 @@ export default function AccountOrdersPage() {
         if (mounted) setOrders(data || [])
       })
       .catch((err) => {
-        if (mounted) setError(err.message || t('common:status.error'))
+        if (mounted) setError(getFriendlyError(err, t))
       })
       .finally(() => {
         if (mounted) setLoading(false)

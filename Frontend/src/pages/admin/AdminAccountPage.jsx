@@ -20,6 +20,7 @@ import { PasswordInput } from '../../components/ui/PasswordInput'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { authService } from '../../services/authService'
+import { getFriendlyError } from '../../utils'
 import { processAvatarImage } from '../../utils/avatar'
 
 export default function AdminAccountPage() {
@@ -102,7 +103,7 @@ export default function AdminAccountPage() {
       setProfileSuccess(true)
       setTimeout(() => setProfileSuccess(false), 4000)
     } catch (err) {
-      setProfileError(err.message || (isRtl ? 'فشل حفظ التعديلات' : 'Failed to save changes'))
+      setProfileError(getFriendlyError(err, t))
     } finally {
       setSavingProfile(false)
     }
@@ -147,15 +148,7 @@ export default function AdminAccountPage() {
       })
       setTimeout(() => setPasswordSuccess(false), 4000)
     } catch (err) {
-      setPasswordError(
-        err.message === 'ERR_PASSWORD_LENGTH'
-          ? isRtl
-            ? 'كلمة المرور قصيرة للغاية'
-            : 'Password is too short'
-          : isRtl
-            ? 'فشل تحديث كلمة المرور'
-            : 'Failed to update password'
-      )
+      setPasswordError(getFriendlyError(err, t))
     } finally {
       setSavingPassword(false)
     }

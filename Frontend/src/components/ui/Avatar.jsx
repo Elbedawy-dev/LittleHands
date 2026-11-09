@@ -1,10 +1,28 @@
 import { User } from 'lucide-react'
+import { useState } from 'react'
 import { cn } from '../../utils'
 
 /**
+ * استخراج أول حرف من أول كلمة + أول حرف من آخر كلمة في الاسم
+ * كلمة واحدة = حرف واحد (يدعم العربية والإنجليزية)
+ */
+function getInitials(rawName) {
+  const cleanName = typeof rawName === 'string' ? rawName.trim() : ''
+  if (!cleanName) return ''
+  const words = cleanName.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return ''
+  const firstChar = Array.from(words[0])[0] || ''
+  if (words.length === 1) {
+    return firstChar.toUpperCase()
+  }
+  const lastChar = Array.from(words[words.length - 1])[0] || ''
+  return `${firstChar}${lastChar}`.toUpperCase()
+}
+
+/**
  * الصورة الرمزية للمستخدم أو البائعة
- * Shows uploaded profile picture (circle, object-cover), else the first letter of the name,
- * else a generic user icon for guests.
+ * Shows uploaded profile picture (circle, object-cover), else the initials of the name
+ * (first letter of first word + first letter of last word), else a generic user icon for guests.
  */
 export function Avatar({
   src,
@@ -13,11 +31,15 @@ export function Avatar({
   size = 'md',
   className,
 }) {
+  const [failedSrc, setFailedSrc] = useState(null)
+  const [loadedSrc, setLoadedSrc] = useState(null)
+
   const sizes = {
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
     lg: 'w-14 h-14 text-base font-bold',
     xl: 'w-20 h-20 text-xl font-bold',
+    '2xl': 'w-24 h-24 sm:w-28 sm:h-28 text-2xl font-bold',
   }
 
   const roleColors = {
@@ -26,8 +48,9 @@ export function Avatar({
     admin: 'bg-[#44BE8E]/20 text-[#1D7753] border-[#44BE8E]/40',
   }
 
-  const cleanName = typeof name === 'string' ? name.trim() : ''
-  const initial = cleanName ? cleanName.charAt(0).toUpperCase() : ''
+  const initials = getInitials(name)
+  const showImage = Boolean(src) && failedSrc !== src
+  const isImageReady = showImage && loadedSrc === src
 
   return (
     <div
@@ -39,17 +62,24 @@ export function Avatar({
         className
       )}
     >
-      {src ? (
+      {showImage && (
         <img
           src={src}
-          alt={cleanName || 'Avatar'}
-          className="w-full h-full object-cover"
-          loading="lazy"
+          alt=""
+          onLoad={() => setLoadedSrc(src)}
+          onError={() => setFailedSrc(src)}
+          className={cn(
+            'w-full h-full object-cover',
+            isImageReady ? 'opacity-100' : 'opacity-0 absolute inset-0 pointer-events-none'
+          )}
         />
-      ) : initial ? (
-        <span>{initial}</span>
-      ) : (
-        <User className="w-4 h-4 text-text-muted" />
+      )}
+      {!isImageReady && (
+        initials ? (
+          <span className="leading-none tracking-tight">{initials}</span>
+        ) : (
+          <User className="w-4 h-4 text-text-muted" />
+        )
       )}
     </div>
   )

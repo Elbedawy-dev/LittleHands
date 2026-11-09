@@ -7,6 +7,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useFormat } from '../../hooks/useFormat'
 import { userService } from '../../services/userService'
+import { getFriendlyError } from '../../utils'
 
 export default function AccountFavoritesPage() {
   const { t, i18n } = useTranslation('profile')
@@ -24,7 +25,7 @@ export default function AccountFavoritesPage() {
         if (mounted) setFavorites(data || [])
       })
       .catch((err) => {
-        if (mounted) setError(err.message || (isEn ? 'Failed to load favorites' : 'فشل تحميل قائمة المفضلة'))
+        if (mounted) setError(getFriendlyError(err, t))
       })
       .finally(() => {
         if (mounted) setLoading(false)
@@ -33,7 +34,7 @@ export default function AccountFavoritesPage() {
     return () => {
       mounted = false
     }
-  }, [isEn])
+  }, [t])
 
   // إزالة الوسيلة التعليمية من القائمة عند النقر على القلب مجدداً
   const handleFavoriteToggle = (productId) => {

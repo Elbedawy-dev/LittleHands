@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, Phone, Send } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Avatar } from '../../../components/ui/Avatar'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { CopyButton } from '../../../components/ui/CopyButton'
@@ -28,7 +29,15 @@ export function AdminSellerCard({
   const payoutPercentage =
     netEarnings > 0 ? Math.min(100, Math.round((totalPaidOut / netEarnings) * 100)) : 0
 
-  const avatarInitial = seller.sellerName?.[0] || seller.name?.[0] || 'ب'
+  const sellerDisplayName = getDisplayName(
+    {
+      id: seller.sellerId || seller.id,
+      sellerId: seller.sellerId || seller.id,
+      name: seller.sellerName || seller.name,
+      nameEn: seller.nameEn,
+    },
+    i18n.language
+  )
   const sellerBio = (typeof seller.bio === 'object' ? (seller.bio?.ar || seller.bio?.en || '') : seller.bio) || ''
 
   return (
@@ -37,12 +46,15 @@ export function AdminSellerCard({
         {/* ترويسة البائعة ورقم الورشة */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-brand-orange/10 dark:bg-brand-orange/20 text-brand-orange flex items-center justify-center font-heading font-black text-xl shrink-0">
-              {avatarInitial}
-            </div>
+            <Avatar
+              src={seller.avatar}
+              name={sellerDisplayName}
+              role="seller"
+              size="lg"
+            />
             <div>
               <h3 className="font-heading font-black text-lg text-text-main">
-                {getDisplayName({ id: seller.sellerId || seller.id, sellerId: seller.sellerId || seller.id, name: seller.sellerName || seller.name, nameEn: seller.nameEn }, i18n.language)}
+                {sellerDisplayName}
               </h3>
               <span className="text-xs text-text-muted">
                 {sellerBio}

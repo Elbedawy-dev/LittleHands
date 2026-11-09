@@ -1,5 +1,6 @@
 import EventEmitter from 'node:events'
 import { EVENT_TYPES } from './eventTypes.js'
+import { waitUntil } from '@vercel/functions'
 
 class IsolatedEventBus extends EventEmitter {
   constructor() {
@@ -25,9 +26,10 @@ class IsolatedEventBus extends EventEmitter {
       try {
         const result = listener(payload)
         if (result && typeof result.then === 'function') {
-          result.catch((error) => {
+          const safe = result.catch((error) => {
             console.error(`[EVENT_BUS] Async listener failed for event "${eventName}":`, error)
           })
+          try { waitUntil(safe) } catch { /* خارج Vercel */ }
         }
       } catch (error) {
         console.error(`[EVENT_BUS] Sync listener failed for event "${eventName}":`, error)

@@ -123,5 +123,17 @@ router.post('/jobs/run/:jobName', authenticate, authorize('admin'), csrfGuard, a
   }
 })
 
+router.get('/jobs/cron', async (req, res, next) => {
+  const secret = process.env.CRON_SECRET
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    return next(new AppError('UNAUTHENTICATED', 401))
+  }
+  try {
+    const results = {}
+    for (const name of ALLOWED_JOBS) results[name] = await jobs.jobHandlers[name]()
+    return ok(res, results)
+  } catch (err) { next(err) }
+})
+
 export default router
 

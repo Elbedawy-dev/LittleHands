@@ -1,40 +1,28 @@
-/**
- * In-process mutex for serializing operations per seller.
- * Ensures concurrent operations (like payouts) for the same seller execute sequentially.
- */
+import mongoose from 'mongoose'
+import { AppError } from '../../utils/appError.js'
 
-const locks = new Map()
+const Lock = mongoose.models.Lock || mongoose.model(
+  'Lock',
+  new mongoose.Schema(
+    { _id: String, expiresAt: { type: Date, index: { expireAfterSeconds: 0 } } },
+    { versionKey: false }
+  )
+)
 
-/**
- * Runs an asynchronous task with an exclusive lock for the given seller.
- * @template T
- * @param {string|import('mongoose').Types.ObjectId} sellerId
- * @param {() => Promise<T>} task
- * @returns {Promise<T>}
- */
 export async function withSellerMutex(sellerId, task) {
-  const key = sellerId?.toString() || 'global'
-  const previous = locks.get(key) || Promise.resolve()
-
-  // Chain our task after previous lock resolves or rejects
-  const execution = previous
-    .catch(() => {})
-    .then(async () => {
-      return await task()
-    })
-
-  locks.set(key, execution)
-
-  // Clean up lock from map once execution is finished if still latest
-  execution
-    .finally(() => {
-      if (locks.get(key) === execution) {
-        locks.delete(key)
-      }
-    })
-    .catch(() => {})
-
-  return execution
+  const key = `seller:${sellerId?.toString() || 'global'}`
+  const deadline = Date.now() + 8000
+  for (;;) {
+    try {
+      await Lock.create({ _id: key, expiresAt: new Date(Date.now() + 15000) })
+      break
+    } catch (e) {
+      if (e.code !== 11000) throw e
+      await Lock.deleteOne({ _id: key, expiresAt: { $lt: new Date() } })
+      if (Date.now() > deadline) throw new AppError('CONFLICT', 409, 'Another payout is in progress')
+      await new Promise((r) => setTimeout(r, 150))
+    }
+  }
+  try { return await task() } finally { await Lock.deleteOne({ _id: key }) }
 }
-
 export default withSellerMutex

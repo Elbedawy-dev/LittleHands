@@ -55,8 +55,8 @@ export const authService = {
    */
   async me() {
     try {
-      const res = await apiClient.get('/auth/me')
-      return res?.user || res || null
+      const u = res?.user || res
+      return u && typeof u === 'object' && u.id ? u : null
     } catch {
       return null
     }

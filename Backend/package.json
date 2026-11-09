@@ -16,6 +16,7 @@
     "check:env": "node src/scripts/checkEnv.js"
   },
   "dependencies": {
+    "@vercel/functions": "^3.11.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.11.0",
     "cookie-parser": "^1.4.7",

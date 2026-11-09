@@ -45,7 +45,7 @@ export default function VerifyEmailPage() {
 
     setLoading(true)
     try {
-      await authService.verifyEmail(code, targetEmail)
+    await authService.verifyEmail({ email: targetEmail, code })
       if (refreshUser) await refreshUser()
       navigate(next, { replace: true })
     } catch (err) {
@@ -60,7 +60,7 @@ export default function VerifyEmailPage() {
     setResending(true)
     setError('')
     try {
-      await authService.resendCode()
+      await authService.resendCode({ email: targetEmail })
       setResendSuccess(true)
       setCountdown(60)
       setTimeout(() => setResendSuccess(false), 3000)

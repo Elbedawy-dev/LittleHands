@@ -1,8 +1,16 @@
 import {
+  Building2,
+  Clock,
+  Lock,
+  MessageCircle,
   Moon,
+  Phone,
+  PhoneCall,
   Send,
   ShoppingBag,
+  Sparkles,
   Sun,
+  User,
 } from 'lucide-react'
 import { useState } from 'react'
 import { OrderItemsList } from '../../components/order/OrderItemsList'
@@ -58,6 +66,7 @@ export default function DesignSystemPage() {
   const [switched, setSwitched] = useState(false)
   const [images, setImages] = useState([])
   const [page, setPage] = useState(2)
+  const [claimModalOpen, setClaimModalOpen] = useState(false)
 
   const sampleProduct = {
     id: 'prod_sample_1',
@@ -459,6 +468,179 @@ export default function DesignSystemPage() {
             <Skeleton className="h-20 w-full rounded-[18px]" />
           </Card>
         </div>
+      </section>
+
+      {/* 12. كروت طلبات الحضانات الخاصة للبائعات */}
+      <section className="space-y-4">
+        <SectionTitle title="12. بطاقات طلبات الحضانات الخاصة للبائعة (Seller Custom Requests)" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* كارت 1: متاح للتنفيذ */}
+          <Card padding="lg" className="flex flex-col justify-between border border-surface-border bg-surface dark:bg-surface-raised">
+            <div className="space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-base text-text-main truncate">
+                    <Building2 className="w-4 h-4 text-brand-orange shrink-0" />
+                    <span className="truncate">حضانة براعم المستقبل</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                    <User className="w-3.5 h-3.5 shrink-0" />
+                    <span>أ. مريم السعيد</span>
+                  </div>
+                </div>
+                <Badge variant="info" size="sm">متاح للتنفيذ</Badge>
+              </div>
+
+              <div className="flex items-center gap-1 text-[11px] text-text-muted">
+                <Clock className="w-3 h-3 shrink-0" />
+                <span>منذ ساعتين</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-surface-subtle dark:bg-surface/50 border border-surface-border text-xs text-text-main leading-relaxed">
+                مطلوب تصميم 3 لوحات تفاعلية لتعليم الأرقام والحساب للأطفال من سن 3 إلى 5 سنوات باستخدام الجوخ والأزرار الملونة.
+              </div>
+
+              <div className="pt-1 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-text-muted">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="font-medium">الهاتف:</span>
+                </div>
+                <span dir="ltr" className="font-mono text-xs font-bold text-text-muted tracking-wider [unicode-bidi:isolate]">
+                  010*****432
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-surface-border">
+              <Button
+                variant="primary"
+                onClick={() => setClaimModalOpen(true)}
+                className="w-full text-xs font-bold shadow-xs hover:shadow-md"
+              >
+                <Sparkles className="w-3.5 h-3.5 me-1.5" />
+                أنا هنفذ الطلب
+              </Button>
+            </div>
+          </Card>
+
+          {/* كارت 2: مستلم بواسطتي */}
+          <Card padding="lg" className="flex flex-col justify-between border border-surface-border bg-surface dark:bg-surface-raised">
+            <div className="space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-base text-text-main truncate">
+                    <Building2 className="w-4 h-4 text-brand-orange shrink-0" />
+                    <span className="truncate">روضة شمس الغد</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                    <User className="w-3.5 h-3.5 shrink-0" />
+                    <span>أ. نجلاء فهمي</span>
+                  </div>
+                </div>
+                <Badge variant="success" size="sm">طلبكِ</Badge>
+              </div>
+
+              <div className="flex items-center gap-1 text-[11px] text-text-muted">
+                <Clock className="w-3 h-3 shrink-0" />
+                <span>أمس</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-surface-subtle dark:bg-surface/50 border border-surface-border text-xs text-text-main leading-relaxed">
+                تفصيل مجسمات حيوانات المزرعة وقصص قماشية متحركة لتعليم الأطفال أسماء الحيوانات وأصواتها.
+              </div>
+
+              <div className="pt-1 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-text-muted">
+                  <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="font-medium">الهاتف:</span>
+                </div>
+                <span dir="ltr" className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 select-all [unicode-bidi:isolate]">
+                  01098765432
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-surface-border">
+              <div className="flex items-center gap-2">
+                <a
+                  href="tel:01098765432"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-bold text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition-colors"
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                  <span>اتصال</span>
+                </a>
+                <a
+                  href="https://wa.me/201098765432"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-bold text-xs bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#128C7E] dark:text-[#25D366] border border-[#25D366]/30 transition-colors"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>واتساب</span>
+                </a>
+              </div>
+            </div>
+          </Card>
+
+          {/* كارت 3: مستلم بواسطة بائعة أخرى */}
+          <Card padding="lg" className="flex flex-col justify-between border border-surface-border bg-surface dark:bg-surface-raised">
+            <div className="space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-base text-text-main truncate">
+                    <Building2 className="w-4 h-4 text-brand-orange shrink-0" />
+                    <span className="truncate">حضانة النور الأزهرية</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                    <User className="w-3.5 h-3.5 shrink-0" />
+                    <span>أ. فاطمة علي</span>
+                  </div>
+                </div>
+                <Badge variant="secondary" size="sm">تم استلامه بواسطة فاطمة محمد</Badge>
+              </div>
+
+              <div className="flex items-center gap-1 text-[11px] text-text-muted">
+                <Clock className="w-3 h-3 shrink-0" />
+                <span>منذ 3 ساعات</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-surface-subtle dark:bg-surface/50 border border-surface-border text-xs text-text-main leading-relaxed">
+                وسيلة تعليمية لأركان الإسلام وحروف الهجاء مجهزة بالجيوب القماشية للتعليق على الجدران.
+              </div>
+
+              <div className="pt-1 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-text-muted">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="font-medium">الهاتف:</span>
+                </div>
+                <span dir="ltr" className="font-mono text-xs font-bold text-text-muted tracking-wider [unicode-bidi:isolate]">
+                  012*****901
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-surface-border">
+              <Button variant="outline" disabled className="w-full text-xs opacity-60 cursor-not-allowed">
+                تم الاستلام
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* حوار تأكيد الاستلام */}
+        <ConfirmDialog
+          isOpen={claimModalOpen}
+          onClose={() => setClaimModalOpen(false)}
+          onConfirm={() => {
+            setClaimModalOpen(false)
+            alert('تم تأكيد الاستلام تجريبياً!')
+          }}
+          title="تأكيد استلام الطلب"
+          message="هل أنتِ متأكدة؟ بعد التأكيد لن تستطيع بائعة أخرى استلام هذا الطلب."
+          confirmText="تأكيد واستلام"
+          cancelText="إلغاء"
+          variant="primary"
+        />
       </section>
     </div>
   )

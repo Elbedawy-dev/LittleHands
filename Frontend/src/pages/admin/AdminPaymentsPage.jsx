@@ -37,7 +37,7 @@ export default function AdminPaymentsPage() {
     setLoading(true)
     try {
       const data = await paymentService.getPayments({ status: 'all' })
-      setAllPayments(data)
+      setAllPayments(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error('Failed to load payments:', err)
       toast.error(getFriendlyError(err, t))

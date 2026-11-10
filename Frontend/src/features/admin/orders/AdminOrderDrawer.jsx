@@ -8,6 +8,7 @@ import {
   Receipt,
   RotateCcw,
   ShieldAlert,
+  Trash2,
   User,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -24,24 +25,28 @@ import { PriceTag } from '../../../components/ui/PriceTag'
 import { ProductImage } from '../../../components/ui/ProductImage'
 import { Select } from '../../../components/ui/Select'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
+import { Tooltip } from '../../../components/ui/Tooltip'
 import { ORDER_STATUS } from '../../../config/constants'
 import { useFormat } from '../../../hooks/useFormat'
 import { usePrivateReceipt } from '../../../hooks/usePrivateReceipt'
 import { orderService } from '../../../services/orderService'
 import { calcCommission, getDisplayName, getFriendlyError } from '../../../utils'
 
+const ADMIN_DELETABLE_STATUSES = ['pending_payment', 'payment_rejected', 'cancelled']
+
 /**
  * درج التفاصيل المتقدم للطلب (Admin Order Details Drawer)
  * يعرض بيانات العميلة، والوسائل مجمعة بحسب البائعة، وجدول توزيع العمولة (20٪) وصافي البائعة (80٪)
- * ومعاينة إيصال فودافون كاش ومسار الطلب الزمني وإجراءات رد المبالغ
+ * ومعاينة إيصال فودافون كاش ومسار الطلب الزمني وإجراءات رد المبالغ وحذف الطلبات غير المدفوعة
  */
 export function AdminOrderDrawer({
   order,
   isOpen,
   onClose,
   onStatusUpdated,
+  onDeleteOrder,
 }) {
-  const { t, i18n } = useTranslation('admin-core')
+  const { t, i18n } = useTranslation(['admin-core', 'common'])
   const isEn = i18n.language === 'en'
   const { formatDateTime } = useFormat()
   const [activeReceiptTarget, setActiveReceiptTarget] = useState(null)
@@ -56,8 +61,11 @@ export function AdminOrderDrawer({
 
   if (!order) return null
 
+  const orderItems = Array.isArray(order.items) ? order.items : []
+  const canDelete = ADMIN_DELETABLE_STATUSES.includes(order.status)
+
   // بناء خريطة أسماء البائعات المترجمة
-  const sellerNamesMap = (order.items || []).reduce((acc, it) => {
+  const sellerNamesMap = orderItems.reduce((acc, it) => {
     if (it.sellerId) {
       acc[it.sellerId] =
         getDisplayName(
@@ -75,7 +83,7 @@ export function AdminOrderDrawer({
   }, {})
 
   // تجميع المنتجات حسب البائعة
-  const itemsBySeller = (order.items || []).reduce((acc, item) => {
+  const itemsBySeller = orderItems.reduce((acc, item) => {
     const sId = item.sellerId || ''
     if (!acc[sId]) acc[sId] = []
     acc[sId].push(item)
@@ -83,7 +91,7 @@ export function AdminOrderDrawer({
   }, {})
 
   // حساب مجاميع جدول العمولات لجميع عناصر الطلب
-  const breakdownRows = (order.items || []).map((item) => {
+  const breakdownRows = orderItems.map((item) => {
     const salePrice = item.unitPrice * item.qty
     const { commission, net } = calcCommission(salePrice)
     const sellerTitle =
@@ -116,7 +124,6 @@ export function AdminOrderDrawer({
       toast.success(t('orders.drawer.statusUpdateSuccess'))
       if (onStatusUpdated) onStatusUpdated()
     } catch (err) {
-      console.error('Failed to update order status:', err)
       toast.error(getFriendlyError(err, t))
     } finally {
       setIsUpdatingStatus(false)
@@ -127,7 +134,7 @@ export function AdminOrderDrawer({
   const handleRefundSubmit = async (e) => {
     e.preventDefault()
     if (!refundRef.trim()) {
-      toast.error(isEn ? 'Reference number is required' : 'رقم العملية المرجعي لرد المبلغ مطلوب')
+      toast.error(t('orders.drawer.refundReferenceRequired'))
       return
     }
 
@@ -137,13 +144,12 @@ export function AdminOrderDrawer({
         reference: refundRef.trim(),
         note: refundNote.trim(),
       })
-      toast.success(isEn ? 'Refund recorded successfully' : 'تم تسجيل رد المبلغ بنجاح')
+      toast.success(t('orders.drawer.refundSuccessToast'))
       setRefundModalOpen(false)
       setRefundRef('')
       setRefundNote('')
       if (onStatusUpdated) onStatusUpdated()
     } catch (err) {
-      console.error('Failed to record refund:', err)
       toast.error(getFriendlyError(err, t))
     } finally {
       setIsRefunding(false)
@@ -172,7 +178,7 @@ export function AdminOrderDrawer({
         }
       >
         <div className="p-6 space-y-6 overflow-y-auto overscroll-contain modal-scrollbar max-h-[calc(100vh-140px)]">
-          {/* شريط الحالة والتحكم السريع بالحالة */}
+          {/* شريط الحالة والتحكم السريع بالحالة وحذف الطلب */}
           <div className="p-4 rounded-2xl bg-surface-subtle border border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-xs text-text-muted block mb-1">
@@ -181,19 +187,52 @@ export function AdminOrderDrawer({
               <StatusBadge status={order.status} size="md" />
             </div>
 
-            <div className="w-full sm:w-56">
-              <Select
-                id="admin-order-status-selector"
-                value={order.status}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                disabled={isUpdatingStatus}
-              >
-                {Object.entries(ORDER_STATUS).map(([key, cfg]) => (
-                  <option key={key} value={key}>
-                    {isEn ? (cfg.labelEn || cfg.label) : cfg.label}
-                  </option>
-                ))}
-              </Select>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex-1 sm:w-52">
+                <Select
+                  id="admin-order-status-selector"
+                  value={order.status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  disabled={isUpdatingStatus}
+                >
+                  {Object.entries(ORDER_STATUS).map(([key, cfg]) => (
+                    <option key={key} value={key}>
+                      {isEn ? (cfg.labelEn || cfg.label) : cfg.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              {onDeleteOrder && (
+                canDelete ? (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={() => onDeleteOrder(order)}
+                    startIcon={<Trash2 className="w-4 h-4" />}
+                    className="shrink-0"
+                  >
+                    {t('orders.delete.action')}
+                  </Button>
+                ) : (
+                  <Tooltip content={t('orders.delete.disabledTooltip')} position="bottom">
+                    <span tabIndex={0} className="inline-flex shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        startIcon={<Trash2 className="w-4 h-4" />}
+                        className="text-rose-400 dark:text-rose-500/50 border-surface-border"
+                        aria-label={t('orders.delete.disabledTooltip')}
+                      >
+                        {t('orders.delete.action')}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )
+              )}
             </div>
           </div>
 
@@ -207,18 +246,18 @@ export function AdminOrderDrawer({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-text-muted block">{t('orders.drawer.name')}:</span>
-                <span className="font-bold text-text-main text-sm">{order.delivery.name}</span>
+                <span className="font-bold text-text-main text-sm">{order.delivery?.name}</span>
               </div>
 
               <div>
                 <span className="text-text-muted block">{t('orders.drawer.phone')}:</span>
                 <span dir="ltr" className="font-mono font-bold text-text-main inline-flex items-center gap-1 [unicode-bidi:isolate]">
                   <Phone className="w-3 h-3 text-brand-orange" />
-                  <span>{order.delivery.phone}</span>
+                  <span>{order.delivery?.phone}</span>
                 </span>
               </div>
 
-              {order.delivery.nurseryName && (
+              {order.delivery?.nurseryName && (
                 <div>
                   <span className="text-text-muted block">{t('orders.drawer.nursery')}:</span>
                   <span className="font-medium text-text-main">{order.delivery.nurseryName}</span>
@@ -230,9 +269,9 @@ export function AdminOrderDrawer({
                 <span className="font-medium text-text-main flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
                   <span>
-                    {order.delivery.governorate}
-                    {order.delivery.city ? `، ${order.delivery.city}` : ''}
-                    {order.delivery.address ? ` — ${order.delivery.address}` : ''}
+                    {order.delivery?.governorate}
+                    {order.delivery?.city ? `، ${order.delivery.city}` : ''}
+                    {order.delivery?.address ? ` — ${order.delivery.address}` : ''}
                   </span>
                 </span>
               </div>
@@ -268,7 +307,7 @@ export function AdminOrderDrawer({
                 </div>
 
                 <div className="divide-y divide-surface-border">
-                  {items.map((it, idx) => (
+                  {(Array.isArray(items) ? items : []).map((it, idx) => (
                     <div key={idx} className="p-3.5 flex items-center gap-3">
                       <div className="w-14 h-14 shrink-0">
                         <ProductImage
@@ -373,12 +412,12 @@ export function AdminOrderDrawer({
                   <RotateCcw className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                   <div>
                     <h4 className="font-bold text-xs text-amber-900 dark:text-amber-200">
-                      {isEn ? 'Order Refund' : 'استرداد قيمة الطلب'}
+                      {t('orders.drawer.refundTitle')}
                     </h4>
                     <p className="text-[11px] text-amber-800 dark:text-amber-300">
-                      {isEn ? 'Amount to refund:' : 'المبلغ المطلوب رده:'}{' '}
+                      {t('orders.drawer.refundAmountLabel')}{' '}
                       <span className="font-black text-amber-950 dark:text-amber-100">
-                        {order.refund.amount} ج.م
+                        <PriceTag amount={order.refund.amount} size="sm" />
                       </span>
                     </p>
                   </div>
@@ -387,7 +426,7 @@ export function AdminOrderDrawer({
                 {order.refund.status === 'completed' ? (
                   <Badge variant="success" size="sm" className="gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>{isEn ? 'Refunded' : 'تم رد المبلغ'}</span>
+                    <span>{t('orders.drawer.refundCompletedBadge')}</span>
                   </Badge>
                 ) : (
                   <Button
@@ -398,7 +437,7 @@ export function AdminOrderDrawer({
                     className="text-xs gap-1"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>{isEn ? 'Process Refund' : 'تم رد المبلغ'}</span>
+                    <span>{t('orders.drawer.processRefundBtn')}</span>
                   </Button>
                 )}
               </div>
@@ -406,18 +445,18 @@ export function AdminOrderDrawer({
               {order.refund.status === 'completed' && (
                 <div className="p-2.5 rounded-xl bg-white/70 dark:bg-black/30 text-xs text-text-muted space-y-0.5">
                   <div>
-                    <span className="font-bold">{isEn ? 'Reference:' : 'الرقم المرجعي:'}</span>{' '}
+                    <span className="font-bold">{t('orders.drawer.refundReferenceLabel')}</span>{' '}
                     <span className="font-mono">{order.refund.reference}</span>
                   </div>
                   {order.refund.refundedAt && (
                     <div>
-                      <span className="font-bold">{isEn ? 'Date:' : 'التاريخ:'}</span>{' '}
+                      <span className="font-bold">{t('orders.drawer.refundDateLabel')}</span>{' '}
                       <span>{formatDateTime(order.refund.refundedAt)}</span>
                     </div>
                   )}
                   {order.refund.note && (
                     <div>
-                      <span className="font-bold">{isEn ? 'Note:' : 'ملاحظة:'}</span>{' '}
+                      <span className="font-bold">{t('orders.drawer.refundNoteLabel')}</span>{' '}
                       <span>{order.refund.note}</span>
                     </div>
                   )}
@@ -435,21 +474,14 @@ export function AdminOrderDrawer({
               </h4>
 
               {/* شارات التحذير الأمنية للدفع إن وجدت */}
-              {order.payment?.flags && order.payment.flags.length > 0 && (
+              {Array.isArray(order.payment?.flags) && order.payment.flags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {order.payment.flags.map((flag) => {
-                    const flagMap = {
-                      amount_mismatch: isEn ? 'Amount Mismatch' : 'المبلغ غير مطابق',
-                      duplicate_reference: isEn ? 'Duplicate Reference' : 'مرجع مكرر',
-                      duplicate_screenshot: isEn ? 'Duplicate Receipt' : 'إيصال مكرر',
-                    }
-                    return (
-                      <Badge key={flag} variant="danger" size="sm" className="gap-1">
-                        <ShieldAlert className="w-3 h-3" />
-                        <span>{flagMap[flag] || flag}</span>
-                      </Badge>
-                    )
-                  })}
+                  {order.payment.flags.map((flag) => (
+                    <Badge key={flag} variant="danger" size="sm" className="gap-1">
+                      <ShieldAlert className="w-3 h-3" />
+                      <span>{t(`orders.drawer.flags.${flag}`, { defaultValue: flag })}</span>
+                    </Badge>
+                  ))}
                 </div>
               )}
             </div>
@@ -518,7 +550,7 @@ export function AdminOrderDrawer({
               <Clock className="w-4 h-4 text-brand-orange" />
               <span>{t('orders.drawer.timelineTitle')}</span>
             </h4>
-            <OrderTimeline timeline={order.timeline || []} />
+            <OrderTimeline timeline={Array.isArray(order.timeline) ? order.timeline : []} />
           </div>
         </div>
       </Drawer>
@@ -528,27 +560,25 @@ export function AdminOrderDrawer({
         isOpen={Boolean(activeReceiptTarget)}
         onClose={() => setActiveReceiptTarget(null)}
         src={privateReceiptUrl}
-        alt="إيصال فودافون كاش"
+        alt={t('orders.drawer.receiptAlt')}
       />
 
       {/* نافذة تسجيل رد المبلغ للعميل */}
       <Modal
         isOpen={refundModalOpen}
         onClose={() => setRefundModalOpen(false)}
-        title={isEn ? 'Record Order Refund' : 'تسجيل رد المبلغ للعميل'}
+        title={t('orders.drawer.refundModalTitle')}
         maxWidth="max-w-md"
       >
         <form onSubmit={handleRefundSubmit} className="space-y-4 p-2">
           <p className="text-xs text-text-muted">
-            {isEn
-              ? 'Enter the transaction reference number for the refund sent to the customer wallet.'
-              : 'أدخلي الرقم المرجعي لعملية تحويل رد المبلغ عبر محفظة فودافون كاش للعميل:'}
+            {t('orders.drawer.refundModalDesc')}
           </p>
 
           <Input
             id="refund-reference"
-            label={isEn ? 'Transaction Reference *' : 'الرقم المرجعي للتحويل *'}
-            placeholder="مثال: 9876543210"
+            label={t('orders.drawer.refundReferenceInputLabel')}
+            placeholder={t('orders.drawer.refundReferencePlaceholder')}
             value={refundRef}
             onChange={(e) => setRefundRef(e.target.value)}
             required
@@ -557,8 +587,8 @@ export function AdminOrderDrawer({
 
           <Input
             id="refund-note"
-            label={isEn ? 'Note (Optional)' : 'ملاحظات إضافية (اختياري)'}
-            placeholder={isEn ? 'Reason or details' : 'سبب الرد أو تفاصيل العملية'}
+            label={t('orders.drawer.refundNoteInputLabel')}
+            placeholder={t('orders.drawer.refundNotePlaceholder')}
             value={refundNote}
             onChange={(e) => setRefundNote(e.target.value)}
             disabled={isRefunding}
@@ -572,7 +602,7 @@ export function AdminOrderDrawer({
               onClick={() => setRefundModalOpen(false)}
               disabled={isRefunding}
             >
-              {isEn ? 'Cancel' : 'إلغاء'}
+              {t('common:actions.cancel')}
             </Button>
             <Button
               type="submit"
@@ -580,7 +610,7 @@ export function AdminOrderDrawer({
               size="sm"
               loading={isRefunding}
             >
-              {isEn ? 'Confirm Refund' : 'تأكيد رد المبلغ'}
+              {t('orders.drawer.refundConfirmBtn')}
             </Button>
           </div>
         </form>

@@ -45,9 +45,9 @@ export default function AdminSellersPage() {
         earningsService.getPayouts(),
         orderService.getAllOrders(),
       ])
-      setSellers(sellersData)
-      setPayouts(payoutsData)
-      setOrders(ordersData)
+      setSellers(Array.isArray(sellersData) ? sellersData : [])
+      setPayouts(Array.isArray(payoutsData) ? payoutsData : [])
+      setOrders(Array.isArray(ordersData) ? ordersData : [])
     } catch (err) {
       console.error('Failed to load sellers earnings:', err)
       toast.error(getFriendlyError(err, t))
@@ -97,7 +97,7 @@ export default function AdminSellersPage() {
   const handleToggleStatus = async (userId, newStatus) => {
     try {
       await adminService.updateUserStatus(userId, newStatus)
-      toast.success(newStatus === 'active' ? 'تم تفعيل حساب البائعة بنجاح' : 'تم إيقاف حساب البائعة')
+      toast.success(newStatus === 'active' ? t('sellers.statusActiveToast') : t('sellers.statusSuspendedToast'))
       await fetchData()
     } catch (err) {
       toast.error(getFriendlyError(err, t))

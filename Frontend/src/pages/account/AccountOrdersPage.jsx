@@ -27,7 +27,7 @@ export default function AccountOrdersPage() {
     orderService
       .getMyOrders()
       .then((data) => {
-        if (mounted) setOrders(data || [])
+        if (mounted) setOrders(Array.isArray(data) ? data : [])
       })
       .catch((err) => {
         if (mounted) setError(getFriendlyError(err, t))

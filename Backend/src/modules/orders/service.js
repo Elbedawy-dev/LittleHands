@@ -1,14 +1,18 @@
+import mongoose from 'mongoose'
 import { Order } from '../../db/models/Order.js'
 import { Product } from '../../db/models/Product.js'
 import { User } from '../../db/models/User.js'
 import { Setting } from '../../db/models/Setting.js'
 import { Counter } from '../../db/models/Counter.js'
 import { Payment } from '../../db/models/Payment.js'
+import { Notification } from '../../db/models/Notification.js'
+import { Upload } from '../../db/models/Upload.js'
 import { AppError } from '../../utils/appError.js'
 import { calcCommission, sum } from '../../utils/money.js'
 import { escapeRegex } from '../../utils/regex.js'
 import { eventBus, EVENT_TYPES } from '../../events/index.js'
 import { audit } from '../../infra/audit/index.js'
+import { storage } from '../../infra/storage/index.js'
 import { env } from '../../config/env.js'
 import {
   DEFAULT_COMMISSION_RATE,
@@ -251,8 +255,8 @@ export const orderService = {
   async getOrder(orderId, currentUser) {
     if (!currentUser) throw new AppError('UNAUTHENTICATED', 401)
 
-    const isObjectId = typeof orderId === 'string' && /^[0-9a-fA-F]{24}$/.test(orderId)
-    const filter = isObjectId ? { $or: [{ _id: orderId }, { number: orderId }] } : { number: orderId }
+    const isObjectId = mongoose.isValidObjectId(orderId)
+    const filter = isObjectId ? { $or: [{ _id: orderId }, { number: String(orderId) }] } : { number: String(orderId) }
 
     const order = await Order.findOne(filter)
     if (!order) {
@@ -295,6 +299,7 @@ export const orderService = {
 
     const filter = {
       'items.sellerId': currentUser._id,
+      hiddenBySellers: { $ne: currentUser._id },
     }
 
     if (status && status !== 'all') {
@@ -799,6 +804,131 @@ export const orderService = {
     })
 
     return updatedOrder
+  },
+
+  /**
+   * Admin permanently deletes an unpaid/inactive order along with its payments, receipts, uploads, and notifications
+   */
+  async deleteOrder(orderId, currentUser, { ip = '' } = {}) {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new AppError('FORBIDDEN', 403)
+    }
+
+    const isObjectId = mongoose.isValidObjectId(orderId)
+    const filter = isObjectId ? { $or: [{ _id: orderId }, { number: String(orderId) }] } : { number: String(orderId) }
+    const orderDoc = await Order.findOne(filter)
+
+    if (!orderDoc) {
+      throw new AppError('ORDER_NOT_FOUND', 404)
+    }
+
+    const deletableStatuses = ['pending_payment', 'payment_rejected', 'cancelled']
+    if (!deletableStatuses.includes(orderDoc.status)) {
+      throw new AppError('ORDER_NOT_DELETABLE', 409)
+    }
+
+    // Restore product stock if order was not already cancelled
+    if (orderDoc.status !== 'cancelled') {
+      for (const item of orderDoc.items || []) {
+        await Product.updateOne({ _id: item.productId }, { $inc: { stock: item.qty } }).catch(() => {})
+      }
+    }
+
+    // Delete associated payments and receipt images from storage
+    const payments = await Payment.find({ orderId: orderDoc._id })
+    const screenshotKeys = []
+    for (const p of payments) {
+      if (p.screenshot && p.screenshot.key) {
+        screenshotKeys.push(p.screenshot.key)
+        try {
+          await storage.remove(p.screenshot.key)
+        } catch {
+          // Ignore storage removal failure so DB cleanup still succeeds
+        }
+      }
+    }
+
+    await Payment.deleteMany({ orderId: orderDoc._id })
+
+    if (screenshotKeys.length > 0) {
+      await Upload.deleteMany({ key: { $in: screenshotKeys } }).catch(() => {})
+    }
+
+    const orderIdStr = orderDoc._id.toString()
+    const orderNum = orderDoc.number
+
+    await Notification.deleteMany({
+      $or: [
+        { 'params.orderId': orderIdStr },
+        { 'params.orderId': orderDoc._id },
+        { 'params.orderNumber': orderNum },
+        { link: `/account/orders/${orderIdStr}` },
+        { link: `/seller/orders?order=${orderNum}` },
+        { link: `/admin/orders?order=${orderNum}` },
+        { link: `/admin/payments?order=${orderNum}` },
+      ],
+    }).catch(() => {})
+
+    await Order.deleteOne({ _id: orderDoc._id })
+
+    await audit.log(
+      currentUser._id,
+      'order.delete',
+      'Order',
+      orderIdStr,
+      {
+        number: orderNum,
+        status: orderDoc.status,
+        total: orderDoc.total,
+      },
+      ip
+    )
+
+    return {
+      id: orderIdStr,
+      number: orderNum,
+      deleted: true,
+    }
+  },
+
+  /**
+   * Seller hides an inactive order from her own list without deleting the order record or altering earnings/payments
+   */
+  async hideSellerOrder(orderId, currentUser) {
+    if (!currentUser || currentUser.role !== 'seller') {
+      throw new AppError('FORBIDDEN', 403)
+    }
+
+    const isObjectId = mongoose.isValidObjectId(orderId)
+    const filter = isObjectId ? { $or: [{ _id: orderId }, { number: String(orderId) }] } : { number: String(orderId) }
+    const orderDoc = await Order.findOne(filter)
+
+    if (!orderDoc) {
+      throw new AppError('ORDER_NOT_FOUND', 404)
+    }
+
+    const containsSellerItem = (orderDoc.items || []).some(
+      (it) => it.sellerId && it.sellerId.toString() === currentUser._id.toString()
+    )
+    if (!containsSellerItem) {
+      throw new AppError('ORDER_NOT_FOUND', 404)
+    }
+
+    const hideableStatuses = ['cancelled', 'payment_rejected', 'delivered', 'pending_payment']
+    if (!hideableStatuses.includes(orderDoc.status)) {
+      throw new AppError('ORDER_NOT_DELETABLE', 409)
+    }
+
+    await Order.updateOne(
+      { _id: orderDoc._id },
+      { $addToSet: { hiddenBySellers: currentUser._id } }
+    )
+
+    return {
+      id: orderDoc._id.toString(),
+      number: orderDoc.number,
+      hidden: true,
+    }
   },
 }
 

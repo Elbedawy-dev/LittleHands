@@ -51,6 +51,14 @@ router.patch(
   orderController.setSellerOrderStatus
 )
 
+router.delete(
+  '/seller/:id',
+  authenticate,
+  authorize('seller'),
+  csrfGuard,
+  orderController.hideSellerOrder
+)
+
 // Admin Order Management
 router.get(
   '/admin',
@@ -87,6 +95,14 @@ router.post(
   csrfGuard,
   validate({ body: refundOrderSchema }),
   orderController.refundOrder
+)
+
+router.delete(
+  '/admin/:id',
+  authenticate,
+  authorize('admin'),
+  csrfGuard,
+  orderController.deleteOrder
 )
 
 // Customer Cancel & Detail

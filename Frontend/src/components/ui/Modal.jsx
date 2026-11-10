@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import { cn } from '../../utils'
 
@@ -15,6 +16,7 @@ export function Modal({
   showClose = true,
   className,
 }) {
+  const { t } = useTranslation('common')
   useScrollLock(Boolean(isOpen))
 
   useEffect(() => {
@@ -82,7 +84,7 @@ export function Modal({
                     type="button"
                     onClick={onClose}
                     className="p-1.5 rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors shrink-0 cursor-pointer"
-                    aria-label="إغلاق النافذة"
+                    aria-label={t('ui.closeModal')}
                   >
                     <X className="w-5 h-5" />
                   </button>

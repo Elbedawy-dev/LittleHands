@@ -103,10 +103,10 @@ export const authService = {
    * تعيين كلمة مرور جديدة عبر رمز الاستعادة
    * POST /auth/reset-password
    */
-  async resetPassword({ token, newPassword }) {
+  async resetPassword({ token, newPassword, password }) {
     const res = await apiClient.post('/auth/reset-password', {
       token: (token || '').trim(),
-      newPassword,
+      password: password || newPassword,
     })
     return res
   },
@@ -116,11 +116,11 @@ export const authService = {
    * POST /auth/change-password
    */
   async changePassword({ currentPassword, current, next, newPassword }) {
-    const curr = currentPassword || current
-    const nxt = newPassword || next
+    const curr = current || currentPassword
+    const nxt = next || newPassword
     const res = await apiClient.post('/auth/change-password', {
-      currentPassword: curr,
-      newPassword: nxt,
+      current: curr,
+      next: nxt,
     })
     return res
   },

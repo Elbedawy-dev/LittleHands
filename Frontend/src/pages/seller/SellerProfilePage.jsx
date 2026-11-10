@@ -28,6 +28,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { useSettings } from '../../context/SettingsContext'
 import { sellerService } from '../../services/sellerService'
+import { userService } from '../../services/userService'
 import { cn, getFriendlyError } from '../../utils'
 import { processAvatarImage } from '../../utils/avatar'
 
@@ -35,7 +36,7 @@ export default function SellerProfilePage() {
   const { t } = useTranslation('profile')
   const { language } = useLanguage()
   const isEn = language === 'en'
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, refreshUser } = useAuth()
   const { settings } = useSettings()
   const sellerId = user?.id || ''
   const fileInputRef = useRef(null)
@@ -113,7 +114,21 @@ export default function SellerProfilePage() {
     setErrorMsg('')
     setSuccessMsg('')
     try {
-      await sellerService.updateSellerProfile(sellerId, formData)
+      await sellerService.updateSellerProfile(sellerId, {
+        displayName: formData.name,
+        bio: formData.bio,
+        stages: formData.stages,
+        materials: formData.materials,
+        payoutWallet: formData.walletNumber,
+      })
+      if (updateProfile) {
+        await updateProfile({
+          name: formData.name,
+          phone: formData.phone,
+          governorate: formData.governorate,
+          address: formData.workshopAddress,
+        })
+      }
       setSuccessMsg(t('seller.saveSuccess'))
       setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
@@ -123,21 +138,27 @@ export default function SellerProfilePage() {
     }
   }
 
-  // رفع وتحديث صورة الورشة
+  // رفع وتحديث صورة الورشة عبر مسار رفع الصورة الرسمي دون إرسال data URL
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     try {
       const dataUrl = await processAvatarImage(file)
-      setFormData((prev) => ({ ...prev, avatar: dataUrl }))
-      await sellerService.updateSellerProfile(sellerId, { avatar: dataUrl })
-      if (updateProfile) {
-        await updateProfile({ avatar: dataUrl })
+      const blob = await fetch(dataUrl).then((r) => r.blob())
+      const avatarFile = new File([blob], file.name || 'avatar.webp', {
+        type: blob.type || 'image/webp',
+      })
+      await userService.uploadAvatar(avatarFile)
+      const refreshed = await refreshUser()
+      if (refreshed?.avatar) {
+        setFormData((prev) => ({ ...prev, avatar: refreshed.avatar }))
       }
       setSuccessMsg(t('seller.avatarSuccess'))
       setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
-      setErrorMsg(getFriendlyError(err, t))
+      setErrorMsg(getFriendlyError(err, t) || t('seller.avatarError'))
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -229,7 +250,7 @@ export default function SellerProfilePage() {
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="flex flex-col items-start gap-1 text-start flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="font-heading font-black text-xl sm:text-2xl text-text-main">
                   <LocalizedText value={formData.displayName || formData.name} />
@@ -239,6 +260,16 @@ export default function SellerProfilePage() {
                   <span>{t('seller.badgeProfessional')}</span>
                 </span>
               </div>
+
+              {(user?.email || formData.email) && (
+                <p className="text-xs text-text-muted font-mono" dir="ltr">
+                  {user?.email || formData.email}
+                </p>
+              )}
+
+              <p className="text-[11px] text-text-muted">
+                {t('header.avatarFormatsHint')}
+              </p>
 
               <p
                 className="text-xs text-text-muted leading-relaxed max-w-xl"

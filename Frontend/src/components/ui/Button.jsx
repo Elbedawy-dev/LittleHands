@@ -11,12 +11,14 @@ export const Button = forwardRef(function Button(
     loading = false,
     disabled = false,
     startIcon = null,
+    icon = null,
     endIcon = null,
     className,
     ...props
   },
   ref
 ) {
+  const resolvedStartIcon = startIcon || icon
   const baseStyles =
     'inline-flex items-center justify-center font-bold transition-all duration-200 cursor-pointer whitespace-nowrap rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 select-none'
 
@@ -57,8 +59,8 @@ export const Button = forwardRef(function Button(
         />
       ) : (
         <>
-          {startIcon && <span className="inline-flex shrink-0">{startIcon}</span>}
-          <span>{children}</span>
+          {resolvedStartIcon && <span className="inline-flex shrink-0">{resolvedStartIcon}</span>}
+          {children && <span>{children}</span>}
           {endIcon && <span className="inline-flex shrink-0 rtl:rotate-180">{endIcon}</span>}
         </>
       )}

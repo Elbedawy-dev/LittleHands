@@ -40,7 +40,7 @@ export default function VerifyEmailPage() {
     setError('')
 
     if (code.length < 4) {
-      setError('يرجى إدخال كافة أرقام رمز التحقق')
+      setError(t('errors.otpIncomplete'))
       return
     }
 

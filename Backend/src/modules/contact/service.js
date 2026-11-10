@@ -54,6 +54,7 @@ export const contactService = {
 
     const total = await CustomRequest.countDocuments(filter)
     const requests = await CustomRequest.find(filter)
+      .populate('claimedBy', 'name seller.displayName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
@@ -80,8 +81,15 @@ export const contactService = {
       throw new AppError('NOT_FOUND', 404)
     }
 
+    if (status === 'new') {
+      request.claimedBy = null
+      request.claimedAt = null
+    }
     request.status = status
     await request.save()
+    if (request.claimedBy) {
+      await request.populate('claimedBy', 'name seller.displayName')
+    }
 
     return toCustomRequestDTO(request)
   },

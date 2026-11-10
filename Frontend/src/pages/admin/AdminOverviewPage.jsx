@@ -54,8 +54,8 @@ export default function AdminOverviewPage() {
       ])
 
       setOverviewData(overview)
-      setPendingPayments(pending)
-      setRecentOrders(orders)
+      setPendingPayments(Array.isArray(pending) ? pending : [])
+      setRecentOrders(Array.isArray(orders) ? orders : [])
     } catch (err) {
       console.error('Failed to load admin overview:', err)
       setError(err || true)

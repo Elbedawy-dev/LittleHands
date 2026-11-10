@@ -117,9 +117,13 @@
     "showingResults": "عرض {{count}} وسيلة تعليمية",
     "noProductsFound": "لا توجد وسائل تعليمية مطابقة",
     "noProductsFoundDesc": "جربي تغيير خيارات التصفية أو مسح كلمات البحث للوصول لنتائج أخرى.",
-    "clearFilters": "مسح الفلاتر"
+    "clearFilters": "مسح الفلاتر",
+    "loadError": "تعذر تحميل الوسائل التعليمية، يرجى المحاولة لاحقاً",
+    "loadErrorTitle": "حدث خطأ أثناء تحميل الوسائل"
   },
   "productDetails": {
+    "notFoundTitle": "الوسيلة التعليمية غير موجودة",
+    "notFoundDesc": "ربما تم حذفها أو تعديل مسارها",
     "backToProducts": "الرجوع إلى قائمة الوسائل",
     "zoomHint": "انقر للتكبير والتفاصيل",
     "handmadeBadge": "تطريز يدوي متقن",
@@ -174,7 +178,12 @@
     "completedOrdersCount": "{{count}} طلبات مكتملة",
     "localHandmade": "صناعة يدوية محلية",
     "browseWorks": "تصفح أعمال البائعة",
+    "emptyTitle": "لا توجد بائعات مسجلات حالياً",
     "publicProfile": {
+      "notFoundTitle": "البائعة غير موجودة",
+      "notFoundDesc": "ربما تم تعديل الرابط أو لم يتم العثور على البائعة المطلوبة",
+      "backToSellers": "الرجوع إلى قائمة البائعات الحرفيات",
+      "showAllAids": "عرض كافة وسائل البائعة",
       "storeSubtitle": "متجر الوسائل التعليمية اليدوية",
       "artisanAids": "وسائل {{name}}",
       "filterCategory": "تصفية حسب التصنيف:",

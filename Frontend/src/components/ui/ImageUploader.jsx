@@ -11,8 +11,7 @@ export function ImageUploader({
   disabled = false,
   className,
 }) {
-  const { i18n } = useTranslation()
-  const isEn = i18n.language === 'en'
+  const { t } = useTranslation('common')
   const fileInputRef = useRef(null)
   const [error, setError] = useState('')
 
@@ -27,17 +26,17 @@ export function ImageUploader({
       const file = files[i]
 
       if (!allowedTypes.includes(file.type)) {
-        setError(isEn ? 'Please choose JPG, PNG, or WebP images only' : 'يرجى اختيار صور بصيغة JPG أو PNG أو WebP فقط')
+        setError(t('ui.imageFormatError'))
         return
       }
 
       if (file.size > maxSizeMb * 1024 * 1024) {
-        setError(isEn ? `Image size must not exceed ${maxSizeMb} MB` : `حجم الصورة يجب ألا يتجاوز ${maxSizeMb} ميجابايت`)
+        setError(t('ui.imageMaxSizeSimple', { max: maxSizeMb }))
         return
       }
 
       if (newImages.length >= maxImages) {
-        setError(isEn ? `Maximum number of images is ${maxImages}` : `الحد الأقصى لعدد الصور هو ${maxImages} صور`)
+        setError(t('ui.imageMaxCountError', { max: maxImages }))
         break
       }
 
@@ -74,14 +73,14 @@ export function ImageUploader({
           >
             <img
               src={img}
-              alt={isEn ? `Image ${idx + 1}` : `صورة ${idx + 1}`}
+              alt={t('ui.imageAlt', { index: idx + 1 })}
               className="w-full h-full object-cover"
             />
 
             {/* شارة الصورة الرئيسية */}
             {idx === 0 && (
               <span className="absolute top-2 start-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-orange text-white shadow-xs">
-                {isEn ? 'Primary' : 'الرئيسية'}
+                {t('ui.primaryImage')}
               </span>
             )}
 
@@ -92,7 +91,7 @@ export function ImageUploader({
                   type="button"
                   onClick={() => handleMove(idx, -1)}
                   className="p-1.5 rounded-full bg-white/20 hover:bg-white text-white hover:text-text-main transition-colors"
-                  aria-label={isEn ? 'Move forward' : 'تقديم الصورة'}
+                  aria-label={t('ui.moveImageForward')}
                 >
                   <ArrowRight className="w-3.5 h-3.5 rtl:rotate-0 rotate-180" />
                 </button>
@@ -102,7 +101,7 @@ export function ImageUploader({
                 type="button"
                 onClick={() => handleRemove(idx)}
                 className="p-1.5 rounded-full bg-rose-600/80 hover:bg-rose-600 text-white transition-colors"
-                aria-label={isEn ? 'Remove image' : 'حذف الصورة'}
+                aria-label={t('ui.removeImage')}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -112,7 +111,7 @@ export function ImageUploader({
                   type="button"
                   onClick={() => handleMove(idx, 1)}
                   className="p-1.5 rounded-full bg-white/20 hover:bg-white text-white hover:text-text-main transition-colors"
-                  aria-label={isEn ? 'Move backward' : 'تأخير الصورة'}
+                  aria-label={t('ui.moveImageBackward')}
                 >
                   <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-0 rotate-180" />
                 </button>
@@ -133,7 +132,7 @@ export function ImageUploader({
               <ImagePlus className="w-5 h-5" />
             </div>
             <span className="text-xs font-bold text-text-main group-hover:text-brand-orange transition-colors">
-              {isEn ? 'Add Image' : 'إضافة صورة'}
+              {t('ui.addImage')}
             </span>
             <span className="text-[10px] text-text-muted mt-0.5">
               ({images.length}/{maxImages})

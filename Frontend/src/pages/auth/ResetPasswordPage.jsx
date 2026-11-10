@@ -24,17 +24,17 @@ export default function ResetPasswordPage() {
     setError('')
 
     if (!token) {
-      setError(isEn ? 'Invalid or missing reset token' : 'رمز إعادة التعيين مفقود أو غير صالح')
+      setError(t('errors.resetTokenInvalid'))
       return
     }
 
     if (password.length < 8) {
-      setError(isEn ? 'Password must be at least 8 characters' : 'يجب ألا تقل كلمة المرور عن 8 خانات')
+      setError(t('errors.passwordMin8'))
       return
     }
 
     if (password !== confirmPassword) {
-      setError(isEn ? 'Passwords do not match' : 'كلمتا المرور غير متطابقتين')
+      setError(t('errors.passwordMismatch'))
       return
     }
 
@@ -103,8 +103,8 @@ export default function ResetPasswordPage() {
           <Input
             id="new-password"
             type="password"
-            label={isEn ? 'New Password' : 'كلمة المرور الجديدة'}
-            placeholder="••••••••"
+            label={t('resetPage.newPasswordLabel')}
+            placeholder={t('common:ui.passwordMaskPlaceholder')}
             icon={<Lock className="w-4 h-4" />}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -116,8 +116,8 @@ export default function ResetPasswordPage() {
           <Input
             id="confirm-new-password"
             type="password"
-            label={isEn ? 'Confirm New Password' : 'تأكيد كلمة المرور الجديدة'}
-            placeholder="••••••••"
+            label={t('resetPage.confirmPasswordLabel')}
+            placeholder={t('common:ui.passwordMaskPlaceholder')}
             icon={<Lock className="w-4 h-4" />}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
           />
 
           <Button type="submit" variant="primary" className="w-full mt-2" loading={loading}>
-            {isEn ? 'Update Password' : 'تحديث كلمة المرور'}
+            {t('resetPage.submitButton')}
           </Button>
         </form>
       )}

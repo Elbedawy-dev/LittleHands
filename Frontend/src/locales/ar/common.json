@@ -117,5 +117,42 @@
   "emptyState": {
     "defaultTitle": "لا توجد عناصر",
     "defaultDescription": "لم يتم العثور على أي عناصر لعرضها"
+  },
+  "logoutCard": {
+    "title": "تسجيل الخروج",
+    "description": "إنهاء جلستك والعودة لصفحة الدخول",
+    "action": "تسجيل الخروج"
+  },
+  "ui": {
+    "closeModal": "إغلاق النافذة",
+    "closeDrawer": "إغلاق اللوحة",
+    "closePreview": "إغلاق المعاينة",
+    "zoomIn": "تكبير",
+    "zoomOut": "تصغير",
+    "resetZoom": "إعادة ضبط الحجم",
+    "paginationLabel": "التنقل بين الصفحات",
+    "previousPage": "الصفحة السابقة",
+    "nextPage": "الصفحة التالية",
+    "increaseQty": "زيادة الكمية",
+    "decreaseQty": "إنقاص الكمية",
+    "quantity": "الكمية",
+    "otpDigit": "الرقم {{index}} من رمز التحقق",
+    "imageFormatError": "يرجى اختيار صور بصيغة JPG أو PNG أو WebP فقط",
+    "imageSizeError": "حجم الصورة \"{{name}}\" يتجاوز الحد الأقصى ({{max}} ميجابايت)",
+    "imageMaxSizeSimple": "حجم الصورة يجب ألا يتجاوز {{max}} ميجابايت",
+    "imageMaxCountError": "الحد الأقصى لعدد الصور هو {{max}} صور",
+    "removeImage": "إزالة الصورة",
+    "moveImageForward": "تقديم الصورة",
+    "moveImageBackward": "تأخير الصورة",
+    "addImage": "إضافة صورة",
+    "primaryImage": "الرئيسية",
+    "imageAlt": "صورة {{index}}",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "phonePlaceholder": "010XXXXXXXX",
+    "passwordMaskPlaceholder": "••••••••",
+    "confirmDialogDefaultTitle": "هل أنتِ متأكدة؟",
+    "confirmDialogDefaultConfirm": "نعم، تأكيد",
+    "confirmDialogDefaultCancel": "إلغاء"
   }
 }

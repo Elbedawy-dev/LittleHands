@@ -31,6 +31,7 @@
   "FILE_TOO_LARGE": "File size exceeds maximum allowed limit (5MB).",
   "ORDER_NOT_FOUND": "Order not found.",
   "ERR_ORDER_NOT_FOUND": "Order not found.",
+  "ORDER_NOT_DELETABLE": "Paid orders cannot be deleted; the order must be cancelled and refunded first.",
   "ORDER_HAS_PAYMENT": "Order cannot be cancelled once payment proof has been submitted.",
   "PAYMENT_REQUIRED": "Action requires confirmed payment.",
   "ERR_PAYMENT_REQUIRED": "Action requires confirmed payment.",
@@ -60,6 +61,8 @@
   "EMAIL_TAKEN": "This email address is already registered",
   "PHONE_TAKEN": "This phone number is already registered",
   "STORAGE_ERROR": "Failed to upload file, please try again",
+  "CUSTOM_REQUEST_ALREADY_CLAIMED": "Another seller has already claimed this custom request",
+  "CUSTOM_REQUEST_NOT_AVAILABLE": "This custom request is no longer available",
   "DEFAULT": "An unexpected error occurred, please try again"
 }
 

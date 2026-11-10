@@ -1,9 +1,19 @@
 import { sellerService } from './service.js'
 import { userController } from '../users/controller.js'
 import { asyncHandler } from '../../utils/asyncHandler.js'
-import { ok } from '../../utils/response.js'
+import { ok, paginated } from '../../utils/response.js'
 
 export const sellerController = {
+  getCustomRequests: asyncHandler(async (req, res) => {
+    const result = await sellerService.getCustomRequests(req.user, req.query)
+    return paginated(res, result)
+  }),
+
+  claimCustomRequest: asyncHandler(async (req, res) => {
+    const claimed = await sellerService.claimCustomRequest(req.user, req.params.id)
+    return ok(res, claimed)
+  }),
+
   getSellers: asyncHandler(async (req, res) => {
     const sellers = await sellerService.getSellers()
     return ok(res, sellers)

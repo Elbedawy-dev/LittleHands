@@ -1,12 +1,15 @@
-import { Eye } from 'lucide-react'
+import { Eye, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../../components/ui/Button'
 import { DataTable } from '../../../components/ui/DataTable'
 import { PriceTag } from '../../../components/ui/PriceTag'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
+import { Tooltip } from '../../../components/ui/Tooltip'
 import { getGovernorateName } from '../../../config/constants'
 import { useFormat } from '../../../hooks/useFormat'
 import { pickLocaleText } from '../../../utils'
+
+const ADMIN_DELETABLE_STATUSES = ['pending_payment', 'payment_rejected', 'cancelled']
 
 /**
  * جدول طلبات المنصة الشامل للإدارة
@@ -16,10 +19,12 @@ export function AdminOrdersTable({
   orders = [],
   loading = false,
   onViewOrder,
+  onDeleteOrder,
 }) {
   const { t, i18n } = useTranslation('admin-core')
   const isEn = i18n.language === 'en'
   const { formatDate } = useFormat()
+  const safeOrders = Array.isArray(orders) ? orders : []
 
   const columns = [
     {
@@ -52,17 +57,18 @@ export function AdminOrdersTable({
       key: 'items',
       sortable: false,
       render: (o) => {
-        const firstTwoNames = (o.items || [])
+        const itemsList = Array.isArray(o.items) ? o.items : []
+        const firstTwoNames = itemsList
           .slice(0, 2)
           .map((i) => (typeof i.name === 'object' ? pickLocaleText(i.name, i18n.language) : i.name))
           .join(isEn ? ', ' : '، ')
-        const remaining = (o.items?.length || 0) - 2
+        const remaining = itemsList.length - 2
         return (
           <div className="max-w-xs text-xs" data-user-content="true">
             <span className="text-text-main line-clamp-1">{firstTwoNames}</span>
             {remaining > 0 && (
               <span className="text-[10px] text-text-muted">
-                +{remaining} {isEn ? 'more aids' : 'وسائل أخرى'}
+                {t('orders.moreAids', { count: remaining })}
               </span>
             )}
           </div>
@@ -93,24 +99,60 @@ export function AdminOrdersTable({
       key: 'actions',
       sortable: false,
       align: 'end',
-      render: (o) => (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onViewOrder(o)}
-          icon={<Eye className="w-3.5 h-3.5" />}
-        >
-          {t('orders.table.viewDetails')}
-        </Button>
-      ),
+      render: (o) => {
+        const canDelete = ADMIN_DELETABLE_STATUSES.includes(o.status)
+        return (
+          <div className="inline-flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onViewOrder(o)}
+              startIcon={<Eye className="w-3.5 h-3.5" />}
+            >
+              {t('orders.table.viewDetails')}
+            </Button>
+
+            {onDeleteOrder && (
+              canDelete ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onDeleteOrder(o)}
+                  className="px-2.5 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                  title={t('orders.delete.action')}
+                  aria-label={t('orders.delete.action')}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Tooltip content={t('orders.delete.disabledTooltip')} position="top">
+                  <span tabIndex={0} className="inline-flex">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="px-2.5 text-rose-400 dark:text-rose-500/50 border-surface-border"
+                      aria-label={t('orders.delete.disabledTooltip')}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </span>
+                </Tooltip>
+              )
+            )}
+          </div>
+        )
+      },
     },
   ]
 
   return (
     <DataTable
       columns={columns}
-      data={orders}
+      data={safeOrders}
       loading={loading}
       emptyTitle={t('orders.emptyTitle')}
       emptyDescription={t('orders.emptyDescription')}
@@ -118,6 +160,7 @@ export function AdminOrdersTable({
         <AdminOrderMobileCard
           order={o}
           onViewOrder={onViewOrder}
+          onDeleteOrder={onDeleteOrder}
           formatDate={formatDate}
           t={t}
           isEn={isEn}
@@ -131,10 +174,12 @@ export function AdminOrdersTable({
 /**
  * بطاقة عرض الطلب المخصصة للشاشات الصغيرة
  */
-function AdminOrderMobileCard({ order: o, onViewOrder, formatDate, t, isEn, lang }) {
-  const itemsText = (o.items || [])
+function AdminOrderMobileCard({ order: o, onViewOrder, onDeleteOrder, formatDate, t, isEn, lang }) {
+  const itemsList = Array.isArray(o.items) ? o.items : []
+  const itemsText = itemsList
     .map((i) => (typeof i.name === 'object' ? pickLocaleText(i.name, lang) : i.name))
     .join(isEn ? ', ' : '، ')
+  const canDelete = ADMIN_DELETABLE_STATUSES.includes(o.status)
 
   return (
     <div className="space-y-3">
@@ -174,17 +219,48 @@ function AdminOrderMobileCard({ order: o, onViewOrder, formatDate, t, isEn, lang
         <span className="text-text-muted">{formatDate(o.createdAt)}</span>
       </div>
 
-      <div className="pt-2 border-t border-surface-border">
+      <div className="pt-2 border-t border-surface-border flex items-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => onViewOrder(o)}
-          icon={<Eye className="w-3.5 h-3.5" />}
-          className="w-full justify-center"
+          startIcon={<Eye className="w-3.5 h-3.5" />}
+          className="flex-1 justify-center"
         >
           {t('orders.table.viewDetails')}
         </Button>
+
+        {onDeleteOrder && (
+          canDelete ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onDeleteOrder(o)}
+              className="px-3 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+              title={t('orders.delete.action')}
+              aria-label={t('orders.delete.action')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Tooltip content={t('orders.delete.disabledTooltip')} position="top">
+              <span tabIndex={0} className="inline-flex">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  className="px-3 text-rose-400 dark:text-rose-500/50 border-surface-border"
+                  aria-label={t('orders.delete.disabledTooltip')}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </span>
+            </Tooltip>
+          )
+        )}
       </div>
     </div>
   )

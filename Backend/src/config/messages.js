@@ -132,6 +132,10 @@ export const ERROR_MESSAGES = {
     ar: 'الطلب غير موجود',
     en: 'Order not found.',
   },
+  ORDER_NOT_DELETABLE: {
+    ar: 'لا يمكن حذف الطلب المدفوع؛ يجب إلغاء الطلب واسترداد مبلغه أولاً',
+    en: 'Paid orders cannot be deleted; the order must be cancelled and refunded first.',
+  },
   PAYMENT_REQUIRED: {
     ar: 'لا يمكن اتخاذ هذا الإجراء قبل تأكيد الدفع من الإدارة',
     en: 'Action requires confirmed payment.',
@@ -187,6 +191,14 @@ export const ERROR_MESSAGES = {
   NOT_IMPLEMENTED: {
     ar: 'هذه الخدمة قيد التطوير ولم تُفعل بعد',
     en: 'This endpoint is not implemented yet.',
+  },
+  CUSTOM_REQUEST_ALREADY_CLAIMED: {
+    ar: 'سبقتك بائعة أخرى لاستلام هذا الطلب',
+    en: 'Another seller has already claimed this custom request',
+  },
+  CUSTOM_REQUEST_NOT_AVAILABLE: {
+    ar: 'هذا الطلب لم يعد متاحاً للاستلام',
+    en: 'This custom request is no longer available',
   },
   INTERNAL_SERVER_ERROR: {
     ar: 'حدث خطأ غير متوقع في الخادم. يرجى المحاولة لاحقاً',

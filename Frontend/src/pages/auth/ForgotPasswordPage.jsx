@@ -33,11 +33,11 @@ export default function ForgotPasswordPage() {
 
     const cleanEmail = email.trim()
     if (!cleanEmail) {
-      setError('يرجى إدخال البريد الإلكتروني')
+      setError(t('errors.emailRequired'))
       return
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setError('صيغة البريد الإلكتروني غير صحيحة')
+      setError(t('errors.emailInvalid'))
       return
     }
 

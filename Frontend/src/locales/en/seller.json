@@ -93,9 +93,13 @@
     "size_en": "Dimensions (English)",
     "size_en_placeholder": "e.g. 50 x 70 cm",
     "usage_ar": "Classroom Usage (Optional)",
+    "usage_ar_placeholder": "e.g. Mount on wall or tabletop",
     "usage_en": "Classroom Usage in English (Optional)",
+    "usage_en_placeholder": "Classroom wall or table activities",
     "care_ar": "Care & Maintenance (Optional)",
+    "care_ar_placeholder": "e.g. Keep in a dry place and wipe gently",
     "care_en": "Care & Maintenance in English (Optional)",
+    "care_en_placeholder": "Store dry, wipe gently",
     "title_new": "Add New Teaching Aid",
     "title_edit": "Edit Teaching Aid",
     "subtitle": "Enter specifications of handcrafted aid, safe materials, and target nursery stages",
@@ -200,6 +204,21 @@
       "timeline_title": "Order Status Timeline",
       "confidential_note": "Note: Vodafone Cash transfer receipts and verification are handled strictly by platform administration."
     },
+    "qty_label": "Qty: {{qty}}",
+    "unit_price_label": "Unit Price: {{price}}",
+    "waiting_payment_desc": "Preparation or shipping cannot start before administration reviews and approves the Vodafone Cash receipt.",
+    "status_delivered_notice": "Order delivered to the nursery successfully",
+    "status_shipped_notice": "Order handed over to the shipping courier",
+    "delivery_masked_notice": "Delivery details appear after payment confirmation",
+    "hide": {
+      "action": "Remove from My List",
+      "disabledTooltip": "Active orders being prepared or shipped cannot be hidden",
+      "confirmTitle": "Hide Order from Your List",
+      "confirmMessage": "The order will be hidden from your list only; customer and admin records and your earnings will not be affected.",
+      "confirmBtn": "Yes, Hide Order",
+      "cancelBtn": "Cancel",
+      "successToast": "Order {{number}} has been hidden from your list"
+    },
     "empty_title": "No orders found",
     "empty_desc": "No orders matched your current filter criteria."
   },
@@ -247,5 +266,43 @@
       "default_notes": "Vodafone Cash payout transfer"
     },
     "reconciliation_badge": "Accounts Reconciled and Audited"
+  },
+  "customRequests": {
+    "title": "Custom Nursery Requests",
+    "subtitle": "Custom educational aids requested by nurseries. The first seller to claim gets it locked to her workshop.",
+    "searchPlaceholder": "Search by nursery, client name, or specifications...",
+    "tabs": {
+      "all": "All",
+      "available": "Available to Claim",
+      "mine": "My Claimed Requests"
+    },
+    "card": {
+      "nursery": "Nursery",
+      "customer": "Requester",
+      "phone": "Contact Phone",
+      "details": "Requested Aid Specifications",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "claimBtn": "I'll Fulfill this Request",
+      "claimedByOther": "Claimed by {{name}}",
+      "myRequest": "Your Request",
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "availableBadge": "Available",
+      "claimedDisabled": "Claimed"
+    },
+    "confirm": {
+      "title": "Confirm Claiming Request",
+      "message": "Are you sure? Once confirmed, no other seller will be able to claim this request.",
+      "confirmBtn": "Confirm & Claim",
+      "cancelBtn": "Cancel",
+      "successToast": "Request claimed successfully! You can now contact the client."
+    },
+    "empty": {
+      "title": "No Custom Requests",
+      "descAll": "Any custom teaching aid requests submitted by nurseries will appear here.",
+      "descAvailable": "No custom requests are currently available. Check back soon!",
+      "descMine": "You haven't claimed any custom requests yet. Check available requests to claim one!"
+    }
   }
 }

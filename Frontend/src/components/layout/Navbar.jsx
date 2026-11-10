@@ -35,7 +35,7 @@ export function Navbar() {
   const { unreadCount } = useNotifications()
   const { theme, toggleTheme } = useTheme()
   const { language, setLanguage } = useLanguage()
-  const isEn = language === 'en'
+  const _isEn = language === 'en'
 
   const [cartOpen, setCartOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -186,7 +186,7 @@ export function Navbar() {
                 type="button"
                 onClick={handleAvatarClick}
                 className="flex items-center gap-2 p-1 rounded-full hover:bg-surface-subtle transition-colors cursor-pointer"
-                aria-label={isEn ? (user?.nameEn || 'My Account') : (displayName || 'حسابي')}
+                aria-label={displayName || t('common:tabBar.account')}
                 data-testid="desktop-avatar-btn"
               >
                 <Avatar

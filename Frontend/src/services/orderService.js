@@ -35,7 +35,8 @@ export const orderService = {
    * Customer: Get my orders
    */
   async getMyOrders(params = {}) {
-    return apiClient.get('/orders/my', { params })
+    const res = await apiClient.get('/orders/my', { params })
+    return Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : []
   },
 
   /**
@@ -56,7 +57,8 @@ export const orderService = {
    * Seller: Get seller orders
    */
   async getSellerOrders(params = {}) {
-    return apiClient.get('/orders/seller', { params })
+    const res = await apiClient.get('/orders/seller', { params })
+    return Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : []
   },
 
   /**
@@ -69,10 +71,18 @@ export const orderService = {
   },
 
   /**
+   * Seller: Hide an inactive order from seller's own orders list
+   */
+  async hideSellerOrder(orderId) {
+    return apiClient.delete(`/orders/seller/${orderId}`)
+  },
+
+  /**
    * Admin: Get all orders
    */
   async getAllOrders(params = {}) {
-    return apiClient.get('/orders/admin', { params })
+    const res = await apiClient.get('/orders/admin', { params })
+    return Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : []
   },
 
   /**
@@ -101,6 +111,13 @@ export const orderService = {
    */
   async adminRefundOrder(id, { reference, note = '' }) {
     return apiClient.post(`/orders/admin/${id}/refund`, { reference, note })
+  },
+
+  /**
+   * Admin: Permanently delete an unpaid/inactive order
+   */
+  async deleteOrder(id) {
+    return apiClient.delete(`/orders/admin/${id}`)
   },
 
   /**

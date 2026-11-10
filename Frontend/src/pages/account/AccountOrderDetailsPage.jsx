@@ -97,7 +97,7 @@ export default function AccountOrderDetailsPage() {
     setCancelling(true)
     try {
       await orderService.cancelOrder(order.id, { reason: cancelReason.trim() })
-      toast.success(isEn ? 'Order cancelled successfully' : 'تم إلغاء الطلب بنجاح')
+      toast.success(t('profile:orders.cancelOrderSuccess'))
       setCancelModalOpen(false)
       setCancelReason('')
       await fetchOrderDetails()
@@ -115,12 +115,12 @@ export default function AccountOrderDetailsPage() {
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      setReuploadError(isEn ? 'Please select an image file (JPG, PNG, WebP)' : 'يرجى اختيار ملف صورة صالح (JPG أو PNG أو WebP)')
+      setReuploadError(t('common:ui.imageFormatError'))
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setReuploadError(isEn ? 'Image size must not exceed 5 MB' : 'حجم الصورة يجب ألا يتجاوز 5 ميجابايت')
+      setReuploadError(t('common:ui.imageMaxSizeSimple', { max: 5 }))
       return
     }
 
@@ -141,12 +141,12 @@ export default function AccountOrderDetailsPage() {
     setReuploadSuccess(false)
 
     if (!reuploadData.senderPhone.trim()) {
-      setReuploadError(isEn ? 'Please enter sender Vodafone Cash wallet number' : 'يرجى إدخال رقم محفظة فودافون كاش المحول منها')
+      setReuploadError(t('profile:orders.reuploadPhoneRequired'))
       return
     }
 
     if (!reuploadData.screenshotFile && !reuploadPreview) {
-      setReuploadError(isEn ? 'Please attach screenshot of transfer' : 'يرجى إرفاق لقطة شاشة واضحة لإشعار التحويل الجديد')
+      setReuploadError(t('profile:orders.reuploadScreenshotRequired'))
       return
     }
 
@@ -155,7 +155,7 @@ export default function AccountOrderDetailsPage() {
       await orderService.reuploadReceipt(id, {
         senderPhone: reuploadData.senderPhone.trim(),
         reference: reuploadData.reference.trim(),
-        screenshotDataUrl: reuploadPreview,
+        screenshotFile: reuploadData.screenshotFile,
       })
 
       setReuploadSuccess(true)
@@ -181,8 +181,8 @@ export default function AccountOrderDetailsPage() {
     return (
       <Card padding="lg">
         <EmptyState
-          title={isEn ? 'Order Not Found' : 'الطلب غير موجود'}
-          description={error || (isEn ? 'Order data not found.' : 'لم يتم العثور على بيانات هذا الطلب.')}
+          title={t('profile:orders.notFoundTitle')}
+          description={error || t('profile:orders.notFoundDesc')}
           action={
             <Link to="/account/orders">
               <Button size="sm">{t('profile:orders.backToList', 'العودة لسجل الطلبات')}</Button>
@@ -519,7 +519,7 @@ export default function AccountOrderDetailsPage() {
               onChange={(e) =>
                 setReuploadData({ ...reuploadData, senderPhone: e.target.value })
               }
-              placeholder="010XXXXXXXX"
+              placeholder={t('common:ui.phonePlaceholder')}
               dir="ltr"
               className="[unicode-bidi:isolate] text-start"
               required
@@ -532,7 +532,7 @@ export default function AccountOrderDetailsPage() {
               onChange={(e) =>
                 setReuploadData({ ...reuploadData, reference: e.target.value })
               }
-              placeholder="VF-2026-9908"
+              placeholder={t('profile:orders.reuploadReferencePlaceholder')}
               dir="ltr"
               className="[unicode-bidi:isolate] text-start"
             />
@@ -611,20 +611,18 @@ export default function AccountOrderDetailsPage() {
       <Modal
         isOpen={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
-        title={isEn ? 'Cancel Order' : 'تأكيد إلغاء الطلب'}
+        title={t('profile:orders.cancelOrderConfirmTitle')}
         maxWidth="max-w-md"
       >
         <form onSubmit={handleCancelOrder} className="space-y-4 p-2">
           <p className="text-xs text-text-muted leading-relaxed">
-            {isEn
-              ? 'Are you sure you want to cancel this order? This action cannot be undone.'
-              : 'هل أنت متأكدة من رغبتك في إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء بعد تنفيذه.'}
+            {t('profile:orders.cancelOrderConfirmMessage')}
           </p>
 
           <Input
             id="cancel-reason"
-            label={isEn ? 'Cancellation Reason (Optional)' : 'سبب الإلغاء (اختياري)'}
-            placeholder={isEn ? 'Why do you want to cancel?' : 'يرجى كتابة سبب الإلغاء إن رغبت'}
+            label={t('profile:orders.cancelReasonLabel')}
+            placeholder={t('profile:orders.cancelReasonPlaceholder')}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
             disabled={cancelling}

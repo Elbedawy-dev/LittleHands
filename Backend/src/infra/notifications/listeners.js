@@ -508,6 +508,7 @@ export function registerNotificationListeners() {
       const { request } = payload || {}
       if (!request) return
 
+      // A. Notify Admins: in-app notification + email (with phone number)
       const activeAdmins = await getActiveAdmins()
       for (const admin of activeAdmins) {
         await notifications.notify(admin._id, {
@@ -532,18 +533,99 @@ export function registerNotificationListeners() {
             {
               customerName: request.name || '',
               phone: request.phone || '',
-              email: request.email || '',
-              subject: request.subject || '',
-              description: request.description || '',
-              stage: request.stage || '',
+              subject: request.nurseryName || '',
+              description: request.details || '',
               reviewUrl: `${env.CLIENT_URL}/admin/custom-requests`,
             },
             { locale: admin.locale || 'ar', user: admin }
           )
         }
       }
+
+      // B. Notify All Active Sellers: in-app notification + email (without phone number)
+      const activeSellers = await User.find({ role: 'seller', status: 'active' })
+      if (activeSellers && activeSellers.length > 0) {
+        await Promise.allSettled(
+          activeSellers.map(async (seller) => {
+            // In-app notification for seller
+            await notifications.notify(seller._id, {
+              type: 'custom_request',
+              role: 'seller',
+              title: {
+                ar: 'طلب تفصيل جديد متاح',
+                en: 'New custom request available',
+              },
+              message: {
+                ar: request.nurseryName
+                  ? `طلب تفصيل وسيلة تعليمية جديد لحضانة ${request.nurseryName}. بادري باستلامه!`
+                  : `طلب تفصيل وسيلة تعليمية جديد متاح الآن. بادري باستلامه!`,
+                en: request.nurseryName
+                  ? `New custom teaching aid request for ${request.nurseryName}. Claim it now!`
+                  : `New custom teaching aid request available now. Claim it now!`,
+              },
+              params: {
+                requestId: request.id || request._id,
+                nurseryName: request.nurseryName || '',
+                customerName: request.name || '',
+              },
+              link: '/seller/custom-requests',
+            })
+
+            // Email via custom-request-seller template (no phone number included)
+            if (seller.email) {
+              await email.sendTemplate(
+                'custom-request-seller',
+                seller.email,
+                {
+                  customerName: request.name || '',
+                  nurseryName: request.nurseryName || '',
+                  details: request.details || '',
+                  claimUrl: `${env.CLIENT_URL}/seller/custom-requests`,
+                },
+                { locale: seller.locale || 'ar', user: seller }
+              )
+            }
+          })
+        )
+      }
     } catch (err) {
       console.error('[EVENT_LISTENER] Error handling customRequest.created:', err)
+    }
+  })
+
+  // 10. Custom Request Claimed
+  eventBus.on(EVENT_TYPES.CUSTOM_REQUEST_CLAIMED, async (payload) => {
+    try {
+      const { request, seller } = payload || {}
+      if (!request || !seller) return
+
+      const sellerName = seller.seller?.displayName?.ar || seller.name || 'بائعة'
+      const nurserySuffix = request.nurseryName ? ` من ${request.nurseryName}` : ''
+      const nurserySuffixEn = request.nurseryName ? ` from ${request.nurseryName}` : ''
+
+      const activeAdmins = await getActiveAdmins()
+      for (const admin of activeAdmins) {
+        await notifications.notify(admin._id, {
+          type: 'custom_request',
+          role: 'admin',
+          title: {
+            ar: 'استلام طلب تفصيل',
+            en: 'Custom request claimed',
+          },
+          message: {
+            ar: `البائعة ${sellerName} استلمت الطلب${nurserySuffix}.`,
+            en: `Seller ${sellerName} claimed the custom request${nurserySuffixEn}.`,
+          },
+          params: {
+            sellerName,
+            nurseryName: request.nurseryName || '',
+            requestId: request.id || request._id,
+          },
+          link: '/admin/custom-requests',
+        })
+      }
+    } catch (err) {
+      console.error('[EVENT_LISTENER] Error handling customRequest.claimed:', err)
     }
   })
 

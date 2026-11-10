@@ -1,4 +1,5 @@
 import { Minus, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils'
 
 export function QuantityStepper({
@@ -10,6 +11,7 @@ export function QuantityStepper({
   disabled = false,
   className,
 }) {
+  const { t } = useTranslation('common')
   const handleDecrement = () => {
     if (value > min && !disabled) {
       onChange(value - 1)
@@ -51,7 +53,7 @@ export function QuantityStepper({
           'rounded-full flex items-center justify-center text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer',
           btnSizes[size] || btnSizes.md
         )}
-        aria-label="تقليل الكمية"
+        aria-label={t('ui.decreaseQty')}
       >
         <Minus className="w-3.5 h-3.5" />
       </button>
@@ -68,7 +70,7 @@ export function QuantityStepper({
           'rounded-full flex items-center justify-center text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer',
           btnSizes[size] || btnSizes.md
         )}
-        aria-label="زيادة الكمية"
+        aria-label={t('ui.increaseQty')}
       >
         <Plus className="w-3.5 h-3.5" />
       </button>

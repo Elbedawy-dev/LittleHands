@@ -7,6 +7,7 @@ import {
   Package,
   Phone,
   ShieldAlert,
+  Trash2,
   Truck,
   User,
 } from 'lucide-react'
@@ -18,8 +19,11 @@ import { Card } from '../../components/ui/Card'
 import { Drawer } from '../../components/ui/Drawer'
 import { ProductImage } from '../../components/ui/ProductImage'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { Tooltip } from '../../components/ui/Tooltip'
 import { useFormat } from '../../hooks/useFormat'
 import { calcCommission } from '../../utils'
+
+const SELLER_HIDEABLE_STATUSES = ['cancelled', 'payment_rejected', 'delivered', 'pending_payment']
 
 /**
  * درج عرض تفاصيل الطلب للبائعة وإجراءات دورة الحياة
@@ -32,6 +36,7 @@ export function OrderDetailsDrawer({
   order,
   sellerId = '',
   onStatusUpdate,
+  onHideOrder,
 }) {
   const { t } = useTranslation('seller')
   const { formatMoney } = useFormat()
@@ -39,8 +44,11 @@ export function OrderDetailsDrawer({
 
   if (!order) return null
 
+  const orderItems = Array.isArray(order.items) ? order.items : []
+  const canHide = SELLER_HIDEABLE_STATUSES.includes(order.status)
+
   // تصفية المنتجات التابعة لورشة هذه البائعة فقط
-  const sellerItems = (order.items || []).filter(
+  const sellerItems = orderItems.filter(
     (item) => !item.sellerId || item.sellerId === sellerId
   )
 
@@ -136,7 +144,7 @@ export function OrderDetailsDrawer({
                   {t('orders.waiting_payment_hint')}
                 </span>
                 <span className="text-[11px] opacity-80">
-                  لا يمكن البدء بالتجهيز أو الشحن قبل مراجعة واعتماد إيصال فودافون كاش من الإدارة.
+                  {t('orders.waiting_payment_desc')}
                 </span>
               </div>
             </div>
@@ -146,8 +154,43 @@ export function OrderDetailsDrawer({
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>
-                {order.status === 'delivered' ? 'تم تسليم الطلب للحضانة بنجاح' : 'تم تسليم الطلب لشركة الشحن'}
+                {order.status === 'delivered'
+                  ? t('orders.status_delivered_notice')
+                  : t('orders.status_shipped_notice')}
               </span>
+            </div>
+          )}
+
+          {onHideOrder && (
+            <div className="pt-2 border-t border-surface-border">
+              {canHide ? (
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => onHideOrder(order)}
+                  startIcon={<Trash2 className="w-4 h-4" />}
+                  className="w-full justify-center"
+                >
+                  {t('orders.hide.action')}
+                </Button>
+              ) : (
+                <Tooltip content={t('orders.hide.disabledTooltip')} position="top">
+                  <span tabIndex={0} className="inline-flex w-full">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      startIcon={<Trash2 className="w-4 h-4" />}
+                      className="w-full justify-center text-rose-400 dark:text-rose-500/50 border-surface-border"
+                      aria-label={t('orders.hide.disabledTooltip')}
+                    >
+                      {t('orders.hide.action')}
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
             </div>
           )}
         </div>
@@ -162,11 +205,7 @@ export function OrderDetailsDrawer({
           {order.delivery?.masked ? (
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>
-                {t('orders.delivery_masked_notice', {
-                  defaultValue: 'تظهر بيانات التوصيل بعد تأكيد الدفع',
-                })}
-              </span>
+              <span>{t('orders.delivery_masked_notice')}</span>
             </div>
           ) : (
             <>
@@ -250,19 +289,21 @@ export function OrderDetailsDrawer({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-bold text-xs text-text-main truncate">{typeof item.name === 'object' ? (item.name?.ar || item.name?.en || '') : item.name}</h5>
+                    <h5 className="font-bold text-xs text-text-main truncate">
+                      {typeof item.name === 'object' ? (item.name?.ar || item.name?.en || '') : item.name}
+                    </h5>
                     <div className="flex items-center gap-2 text-[11px] text-text-muted mt-1">
-                      <span>الكمية: {item.qty}</span>
+                      <span>{t('orders.qty_label', { qty: item.qty })}</span>
                       <span>•</span>
-                      <span>سعر القطعة: {formatMoney(item.unitPrice)}</span>
+                      <span>{t('orders.unit_price_label', { price: formatMoney(item.unitPrice) })}</span>
                     </div>
 
                     <div className="flex items-center justify-between gap-2 mt-2 pt-1 border-t border-surface-border/50 text-[11px]">
                       <span className="text-text-muted">
-                        عمولة 20%: <span className="font-mono">{formatMoney(itemCommission.commission)}</span>
+                        {t('orders.col_commission')}: <span className="font-mono">{formatMoney(itemCommission.commission)}</span>
                       </span>
                       <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        صافي لكِ: <span className="font-mono">{formatMoney(itemCommission.net)}</span>
+                        {t('orders.col_net')}: <span className="font-mono">{formatMoney(itemCommission.net)}</span>
                       </span>
                     </div>
                   </div>
@@ -309,7 +350,7 @@ export function OrderDetailsDrawer({
           <h4 className="font-heading font-black text-sm text-text-main pb-2 border-b border-surface-border">
             {t('orders.drawer.timeline_title')}
           </h4>
-          <OrderTimeline timeline={order.timeline || []} />
+          <OrderTimeline timeline={Array.isArray(order.timeline) ? order.timeline : []} />
         </Card>
       </div>
     </Drawer>

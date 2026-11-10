@@ -43,6 +43,7 @@ const SellerProductFormPage = lazy(() => import('../pages/seller/SellerProductFo
 const SellerOrdersPage = lazy(() => import('../pages/seller/SellerOrdersPage'))
 const SellerEarningsPage = lazy(() => import('../pages/seller/SellerEarningsPage'))
 const SellerProfilePage = lazy(() => import('../pages/seller/SellerProfilePage'))
+const SellerCustomRequestsPage = lazy(() => import('../pages/seller/SellerCustomRequestsPage'))
 const SellerNotificationsPage = lazy(() => import('../pages/seller/SellerNotificationsPage'))
 
 const AdminOverviewPage = lazy(() => import('../pages/admin/AdminOverviewPage'))
@@ -63,6 +64,9 @@ const DesignSystemPage = import.meta.env.DEV
   : null
 const EmailPreviewPage = import.meta.env.DEV
   ? lazy(() => import('../pages/dev/EmailPreviewPage'))
+  : null
+const SellerCustomRequestsPreview = import.meta.env.DEV
+  ? lazy(() => import('../pages/dev/SellerCustomRequestsPreview'))
   : null
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
 
@@ -170,6 +174,7 @@ export const router = createBrowserRouter([
         ? [
             { path: 'dev/design-system', element: <SuspenseWrapper><DesignSystemPage /></SuspenseWrapper> },
             { path: 'dev/emails', element: <SuspenseWrapper><EmailPreviewPage /></SuspenseWrapper> },
+            { path: 'dev/seller-custom-requests', element: <SuspenseWrapper><SellerCustomRequestsPreview /></SuspenseWrapper> },
           ]
         : []),
 
@@ -205,6 +210,7 @@ export const router = createBrowserRouter([
       { path: 'products/new', element: <SuspenseWrapper><SellerProductFormPage /></SuspenseWrapper> },
       { path: 'products/:id/edit', element: <SuspenseWrapper><SellerProductFormPage /></SuspenseWrapper> },
       { path: 'orders', element: <SuspenseWrapper><SellerOrdersPage /></SuspenseWrapper> },
+      { path: 'custom-requests', element: <SuspenseWrapper><SellerCustomRequestsPage /></SuspenseWrapper> },
       { path: 'earnings', element: <SuspenseWrapper><SellerEarningsPage /></SuspenseWrapper> },
       { path: 'profile', element: <SuspenseWrapper><SellerProfilePage /></SuspenseWrapper> },
       { path: 'notifications', element: <SuspenseWrapper><SellerNotificationsPage /></SuspenseWrapper> },

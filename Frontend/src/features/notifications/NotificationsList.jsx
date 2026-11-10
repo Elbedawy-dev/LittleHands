@@ -4,6 +4,7 @@ import {
   CheckCheck,
   Clock,
   ExternalLink,
+  MessageSquare,
   Package,
   Receipt,
   Truck,
@@ -64,6 +65,15 @@ export function getNotificationBadge(notif, isEn = false) {
     }
   }
 
+  if (type === 'custom_request') {
+    return {
+      icon: <MessageSquare className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+      bg: 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900',
+      badgeColor: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
+      label: isEn ? 'Custom Request' : 'طلب تفصيل',
+    }
+  }
+
   // افتراضي: طلب
   return {
     icon: <Package className="w-5 h-5 text-brand-orange" />,
@@ -77,7 +87,7 @@ export function getNotificationBadge(notif, isEn = false) {
  * مكون قائمة الإشعارات المتكامل والمتوافق مع كل الأدوار (عميلة، بائعة، إدارة)
  */
 export function NotificationsList({ role: propRole, showFilters = true }) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation('notifications')
   const isEn = i18n.language === 'en'
   const { user } = useAuth()
   const { notifications, markAsRead, markAllAsRead } = useNotifications()
@@ -94,7 +104,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
     async function load() {
       try {
         const data = await notificationService.getNotifications(currentRole)
-        if (mounted) setLocalNotifications(data)
+        if (mounted) setLocalNotifications(Array.isArray(data) ? data : [])
       } catch (err) {
         console.warn('Failed to load notifications:', err)
       }
@@ -106,7 +116,9 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
   }, [currentRole, user])
 
   // استخدام القائمة المحلية مع دمج الإشعارات العامة
-  const sourceList = localNotifications.length > 0 ? localNotifications : notifications
+  const safeLocal = Array.isArray(localNotifications) ? localNotifications : []
+  const safeGlobal = Array.isArray(notifications) ? notifications : []
+  const sourceList = safeLocal.length > 0 ? safeLocal : safeGlobal
 
   // تصفية الإشعارات الخاصة بالدور الحالي
   const roleFiltered = useMemo(() => {
@@ -264,12 +276,8 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
       {displayedNotifications.length === 0 ? (
         <Card padding="lg">
           <EmptyState
-            title={isEn ? 'No notifications match your selection' : 'لا توجد إشعارات تطابق اختياركِ'}
-            description={
-              isEn
-                ? 'Notifications will appear here as updates occur on your orders or account.'
-                : 'ستظهر التنبيهات هنا فور تسجيل أي تحديث على طلباتكِ أو حسابكِ.'
-            }
+            title={t('emptyFilteredTitle')}
+            description={t('emptyFilteredSubtitle')}
             icon={<Bell className="w-10 h-10 text-text-muted/40" />}
           />
         </Card>
@@ -281,7 +289,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
               <div className="flex items-center gap-2 px-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-brand-orange" />
                 <h3 className="font-heading font-black text-sm text-text-main">
-                  {isEn ? 'Today' : 'اليوم'}
+                  {t('groupToday')}
                 </h3>
               </div>
               <div className="space-y-2.5">
@@ -294,6 +302,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
                     formatDateTime={formatDateTime}
                     isEn={isEn}
                     lang={i18n.language}
+                    t={t}
                   />
                 ))}
               </div>
@@ -306,7 +315,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
               <div className="flex items-center gap-2 px-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-text-muted/40" />
                 <h3 className="font-heading font-black text-sm text-text-muted">
-                  {isEn ? 'Earlier' : 'سابقاً'}
+                  {t('groupEarlier')}
                 </h3>
               </div>
               <div className="space-y-2.5">
@@ -319,6 +328,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
                     formatDateTime={formatDateTime}
                     isEn={isEn}
                     lang={i18n.language}
+                    t={t}
                   />
                 ))}
               </div>
@@ -340,6 +350,7 @@ function NotificationItem({
   formatDateTime,
   isEn,
   lang,
+  t,
 }) {
   const badge = getNotificationBadge(notification, isEn)
   const isUnread = !notification.read
@@ -416,8 +427,8 @@ function NotificationItem({
         {isUnread && (
           <span
             className="w-2.5 h-2.5 rounded-full bg-brand-orange shadow-xs animate-pulse"
-            title={isEn ? 'Unread notification' : 'إشعار غير مقروء'}
-            aria-label={isEn ? 'Unread' : 'غير مقروء'}
+            title={t('unreadTitle')}
+            aria-label={t('unreadAria')}
           />
         )}
 
@@ -429,8 +440,8 @@ function NotificationItem({
               onMarkRead(notification.id)
             }}
             className="p-2 rounded-full border border-surface-border text-text-muted hover:text-brand-orange hover:bg-surface-subtle transition-colors"
-            title={isEn ? 'View details' : 'الانتقال للتفاصيل'}
-            aria-label={isEn ? 'View details' : 'الانتقال للتفاصيل'}
+            title={t('viewDetails')}
+            aria-label={t('viewDetails')}
           >
             <ExternalLink className="w-4 h-4 rtl:rotate-180" />
           </Link>

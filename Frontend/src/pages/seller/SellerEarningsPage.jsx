@@ -54,14 +54,15 @@ export default function SellerEarningsPage() {
         earningsService.getPayouts({ sellerId }),
       ])
 
+      const safeOrders = Array.isArray(ords) ? ords : []
       // تصفية الطلبات الخاصة بهذه البائعة
-      const myOrders = ords.filter((o) =>
-        (o.items || []).some((item) => !item.sellerId || item.sellerId === sellerId)
+      const myOrders = safeOrders.filter((o) =>
+        (Array.isArray(o.items) ? o.items : []).some((item) => !item.sellerId || item.sellerId === sellerId)
       )
 
       setOverview(ov)
       setOrders(myOrders)
-      setPayouts(pays)
+      setPayouts(Array.isArray(pays) ? pays : [])
     } catch (err) {
       setError(getFriendlyError(err, t))
     } finally {

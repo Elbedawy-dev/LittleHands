@@ -18,7 +18,7 @@ export default function SellersPage() {
   useEffect(() => {
     sellerService
       .getSellers()
-      .then((data) => setSellers(data))
+      .then((data) => setSellers(Array.isArray(data) ? data : []))
       .catch(() => setSellers([]))
       .finally(() => setLoading(false))
   }, [])
@@ -36,7 +36,7 @@ export default function SellersPage() {
           <Skeleton className="h-64 rounded-[28px]" />
         </div>
       ) : sellers.length === 0 ? (
-        <EmptyState title="لا توجد بائعات مسجلات حالياً" />
+        <EmptyState title={t('sellers.emptyTitle')} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {sellers.map((seller) => (

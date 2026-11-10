@@ -170,10 +170,44 @@
         "viewReceipt": "معاينة صورة الإيصال المكبرة",
         "noPayment": "لم يتم إرفاق إيصال دفع حتى الآن"
       },
-      "timelineTitle": "مسار وحالات الطلب"
+      "timelineTitle": "مسار وحالات الطلب",
+      "refundTitle": "استرداد قيمة الطلب",
+      "refundAmountLabel": "المبلغ المطلوب رده:",
+      "refundCompletedBadge": "تم رد المبلغ",
+      "processRefundBtn": "تسجيل رد المبلغ",
+      "refundReferenceLabel": "الرقم المرجعي:",
+      "refundDateLabel": "التاريخ:",
+      "refundNoteLabel": "ملاحظة:",
+      "refundModalTitle": "تسجيل رد المبلغ للعميل",
+      "refundModalDesc": "أدخلي الرقم المرجعي لعملية تحويل رد المبلغ عبر محفظة فودافون كاش للعميل:",
+      "refundReferenceInputLabel": "الرقم المرجعي للتحويل *",
+      "refundReferencePlaceholder": "مثال: 9876543210",
+      "refundNoteInputLabel": "ملاحظات إضافية (اختياري)",
+      "refundNotePlaceholder": "سبب الرد أو تفاصيل العملية",
+      "refundConfirmBtn": "تأكيد رد المبلغ",
+      "refundReferenceRequired": "رقم العملية المرجعي لرد المبلغ مطلوب",
+      "refundSuccessToast": "تم تسجيل رد المبلغ بنجاح",
+      "receiptAlt": "إيصال فودافون كاش",
+      "flags": {
+        "amount_mismatch": "المبلغ غير مطابق",
+        "duplicate_reference": "مرجع مكرر",
+        "duplicate_screenshot": "إيصال مكرر"
+      }
     },
+    "delete": {
+      "action": "حذف الطلب",
+      "disabledTooltip": "لا يمكن حذف الطلب المدفوع أو قيد التنفيذ؛ يجب إلغاؤه واسترداد مبلغه أولاً",
+      "confirmTitle": "حذف الطلب نهائياً",
+      "confirmMessage": "هل أنت متأكد من حذف الطلب رقم {{number}} نهائياً؟ سيتم حذف سجل الطلب وأي إيصالات دفع مرتبطة به ولا يمكن التراجع عن هذا الإجراء.",
+      "confirmBtn": "نعم، احذف الطلب",
+      "cancelBtn": "إلغاء",
+      "successToast": "تم حذف الطلب {{number}} نهائياً بنجاح"
+    },
+    "loadError": "حدث خطأ أثناء تحميل سجل الطلبات",
+    "moreAids": "+{{count}} وسائل أخرى",
     "empty": "لا توجد طلبات مسجلة تطابق هذه المعايير",
-    "emptyTitle": "لا توجد طلبات"
+    "emptyTitle": "لا توجد طلبات",
+    "emptyDescription": "لم يتم العثور على أي طلبات تطابق معايير التصفية المحددة."
   },
   "sellers": {
     "title": "البائعات وأرباح المنصة",
@@ -269,6 +303,16 @@
       "date": "التاريخ",
       "empty": "لا توجد طلبات لهذه البائعة",
       "emptyDescription": "ستظهر هنا طلبات هذه البائعة فور تسجيلها."
-    }
+    },
+    "statusActiveToast": "تم تفعيل حساب البائعة بنجاح",
+    "statusSuspendedToast": "تم إيقاف حساب البائعة"
+  },
+  "customRequests": {
+    "title": "طلبات الحضانات الخاصة",
+    "description": "متابعة وإدارة طلبات تفصيل وتصنيع الوسائل التعليمية المخصصة للحضانات والمعلمات.",
+    "searchPlaceholder": "بحث بالاسم، الهاتف، الحضانة...",
+    "statusUpdatedToast": "تم تحديث حالة الطلب",
+    "emptyTitle": "لا توجد طلبات حضانات خاصة",
+    "emptyDescription": "أي طلبات تفصيل وسيلة خاصة يتم إرسالها من النموذج ستظهر هنا."
   }
 }

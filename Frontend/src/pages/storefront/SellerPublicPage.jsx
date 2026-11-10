@@ -67,11 +67,11 @@ export default function SellerPublicPage() {
     return (
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <EmptyState
-          title="البائعة غير موجودة"
-          description="ربما تم تعديل الرابط أو لم يتم العثور على البائعة المطلوبة"
+          title={t('storefront:sellers.publicProfile.notFoundTitle')}
+          description={t('storefront:sellers.publicProfile.notFoundDesc')}
           action={
             <Link to="/sellers">
-              <Button>العودة لقائمة البائعات</Button>
+              <Button>{t('storefront:sellers.publicProfile.backToSellers')}</Button>
             </Link>
           }
         />
@@ -82,13 +82,13 @@ export default function SellerPublicPage() {
   return (
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8">
       {/* رابط العودة لقائمة البائعات */}
-      <nav aria-label="الرجوع">
+      <nav aria-label={t('common:actions.back')}>
         <Link
           to="/sellers"
           className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-text-muted hover:text-brand-orange-text dark:hover:text-brand-orange transition-colors"
         >
           <ArrowRight className="w-4 h-4 rtl:rotate-0 rotate-180" />
-          <span>الرجوع إلى قائمة البائعات الحرفيات</span>
+          <span>{t('storefront:sellers.publicProfile.backToSellers')}</span>
         </Link>
       </nav>
 

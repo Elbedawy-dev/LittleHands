@@ -15,7 +15,7 @@ import { getFriendlyError } from '../../utils'
 export default function ProfilePage() {
   const { t, i18n } = useTranslation('profile')
   const isEn = i18n.language === 'en'
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, refreshUser } = useAuth()
 
   // بيانات الملف الشخصي
   const [formData, setFormData] = useState({
@@ -57,7 +57,7 @@ export default function ProfilePage() {
     setProfileSuccess(false)
 
     if (!formData.name.trim()) {
-      setProfileError(isEn ? 'Please enter full name' : 'يرجى إدخال الاسم بالكامل')
+      setProfileError(t('info.nameRequired'))
       return
     }
 
@@ -80,15 +80,15 @@ export default function ProfilePage() {
     setPasswordSuccess(false)
 
     if (!passwordData.currentPassword) {
-      setPasswordError(isEn ? 'Please enter current password' : 'يرجى إدخال كلمة المرور الحالية')
+      setPasswordError(t('info.passwordRequiredFields'))
       return
     }
-    if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
-      setPasswordError(isEn ? 'New password must be at least 6 characters' : 'كلمة المرور الجديدة يجب ألا تقل عن 6 أحرف')
+    if (!passwordData.newPassword || passwordData.newPassword.length < 8) {
+      setPasswordError(t('info.passwordTooShort'))
       return
     }
     if (passwordData.newPassword !== passwordData.confirmNewPassword) {
-      setPasswordError(isEn ? 'Passwords do not match' : 'كلمتا المرور الجديدتان غير متطابقتين')
+      setPasswordError(t('info.passwordMismatch'))
       return
     }
 
@@ -98,6 +98,7 @@ export default function ProfilePage() {
         current: passwordData.currentPassword,
         next: passwordData.newPassword,
       })
+      await refreshUser()
       setPasswordSuccess(true)
       setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
       setTimeout(() => setPasswordSuccess(false), 4000)
@@ -181,7 +182,7 @@ export default function ProfilePage() {
               label={t('info.nurseryName', 'اسم الحضانة أو الروضة')}
               value={formData.nurseryName}
               onChange={(e) => setFormData({ ...formData, nurseryName: e.target.value })}
-              placeholder={isEn ? 'e.g. Future Sprouts Nursery' : 'مثال: روضة براعم المستقبل'}
+              placeholder={t('info.nurseryPlaceholder')}
             />
           </div>
 
@@ -200,7 +201,7 @@ export default function ProfilePage() {
               label={t('info.city', 'المدينة أو المركز')}
               value={formData.city}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              placeholder={isEn ? 'e.g. Nasr City / Dokki' : 'مثال: مدينة نصر / الدقي'}
+              placeholder={t('info.cityPlaceholder')}
             />
           </div>
 
@@ -209,7 +210,7 @@ export default function ProfilePage() {
             label={t('info.address', 'العنوان بالتفصيل')}
             value={formData.address}
             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            placeholder={isEn ? 'Street, building number, floor, landmark' : 'الشارع، رقم المبنى، الدور، علامة مميزة لتسهيل وصول مندوب الشحن'}
+            placeholder={t('info.addressPlaceholder')}
             rows={3}
           />
 
@@ -247,7 +248,7 @@ export default function ProfilePage() {
         {passwordSuccess && (
           <div className="mb-6 p-4 rounded-[16px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{isEn ? 'Password updated successfully!' : 'تم تحديث كلمة المرور بنجاح!'}</span>
+            <span>{t('info.passwordUpdateSuccess')}</span>
           </div>
         )}
 
@@ -266,7 +267,7 @@ export default function ProfilePage() {
             onChange={(e) =>
               setPasswordData({ ...passwordData, currentPassword: e.target.value })
             }
-            placeholder={isEn ? 'Enter current password' : 'أدخلي كلمة المرور الحالية'}
+            placeholder="••••••••"
             required
           />
 
@@ -278,7 +279,7 @@ export default function ProfilePage() {
             onChange={(e) =>
               setPasswordData({ ...passwordData, newPassword: e.target.value })
             }
-            placeholder={isEn ? 'At least 6 characters' : '6 أحرف أو أرقام على الأقل'}
+            placeholder={t('info.passwordHelper')}
             required
           />
 
@@ -289,7 +290,7 @@ export default function ProfilePage() {
             onChange={(e) =>
               setPasswordData({ ...passwordData, confirmNewPassword: e.target.value })
             }
-            placeholder={isEn ? 'Repeat new password' : 'كرري كلمة المرور الجديدة'}
+            placeholder="••••••••"
             required
           />
 

@@ -4,7 +4,10 @@ import { authedAgent } from '../helpers/authedAgent.js'
 import { createUser, createProduct, createOrder } from '../helpers/factories.js'
 import { Product } from '../../src/db/models/Product.js'
 import { Order } from '../../src/db/models/Order.js'
+import { Payment } from '../../src/db/models/Payment.js'
+import { AuditLog } from '../../src/db/models/AuditLog.js'
 import { Setting } from '../../src/db/models/Setting.js'
+import { storage } from '../../src/infra/storage/index.js'
 import { env } from '../../src/config/env.js'
 import { cancelExpiredUnpaidOrders } from '../../src/modules/orders/service.js'
 
@@ -689,6 +692,159 @@ describe('Orders Module Integration Tests', () => {
       // Stock was restored by 2
       const updatedProduct = await Product.findById(product._id)
       expect(updatedProduct.stock).toBe(4) // 2 + 2
+    })
+  })
+
+  describe('Order Deletion (Admin) & Order Hiding (Seller)', () => {
+    it('rejects deleting a confirmed order with 409 ORDER_NOT_DELETABLE', async () => {
+      const { agent: adminAgent } = await authedAgent(app, 'admin')
+      const order = await createOrder({ status: 'payment_confirmed' })
+
+      const resAr = await adminAgent
+        .delete(`/api/v1/orders/admin/${order._id}`)
+        .set('Accept-Language', 'ar')
+      expect(resAr.status).toBe(409)
+      expect(resAr.body.error.code).toBe('ORDER_NOT_DELETABLE')
+      expect(resAr.body.error.message).toContain('لا يمكن حذف')
+
+      const resEn = await adminAgent
+        .delete(`/api/v1/orders/admin/${order._id}`)
+        .set('Accept-Language', 'en')
+      expect(resEn.status).toBe(409)
+      expect(resEn.body.error.code).toBe('ORDER_NOT_DELETABLE')
+      expect(resEn.body.error.message).toContain('cancelled and refunded')
+
+      const stillExists = await Order.findById(order._id)
+      expect(stillExists).not.toBeNull()
+    })
+
+    it('deletes a pending_payment order along with its payment, receipt, and records audit log', async () => {
+      const { agent: adminAgent } = await authedAgent(app, 'admin')
+      const customer = await createUser({ role: 'customer' })
+      const seller = await createUser({ role: 'seller' })
+      const product = await createProduct({ sellerId: seller._id, stock: 5 })
+
+      const order = await createOrder({
+        customerId: customer._id,
+        sellerId: seller._id,
+        status: 'pending_payment',
+        items: [
+          {
+            productId: product._id,
+            name: { ar: 'وسيلة للحذف', en: 'Deletable Item' },
+            qty: 2,
+            unitPrice: 100,
+            sellerId: seller._id,
+            commissionRate: 0.20,
+            commissionAmount: 40,
+            sellerNet: 160,
+          },
+        ],
+      })
+
+      const receiptKey = `payment_${Date.now()}_testreceipt.webp`
+      storage._memoryStore.set(receiptKey, {
+        buffer: Buffer.from('fake-receipt-content'),
+        mime: 'image/webp',
+        kind: 'payment',
+        size: 20,
+        hash: 'abc123sha256',
+        key: receiptKey,
+      })
+      expect(storage.hasInMemory(receiptKey)).toBe(true)
+
+      const payment = await Payment.create({
+        orderId: order._id,
+        customerId: customer._id,
+        attempt: 1,
+        senderPhone: '01012345678',
+        reference: 'REF-DEL-001',
+        transferredAmount: 240,
+        expectedAmount: 240,
+        screenshot: {
+          key: receiptKey,
+          sha256: 'abc123sha256',
+          mime: 'image/webp',
+          size: 20,
+        },
+        status: 'pending',
+      })
+
+      const res = await adminAgent.delete(`/api/v1/orders/admin/${order._id}`)
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+      expect(res.body.data.deleted).toBe(true)
+
+      const deletedOrder = await Order.findById(order._id)
+      expect(deletedOrder).toBeNull()
+
+      const deletedPayment = await Payment.findById(payment._id)
+      expect(deletedPayment).toBeNull()
+      expect(storage.hasInMemory(receiptKey)).toBe(false)
+
+      const restoredProduct = await Product.findById(product._id)
+      expect(restoredProduct.stock).toBe(7)
+
+      const auditEntry = await AuditLog.findOne({
+        action: 'order.delete',
+        entityId: order._id.toString(),
+      })
+      expect(auditEntry).not.toBeNull()
+    })
+
+    it('allows seller to hide an inactive order from her list without deleting it or affecting admin view', async () => {
+      const { agent: sellerAgent, user: seller } = await authedAgent(app, 'seller')
+      const { agent: adminAgent } = await authedAgent(app, 'admin')
+
+      const order = await createOrder({
+        sellerId: seller._id,
+        status: 'delivered',
+      })
+
+      // Active order (preparing) cannot be hidden -> 409
+      const activeOrder = await createOrder({
+        sellerId: seller._id,
+        status: 'preparing',
+      })
+      const activeRes = await sellerAgent.delete(`/api/v1/orders/seller/${activeOrder._id}`)
+      expect(activeRes.status).toBe(409)
+      expect(activeRes.body.error.code).toBe('ORDER_NOT_DELETABLE')
+
+      // Inactive order (delivered) can be hidden -> 200
+      const hideRes = await sellerAgent.delete(`/api/v1/orders/seller/${order._id}`)
+      expect(hideRes.status).toBe(200)
+      expect(hideRes.body.data.hidden).toBe(true)
+
+      // Excluded from seller orders list
+      const sellerListRes = await sellerAgent.get('/api/v1/orders/seller')
+      expect(sellerListRes.status).toBe(200)
+      const inSellerList = sellerListRes.body.data.items.some((o) => o.id === order._id.toString())
+      expect(inSellerList).toBe(false)
+
+      // Still exists in DB and visible to admin
+      const dbOrder = await Order.findById(order._id)
+      expect(dbOrder).not.toBeNull()
+      expect(dbOrder.hiddenBySellers.map((id) => id.toString())).toContain(seller._id.toString())
+
+      const adminGetRes = await adminAgent.get(`/api/v1/orders/admin/${order._id}`)
+      expect(adminGetRes.status).toBe(200)
+    })
+
+    it('prevents seller from hiding another seller order (returns 404)', async () => {
+      const seller1 = await createUser({ role: 'seller', status: 'active' })
+      const { agent: sellerAgent2, user: seller2 } = await authedAgent(app, 'seller')
+
+      const order = await createOrder({
+        sellerId: seller1._id,
+        status: 'cancelled',
+      })
+
+      const res = await sellerAgent2.delete(`/api/v1/orders/seller/${order._id}`)
+      expect(res.status).toBe(404)
+      expect(res.body.error.code).toBe('ORDER_NOT_FOUND')
+
+      const dbOrder = await Order.findById(order._id)
+      expect(dbOrder.hiddenBySellers.map((id) => id.toString())).not.toContain(seller2._id.toString())
     })
   })
 })

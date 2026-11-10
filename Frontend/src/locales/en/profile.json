@@ -19,7 +19,8 @@
     "tabsAriaLabel": "Customer account tabs",
     "activeMembership": "Active Member — Egypt Nurseries",
     "myProfile": "My Profile",
-    "customerAccount": "Customer Account"
+    "customerAccount": "Customer Account",
+    "avatarFormatsHint": "Allowed formats: JPG, PNG, WebP (Max 2MB)"
   },
   "nav": {
     "profile": "My Profile",
@@ -46,7 +47,25 @@
     "currentPassword": "Current Password",
     "newPassword": "New Password",
     "confirmNewPassword": "Confirm New Password",
-    "updatePasswordBtn": "Update Password"
+    "updatePasswordBtn": "Update Password",
+    "nameRequired": "Full name is required",
+    "phoneInvalid": "Please enter a valid Egyptian phone number",
+    "saveError": "Failed to save profile details",
+    "avatarSuccess": "Profile picture updated successfully",
+    "avatarError": "Failed to update profile picture",
+    "passwordRequiredFields": "Please fill in all password fields",
+    "passwordTooShort": "New password must be at least 8 characters",
+    "passwordMismatch": "Password confirmation does not match",
+    "passwordSameAsCurrent": "New password must be different from the current password",
+    "passwordUpdateSuccess": "Password updated successfully",
+    "passwordUpdateError": "Failed to update password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "passwordHelper": "At least 8 characters to protect your account",
+    "governorateSelectPlaceholder": "Select governorate",
+    "cityPlaceholder": "e.g. Nasr City, Mohandessin...",
+    "addressPlaceholder": "Street, building number, floor...",
+    "nurseryPlaceholder": "e.g. Little Sprouts Nursery"
   },
   "orders": {
     "title": "Educational Aids Orders History",
@@ -84,13 +103,28 @@
     "reuploadAmount": "Transferred Amount (EGP)",
     "reuploadScreenshot": "New Receipt Screenshot",
     "reuploadSubmit": "Submit New Receipt for Review",
-    "reuploadSuccess": "Transfer receipt submitted successfully and is awaiting admin review"
+    "reuploadSuccess": "Transfer receipt submitted successfully and is awaiting admin review",
+    "cancelOrderBtn": "Cancel Order",
+    "cancelOrderSuccess": "Order cancelled successfully",
+    "cancelOrderConfirmTitle": "Cancel Order",
+    "cancelOrderConfirmMessage": "Are you sure you want to cancel this order?",
+    "cancelOrderConfirmBtn": "Yes, Cancel Order",
+    "loadOrdersError": "Failed to load orders history",
+    "receiptAlt": "Vodafone Cash Transfer Receipt",
+    "reuploadReferencePlaceholder": "Enter transaction reference if available",
+    "reuploadPhoneRequired": "Please enter sender Vodafone Cash wallet number",
+    "reuploadScreenshotRequired": "Please attach screenshot of transfer",
+    "notFoundTitle": "Order Not Found",
+    "notFoundDesc": "Order data not found.",
+    "cancelReasonLabel": "Cancellation Reason (Optional)",
+    "cancelReasonPlaceholder": "Why do you want to cancel?"
   },
   "favorites": {
     "title": "Favorite Teaching Aids",
     "subtitle": "Your curated list of handmade aids to equip your classroom",
     "emptyTitle": "Your Favorites List is Empty",
-    "emptyDesc": "Click the heart icon on any teaching aid to save it here for quick access."
+    "emptyDesc": "Click the heart icon on any teaching aid to save it here for quick access.",
+    "loadErrorTitle": "Failed to Load Favorites"
   },
   "addresses": {
     "title": "Nursery Delivery Addresses",
@@ -104,11 +138,15 @@
     "modalAddTitle": "Add New Nursery Address",
     "modalEditTitle": "Edit Nursery Address",
     "nameLabel": "Contact Person Name",
+    "namePlaceholder": "Full recipient name",
     "phoneLabel": "Contact Phone Number",
     "nurseryLabel": "Nursery or School Name",
+    "nurseryPlaceholder": "e.g. Al-Eman Preschool",
     "govLabel": "Governorate",
     "cityLabel": "City or District",
+    "cityPlaceholder": "e.g. Nasr City",
     "addressDetailsLabel": "Detailed Address (Street, Building, Landmark)",
+    "addressPlaceholder": "Street, building number, floor, landmark",
     "isDefaultCheckbox": "Set as default address for orders",
     "saveAddressBtn": "Save Address",
     "deleteConfirmTitle": "Confirm Address Deletion",
@@ -192,5 +230,25 @@
     "securityNoticeText": "All upcoming payout transfers will be sent to this number once approved.",
     "cancelBtn": "Cancel",
     "confirmWalletBtn": "Confirm & Save Number"
+  },
+  "admin": {
+    "pageTitle": "My Account & Profile",
+    "pageSubtitle": "Manage personal info, avatar, and password for your admin account",
+    "roleBadge": "Platform Admin — Full Access",
+    "avatarUpdateTitle": "Update profile picture",
+    "avatarFormatsHint": "Allowed formats: JPG, PNG, WebP (Max 2MB)",
+    "personalInfoTitle": "Personal Information",
+    "personalInfoDesc": "Update display name and phone number",
+    "fullNameLabel": "Full Name",
+    "emailLabel": "Email Address",
+    "emailHelper": "Primary account email",
+    "phoneLabel": "Phone Number (Egypt)",
+    "saveChanges": "Save Changes",
+    "securityTitle": "Security & Password",
+    "securityDesc": "Choose a strong password of at least 8 characters",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "updatePassword": "Update Password"
   }
 }

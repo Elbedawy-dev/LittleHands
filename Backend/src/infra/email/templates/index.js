@@ -11,6 +11,7 @@ import sellerWelcome from './sellerWelcome.js'
 import orderCancelled from './orderCancelled.js'
 import payoutRecorded from './payoutRecorded.js'
 import customRequestAdmin from './customRequestAdmin.js'
+import customRequestSeller from './customRequestSeller.js'
 
 export const templates = {
   'customer-order-received': customerOrderReceived,
@@ -25,6 +26,7 @@ export const templates = {
   'order-cancelled': orderCancelled,
   'payout-recorded': payoutRecorded,
   'custom-request-admin': customRequestAdmin,
+  'custom-request-seller': customRequestSeller,
 }
 
 // Compile cache for performance

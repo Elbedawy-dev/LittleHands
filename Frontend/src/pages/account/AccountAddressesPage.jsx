@@ -62,7 +62,7 @@ export default function AccountAddressesPage() {
     try {
       setLoading(true)
       const data = await userService.getAddresses()
-      setAddresses(data || [])
+      setAddresses(Array.isArray(data) ? data : [])
     } catch (err) {
       console.warn('Failed to load addresses:', err)
     } finally {
@@ -307,7 +307,7 @@ export default function AccountAddressesPage() {
               setFormData({ ...formData, name: e.target.value })
               if (formErrors.name) setFormErrors({ ...formErrors, name: null })
             }}
-            placeholder={isEn ? 'Full recipient name' : 'اسم المستلمة الكامل'}
+            placeholder={t('addresses.namePlaceholder')}
             error={formErrors.name}
             startIcon={<User className="w-4 h-4" />}
             required
@@ -322,7 +322,7 @@ export default function AccountAddressesPage() {
               setFormData({ ...formData, phone: e.target.value })
               if (formErrors.phone) setFormErrors({ ...formErrors, phone: null })
             }}
-            placeholder="010XXXXXXXX"
+            placeholder={t('common:ui.phonePlaceholder')}
             error={formErrors.phone}
             startIcon={<Phone className="w-4 h-4" />}
             dir="ltr"
@@ -335,7 +335,7 @@ export default function AccountAddressesPage() {
             label={t('addresses.nurseryLabel', 'اسم الحضانة أو المدرسة')}
             value={formData.nurseryName}
             onChange={(e) => setFormData({ ...formData, nurseryName: e.target.value })}
-            placeholder={isEn ? 'e.g. Al-Eman Preschool' : 'مثال: حضانة براعم الإيمان'}
+            placeholder={t('addresses.nurseryPlaceholder')}
             startIcon={<School className="w-4 h-4" />}
           />
 
@@ -354,7 +354,7 @@ export default function AccountAddressesPage() {
               label={t('addresses.cityLabel', 'المدينة أو المركز')}
               value={formData.city}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              placeholder={isEn ? 'e.g. Nasr City' : 'مثال: مدينة نصر'}
+              placeholder={t('addresses.cityPlaceholder')}
             />
           </div>
 
@@ -366,7 +366,7 @@ export default function AccountAddressesPage() {
               setFormData({ ...formData, address: e.target.value })
               if (formErrors.address) setFormErrors({ ...formErrors, address: null })
             }}
-            placeholder={isEn ? 'Street, building number, floor, landmark' : 'الشارع، رقم المبنى، الدور، علامة مميزة لتسهيل الوصول'}
+            placeholder={t('addresses.addressPlaceholder')}
             error={formErrors.address}
             rows={3}
             required

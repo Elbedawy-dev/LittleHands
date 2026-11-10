@@ -117,9 +117,13 @@
     "showingResults": "Showing {{count}} educational aids",
     "noProductsFound": "No matching teaching aids found",
     "noProductsFoundDesc": "Try adjusting your filter options or clearing your search query.",
-    "clearFilters": "Clear Filters"
+    "clearFilters": "Clear Filters",
+    "loadError": "Failed to load teaching aids, please try again later",
+    "loadErrorTitle": "Failed to load teaching aids"
   },
   "productDetails": {
+    "notFoundTitle": "Teaching aid not found",
+    "notFoundDesc": "It may have been removed or moved",
     "backToProducts": "Back to Teaching Aids",
     "zoomHint": "Click to zoom & inspect details",
     "handmadeBadge": "Hand Embroidery",
@@ -174,7 +178,12 @@
     "completedOrdersCount": "{{count}} completed orders",
     "localHandmade": "Local Handcrafted",
     "browseWorks": "Browse Artisan's Works",
+    "emptyTitle": "No artisans registered currently",
     "publicProfile": {
+      "notFoundTitle": "Artisan not found",
+      "notFoundDesc": "The link may have changed or the artisan could not be found",
+      "backToSellers": "Back to Artisan Craftswomen",
+      "showAllAids": "Show all artisan's aids",
       "storeSubtitle": "Handmade Educational Aids Workshop",
       "artisanAids": "Aids by {{name}}",
       "filterCategory": "Filter by Category:",

@@ -80,7 +80,7 @@ export function CategoryEditModal({
           label={t('categories.table.nameEn')}
           value={form.nameEn}
           onChange={(e) => setForm((prev) => ({ ...prev, nameEn: e.target.value }))}
-          placeholder="e.g. Alphabet Boards"
+          placeholder={t('categories.nameEnPlaceholder')}
           dir="ltr"
         />
 
@@ -117,7 +117,7 @@ export function CategoryEditModal({
                     'w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                     isSelected && 'ring-2 ring-offset-2 ring-brand-orange scale-105 shadow-soft'
                   )}
-                  aria-label={`Select color ${clr}`}
+                  aria-label={t('categories.selectColorAria', { color: clr })}
                 >
                   {isSelected && <Check className="w-4 h-4 text-white drop-shadow" />}
                 </button>
@@ -131,7 +131,7 @@ export function CategoryEditModal({
                 value={form.color}
                 onChange={(e) => setForm((prev) => ({ ...prev, color: e.target.value }))}
                 className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 p-0"
-                aria-label="Custom color picker"
+                aria-label={t('categories.customColorPickerAria')}
               />
               <span
                 dir="ltr"

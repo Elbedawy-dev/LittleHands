@@ -61,7 +61,7 @@ export default function SellerProductsPage() {
         q: searchQuery,
         status: statusFilter,
       })
-      setProducts(data)
+      setProducts(Array.isArray(data) ? data : [])
     } catch (err) {
       setError(getFriendlyError(err, t))
     } finally {

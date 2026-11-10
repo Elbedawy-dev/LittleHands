@@ -2,12 +2,14 @@ import {
   Eye,
   Search,
   ShoppingBag,
+  Trash2,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Input } from '../../components/ui/Input'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -16,20 +18,23 @@ import { ProductImage } from '../../components/ui/ProductImage'
 import { Select } from '../../components/ui/Select'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { Tooltip } from '../../components/ui/Tooltip'
 import { useAuth } from '../../context/AuthContext'
 import { OrderDetailsDrawer } from '../../features/seller'
 import { useFormat } from '../../hooks/useFormat'
 import { orderService } from '../../services/orderService'
 import { calcCommission, getFriendlyError } from '../../utils'
 
+const SELLER_HIDEABLE_STATUSES = ['cancelled', 'payment_rejected', 'delivered', 'pending_payment']
+
 /**
  * صفحة إدارة ومتابعة طلبات الوسائل التعليمية للبائعة
  * Displays orders list with filters, search, drawer details, timeline,
- * and preparation/shipping lifecycle actions.
+ * preparation/shipping lifecycle actions, and hiding inactive orders.
  * Strictly scoped to the authenticated seller and hides customer payment screenshots.
  */
 export default function SellerOrdersPage() {
-  const { t } = useTranslation('seller')
+  const { t } = useTranslation(['seller', 'common'])
   const { user } = useAuth()
   const sellerId = user?.id || ''
   const { formatMoney, formatDate, formatNumber } = useFormat()
@@ -45,6 +50,10 @@ export default function SellerOrdersPage() {
   // الطلب المختار لعرض تفاصيله بالدرج
   const [selectedOrder, setSelectedOrder] = useState(null)
 
+  // الطلب المراد إخفاؤه من قائمة البائعة
+  const [orderToHide, setOrderToHide] = useState(null)
+  const [hidingOrder, setHidingOrder] = useState(false)
+
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -54,9 +63,11 @@ export default function SellerOrdersPage() {
         q: searchQuery,
       })
 
-      // فلترة المنتجات الخاصة بهذه البائعة فقط
-      const myOrders = data.filter((o) =>
-        (o.items || []).some((item) => !item.sellerId || item.sellerId === sellerId)
+      const safeList = Array.isArray(data) ? data : []
+      const myOrders = safeList.filter((o) =>
+        (Array.isArray(o.items) ? o.items : []).some(
+          (item) => !item.sellerId || item.sellerId === sellerId
+        )
       )
       setOrders(myOrders)
     } catch (err) {
@@ -72,11 +83,12 @@ export default function SellerOrdersPage() {
 
   // التصفية الفورية بالبحث السريع
   const filteredOrders = useMemo(() => {
-    if (!searchQuery.trim()) return orders
+    const safeOrders = Array.isArray(orders) ? orders : []
+    if (!searchQuery.trim()) return safeOrders
     const q = searchQuery.toLowerCase().trim()
-    return orders.filter(
+    return safeOrders.filter(
       (o) =>
-        o.number.toLowerCase().includes(q) ||
+        (o.number || '').toLowerCase().includes(q) ||
         (o.delivery?.name && o.delivery.name.toLowerCase().includes(q)) ||
         (o.delivery?.nurseryName && o.delivery.nurseryName.toLowerCase().includes(q)) ||
         (o.delivery?.phone && o.delivery.phone.includes(q))
@@ -92,6 +104,25 @@ export default function SellerOrdersPage() {
       setSelectedOrder(updated)
     } catch (err) {
       toast.error(getFriendlyError(err, t))
+    }
+  }
+
+  // تأكيد إخفاء الطلب من قائمة البائعة فقط
+  const handleConfirmHideOrder = async () => {
+    if (!orderToHide) return
+    setHidingOrder(true)
+    try {
+      await orderService.hideSellerOrder(orderToHide.id)
+      toast.success(t('orders.hide.successToast', { number: orderToHide.number }))
+      if (selectedOrder?.id === orderToHide.id) {
+        setSelectedOrder(null)
+      }
+      setOrderToHide(null)
+      await fetchOrders()
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    } finally {
+      setHidingOrder(false)
     }
   }
 
@@ -161,7 +192,7 @@ export default function SellerOrdersPage() {
         <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between">
           <span>{error}</span>
           <Button variant="outline" size="sm" onClick={fetchOrders}>
-            إعادة المحاولة
+            {t('common:status.retry')}
           </Button>
         </div>
       )}
@@ -194,7 +225,8 @@ export default function SellerOrdersPage() {
                   </thead>
                   <tbody className="divide-y divide-surface-border">
                     {filteredOrders.map((ord) => {
-                      const myItems = (ord.items || []).filter(
+                      const ordItems = Array.isArray(ord.items) ? ord.items : []
+                      const myItems = ordItems.filter(
                         (it) => !it.sellerId || it.sellerId === sellerId
                       )
                       const myQty = myItems.reduce((acc, it) => acc + (it.qty || 1), 0)
@@ -204,6 +236,7 @@ export default function SellerOrdersPage() {
                       )
                       const { commission: ordCommission, net: ordNet } = calcCommission(myGross)
                       const firstItem = myItems[0]
+                      const canHide = SELLER_HIDEABLE_STATUSES.includes(ord.status)
 
                       return (
                         <tr
@@ -269,16 +302,47 @@ export default function SellerOrdersPage() {
 
                           {/* الإجراءات */}
                           <td className="py-4 px-4 text-end whitespace-nowrap">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedOrder(ord)}
-                              className="whitespace-nowrap px-3 py-1.5 h-auto text-xs"
-                              startIcon={<Eye className="w-3.5 h-3.5" />}
-                            >
-                              {t('orders.view_details')}
-                            </Button>
+                            <div className="inline-flex items-center justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedOrder(ord)}
+                                className="whitespace-nowrap px-3 py-1.5 h-auto text-xs"
+                                startIcon={<Eye className="w-3.5 h-3.5" />}
+                              >
+                                {t('orders.view_details')}
+                              </Button>
+
+                              {canHide ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setOrderToHide(ord)}
+                                  className="px-2.5 py-1.5 h-auto text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                  title={t('orders.hide.action')}
+                                  aria-label={t('orders.hide.action')}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              ) : (
+                                <Tooltip content={t('orders.hide.disabledTooltip')} position="top">
+                                  <span tabIndex={0} className="inline-flex">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      disabled
+                                      className="px-2.5 py-1.5 h-auto text-rose-400 dark:text-rose-500/50 border-surface-border"
+                                      aria-label={t('orders.hide.disabledTooltip')}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </span>
+                                </Tooltip>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       )
@@ -292,7 +356,8 @@ export default function SellerOrdersPage() {
           {/* العرض في الشاشات الصغيرة (Mobile Cards) */}
           <div className="grid grid-cols-1 gap-4 md:hidden">
             {filteredOrders.map((ord) => {
-              const myItems = (ord.items || []).filter(
+              const ordItems = Array.isArray(ord.items) ? ord.items : []
+              const myItems = ordItems.filter(
                 (it) => !it.sellerId || it.sellerId === sellerId
               )
               const myQty = myItems.reduce((acc, it) => acc + (it.qty || 1), 0)
@@ -302,6 +367,7 @@ export default function SellerOrdersPage() {
               )
               const { commission: ordCommission, net: ordNet } = calcCommission(myGross)
               const firstItem = myItems[0]
+              const canHide = SELLER_HIDEABLE_STATUSES.includes(ord.status)
 
               return (
                 <Card key={ord.id} padding="md" className="space-y-3.5">
@@ -327,13 +393,13 @@ export default function SellerOrdersPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-xs text-text-main truncate">
-                        {firstItem?.name || 'وسيلة تعليمية'}
+                        {firstItem?.name || t('orders.default_aid')}
                       </h4>
                       <p className="text-[11px] text-text-muted mt-0.5">
                         {ord.delivery?.nurseryName || ord.delivery?.name}
                       </p>
                       <div className="flex items-center gap-2 text-[11px] text-text-muted mt-1">
-                        <span>الكمية: {myQty}</span>
+                        <span>{t('orders.qty_label', { qty: myQty })}</span>
                         <span>•</span>
                         <span>{formatDate(ord.createdAt)}</span>
                       </div>
@@ -342,37 +408,64 @@ export default function SellerOrdersPage() {
 
                   <div className="pt-2 border-t border-surface-border flex items-center justify-between text-xs">
                     <div>
-                      <span className="text-[10px] text-text-muted block">سعر البيع</span>
+                      <span className="text-[10px] text-text-muted block">{t('orders.col_price')}</span>
                       <span className="font-mono font-bold text-text-main">
                         {formatMoney(myGross)}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-[10px] text-text-muted block">عمولة 20%</span>
+                      <span className="text-[10px] text-text-muted block">{t('orders.col_commission')}</span>
                       <span className="font-mono text-brand-orange-text dark:text-brand-orange">
                         {formatMoney(ordCommission)}
                       </span>
                     </div>
 
                     <div className="text-end">
-                      <span className="text-[10px] text-text-muted block">صافي لكِ</span>
+                      <span className="text-[10px] text-text-muted block">{t('orders.col_net')}</span>
                       <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                         {formatMoney(ordNet)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 flex items-center gap-2">
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full justify-center text-xs h-10"
+                      className="flex-1 justify-center text-xs h-10"
                       onClick={() => setSelectedOrder(ord)}
                       startIcon={<Eye className="w-3.5 h-3.5" />}
                     >
                       {t('orders.view_details')}
                     </Button>
+
+                    {canHide ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="px-3 h-10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                        onClick={() => setOrderToHide(ord)}
+                        title={t('orders.hide.action')}
+                        aria-label={t('orders.hide.action')}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Tooltip content={t('orders.hide.disabledTooltip')} position="top">
+                        <span tabIndex={0} className="inline-flex">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled
+                            className="px-3 h-10 text-rose-400 dark:text-rose-500/50 border-surface-border"
+                            aria-label={t('orders.hide.disabledTooltip')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </span>
+                      </Tooltip>
+                    )}
                   </div>
                 </Card>
               )
@@ -388,6 +481,20 @@ export default function SellerOrdersPage() {
         order={selectedOrder}
         sellerId={sellerId}
         onStatusUpdate={handleStatusUpdate}
+        onHideOrder={(ord) => setOrderToHide(ord)}
+      />
+
+      {/* نافذة تأكيد إخفاء الطلب من قائمة البائعة */}
+      <ConfirmDialog
+        isOpen={Boolean(orderToHide)}
+        onClose={() => !hidingOrder && setOrderToHide(null)}
+        onConfirm={handleConfirmHideOrder}
+        title={t('orders.hide.confirmTitle')}
+        message={t('orders.hide.confirmMessage')}
+        confirmText={t('orders.hide.confirmBtn')}
+        cancelText={t('orders.hide.cancelBtn')}
+        variant="danger"
+        loading={hidingOrder}
       />
     </div>
   )

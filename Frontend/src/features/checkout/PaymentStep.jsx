@@ -106,7 +106,7 @@ export function PaymentStep({
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
-      setFileError('يرجى اختيار صورة بصيغة JPG أو PNG أو WebP فقط')
+      setFileError(t('common:ui.imageFormatError'))
       return
     }
 

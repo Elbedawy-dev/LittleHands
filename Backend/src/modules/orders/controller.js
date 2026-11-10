@@ -118,6 +118,24 @@ export const orderController = {
     const order = await orderService.refundOrder(req.params.id, req.body, req.user)
     return ok(res, toOrderDTO(order, 'admin'))
   }),
+
+  /**
+   * Admin permanently deletes an unpaid/inactive order
+   */
+  deleteOrder: asyncHandler(async (req, res) => {
+    const result = await orderService.deleteOrder(req.params.id, req.user, {
+      ip: req.ip || '',
+    })
+    return ok(res, result)
+  }),
+
+  /**
+   * Seller hides an inactive order from her own orders list
+   */
+  hideSellerOrder: asyncHandler(async (req, res) => {
+    const result = await orderService.hideSellerOrder(req.params.id, req.user)
+    return ok(res, result)
+  }),
 }
 
 export default orderController

@@ -29,6 +29,16 @@ const customRequestSchema = new mongoose.Schema(
       default: 'new',
       index: true,
     },
+    claimedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
+    claimedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

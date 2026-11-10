@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils'
 
 export function OTPInput({
@@ -8,6 +9,7 @@ export function OTPInput({
   disabled = false,
   className,
 }) {
+  const { t } = useTranslation('common')
   const inputRefs = useRef([])
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export function OTPInput({
           onPaste={handlePaste}
           disabled={disabled}
           className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-black rounded-[16px] bg-surface border-[1.5px] border-surface-border text-text-main focus:border-brand-orange focus:ring-3 focus:ring-brand-orange/20 outline-none transition-all shadow-xs"
-          aria-label={`الرمز ${index + 1}`}
+          aria-label={t('ui.otpDigit', { index: index + 1 })}
         />
       ))}
     </div>

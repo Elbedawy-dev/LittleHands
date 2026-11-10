@@ -1,7 +1,6 @@
 import {
   Camera,
   Heart,
-  LogOut,
   MapPin,
   Package,
   Phone,
@@ -11,16 +10,18 @@ import {
   User,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Avatar } from '../../components/ui/Avatar'
+import { LogoutCard } from '../../components/ui/LogoutCard'
 import { getGovernorateName } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
 import { useSettings } from '../../context/SettingsContext'
 import { useFormat } from '../../hooks/useFormat'
 import { orderService } from '../../services/orderService'
 import { userService } from '../../services/userService'
-import { cn } from '../../utils'
+import { cn, getFriendlyError } from '../../utils'
 import { processAvatarImage } from '../../utils/avatar'
 
 /**
@@ -68,13 +69,18 @@ export default function AccountLayout() {
     setUpdatingAvatar(true)
     try {
       const dataUrl = await processAvatarImage(file)
-      const blob = await (await fetch(dataUrl)).blob()
-      await userService.uploadAvatar(new File([blob], 'avatar.jpg', { type: blob.type || 'image/jpeg' }))
+      const blob = await fetch(dataUrl).then((r) => r.blob())
+      const avatarFile = new File([blob], file.name || 'avatar.webp', {
+        type: blob.type || 'image/webp',
+      })
+      await userService.uploadAvatar(avatarFile)
       await refreshUser()
+      toast.success(t('profile:info.avatarSuccess'))
     } catch (err) {
-      console.error('Failed to update avatar:', err)
+      toast.error(getFriendlyError(err, t) || t('profile:info.avatarError'))
     } finally {
       setUpdatingAvatar(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -134,28 +140,32 @@ export default function AccountLayout() {
             </div>
 
             {/* تفاصيل الاسم والروضة والتواصل */}
-            <div className="space-y-1.5" data-user-content="true">
+            <div className="flex flex-col items-start gap-1 text-start flex-1 min-w-0" data-user-content="true">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="font-heading font-black text-xl sm:text-2xl text-text-main">
-                  {user?.name || (isEn ? 'Customer Account' : 'حساب العميلة')}
+                  {user?.name || t('profile:header.customerAccount')}
                 </h1>
                 <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-brand-mint/15 text-brand-mint-text dark:text-brand-mint text-[11px] font-bold">
                   <Sparkles className="w-3 h-3" />
-                  <span>{t('profile:header.activeMembership', 'عضوية نشطة — حضانات مصر')}</span>
+                  <span>{t('profile:header.activeMembership')}</span>
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
+              {user?.email && (
+                <p className="text-xs text-text-muted font-mono" dir="ltr">
+                  {user.email}
+                </p>
+              )}
+
+              <p className="text-[11px] text-text-muted">
+                {t('profile:header.avatarFormatsHint')}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted pt-0.5">
                 {user?.nurseryName && (
                   <span className="flex items-center gap-1.5 font-semibold text-text-main">
                     <School className="w-3.5 h-3.5 text-brand-orange" />
                     <span>{user.nurseryName}</span>
-                  </span>
-                )}
-
-                {user?.email && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-mono" dir="ltr">{user.email}</span>
                   </span>
                 )}
 
@@ -264,21 +274,14 @@ export default function AccountLayout() {
         <Outlet />
       </div>
 
-      {/* زر تسجيل الخروج في نهاية المحتوى قبل التذييل مباشرة (يختفي على الموبايل لوجوده في القائمة الجانبية) */}
-      <div className="hidden md:flex items-center justify-start pt-6 mt-8 border-t border-surface-border text-start">
-        <button
-          type="button"
-          onClick={async () => {
-            await logout()
-            navigate('/login')
-          }}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors cursor-pointer text-start"
-          data-testid="account-header-logout-btn"
-        >
-          <LogOut className="w-4 h-4 shrink-0 me-0.5 rtl:rotate-180" />
-          <span>{t('common:actions.logout', 'تسجيل الخروج')}</span>
-        </button>
-      </div>
+      {/* بطاقة تسجيل الخروج المشتركة في نهاية المحتوى قبل التذييل مباشرة (تختفي على الموبايل لوجودها في القائمة الجانبية) */}
+      <LogoutCard
+        onLogout={async () => {
+          await logout()
+          navigate('/login')
+        }}
+        className="hidden md:flex mt-8"
+      />
     </div>
   )
 }

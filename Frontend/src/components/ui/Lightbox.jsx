@@ -2,9 +2,11 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { useScrollLock } from '../../hooks/useScrollLock'
 
-export function Lightbox({ isOpen, onClose, src, alt = 'صورة مكبرة' }) {
+export function Lightbox({ isOpen, onClose, src, alt }) {
+  const { t } = useTranslation('common')
   useScrollLock(Boolean(isOpen && src))
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export function Lightbox({ isOpen, onClose, src, alt = 'صورة مكبرة' }) 
             type="button"
             onClick={onClose}
             className="absolute -top-12 end-0 p-2 text-white hover:text-brand-orange transition-colors"
-            aria-label="إغلاق"
+            aria-label={t('ui.closePreview')}
           >
             <X className="w-7 h-7" />
           </button>
@@ -52,7 +54,7 @@ export function Lightbox({ isOpen, onClose, src, alt = 'صورة مكبرة' }) 
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             src={src}
-            alt={alt}
+            alt={alt || t('ui.zoomIn')}
             className="max-h-[85vh] w-auto max-w-full rounded-[16px] object-contain shadow-2xl"
           />
         </div>

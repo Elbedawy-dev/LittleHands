@@ -44,7 +44,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
   const { unreadCount } = useNotifications()
   const { theme, toggleTheme } = useTheme()
   const { language, setLanguage } = useLanguage()
-  const isEn = language === 'en'
+  const _isEn = language === 'en'
   const shouldReduceMotion = useReducedMotion()
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -119,6 +119,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
         { href: '/seller', label: t('nav:seller.dashboard', 'لوحة التحكم'), exact: true },
         { href: '/seller/products', label: t('nav:seller.products', 'منتجاتي') },
         { href: '/seller/orders', label: t('nav:seller.orders', 'طلباتي') },
+        { href: '/seller/custom-requests', label: t('nav:seller.customRequests', 'الطلبات الخاصة') },
         { href: '/seller/earnings', label: t('nav:seller.earnings', 'أرباحي') },
         { href: '/seller/profile', label: t('nav:seller.profile', 'ملفي الشخصي') },
         { href: '/seller/notifications', label: t('nav:seller.notifications', 'الإشعارات') },
@@ -222,7 +223,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
             type="button"
             onClick={handleAvatarClick}
             className="min-w-[44px] min-h-[44px] flex items-center justify-center p-1 rounded-full hover:bg-surface-subtle active:scale-95 transition-transform cursor-pointer"
-            aria-label={isEn ? (user?.nameEn || 'My Account') : (displayName || 'حسابي')}
+            aria-label={displayName || t('common:tabBar.account')}
             data-testid="mobile-avatar-btn"
           >
             <Avatar

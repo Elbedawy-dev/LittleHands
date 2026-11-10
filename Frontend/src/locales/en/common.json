@@ -117,5 +117,42 @@
   "emptyState": {
     "defaultTitle": "No items",
     "defaultDescription": "No items to display."
+  },
+  "logoutCard": {
+    "title": "Sign Out",
+    "description": "End your session and return to the login page",
+    "action": "Sign Out"
+  },
+  "ui": {
+    "closeModal": "Close dialog",
+    "closeDrawer": "Close panel",
+    "closePreview": "Close preview",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetZoom": "Reset zoom",
+    "paginationLabel": "Pagination",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "increaseQty": "Increase quantity",
+    "decreaseQty": "Decrease quantity",
+    "quantity": "Quantity",
+    "otpDigit": "Digit {{index}} of verification code",
+    "imageFormatError": "Please select images in JPG, PNG, or WebP format only",
+    "imageSizeError": "Image \"{{name}}\" exceeds maximum size ({{max}} MB)",
+    "imageMaxSizeSimple": "Image size must not exceed {{max}} MB",
+    "imageMaxCountError": "Maximum number of images is {{max}}",
+    "removeImage": "Remove image",
+    "moveImageForward": "Move forward",
+    "moveImageBackward": "Move backward",
+    "addImage": "Add Image",
+    "primaryImage": "Primary",
+    "imageAlt": "Image {{index}}",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "phonePlaceholder": "010XXXXXXXX",
+    "passwordMaskPlaceholder": "••••••••",
+    "confirmDialogDefaultTitle": "Are you sure?",
+    "confirmDialogDefaultConfirm": "Yes, Confirm",
+    "confirmDialogDefaultCancel": "Cancel"
   }
 }

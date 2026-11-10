@@ -30,5 +30,16 @@
     "sellerPayout": "Your earnings have been transferred",
     "adminNewPayment": "New Vodafone Cash receipt awaiting review",
     "adminNewOrder": "New order registered on the platform"
-  }
+  },
+  "emptyFilteredTitle": "No notifications match your selection",
+  "emptyFilteredSubtitle": "Notifications will appear here as updates occur on your orders or account.",
+  "unreadTitle": "Unread notification",
+  "unreadAria": "Unread",
+  "viewDetails": "View details",
+  "customerPageTitle": "Notifications & Alerts Center",
+  "customerPageSubtitle": "Track your teaching aids orders, Vodafone Cash receipt verification updates, and delivery dispatch notices.",
+  "sellerPageTitle": "Artisan Workshop Notifications Center",
+  "sellerPageSubtitle": "Real-time alerts on customer payment confirmation, new preschool orders, and payout notifications to your wallet.",
+  "adminPageTitle": "Admin Notifications & Audit Center",
+  "adminPageSubtitle": "Real-time alerts to audit uploaded Vodafone Cash receipts, registered orders, and artisan payout transfers."
 }

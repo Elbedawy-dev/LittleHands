@@ -45,9 +45,15 @@ export default function AdminProductsPage() {
         orderService.getAllOrders().catch(() => []),
         adminService.getSellerAccounts().catch(() => []),
       ])
-      setProducts(allProducts || [])
-      setOrders(allOrders || [])
-      setSellers(sellerAccounts?.items || sellerAccounts || [])
+      setProducts(Array.isArray(allProducts) ? allProducts : [])
+      setOrders(Array.isArray(allOrders) ? allOrders : [])
+      setSellers(
+        Array.isArray(sellerAccounts)
+          ? sellerAccounts
+          : Array.isArray(sellerAccounts?.items)
+          ? sellerAccounts.items
+          : []
+      )
     } catch (err) {
       toast.error(getFriendlyError(err, t))
     } finally {

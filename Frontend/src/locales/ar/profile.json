@@ -19,7 +19,8 @@
     "tabsAriaLabel": "تبويبات حساب العميل",
     "activeMembership": "عضوية نشطة — حضانات مصر",
     "myProfile": "بياناتي وملفي",
-    "customerAccount": "حساب العميلة"
+    "customerAccount": "حساب العميلة",
+    "avatarFormatsHint": "صيغ مدعومة: JPG, PNG, WebP (حد أقصى 2MB)"
   },
   "nav": {
     "profile": "ملفي الشخصي",
@@ -46,7 +47,25 @@
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
     "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
-    "updatePasswordBtn": "تحديث كلمة المرور"
+    "updatePasswordBtn": "تحديث كلمة المرور",
+    "nameRequired": "الاسم الكامل مطلوب",
+    "phoneInvalid": "يرجى إدخال رقم هاتف مصري صحيح",
+    "saveError": "حدث خطأ أثناء حفظ البيانات",
+    "avatarSuccess": "تم تحديث الصورة الشخصية بنجاح",
+    "avatarError": "فشل تحديث الصورة الشخصية",
+    "passwordRequiredFields": "يرجى ملء جميع حقول كلمة المرور",
+    "passwordTooShort": "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل",
+    "passwordMismatch": "تأكيد كلمة المرور غير مطابق",
+    "passwordSameAsCurrent": "كلمة المرور الجديدة يجب أن تختلف عن الحالية",
+    "passwordUpdateSuccess": "تم تحديث كلمة المرور بنجاح",
+    "passwordUpdateError": "فشل تحديث كلمة المرور",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "passwordHelper": "8 أحرف على الأقل لحماية حسابك",
+    "governorateSelectPlaceholder": "اختر المحافظة",
+    "cityPlaceholder": "مثال: مدينة نصر، المهندسين...",
+    "addressPlaceholder": "الشارع، رقم المبنى، الدور...",
+    "nurseryPlaceholder": "مثال: حضانة براعم المستقبل"
   },
   "orders": {
     "title": "سجل طلبات الوسائل التعليمية",
@@ -84,13 +103,28 @@
     "reuploadAmount": "المبلغ المحول (ج.م)",
     "reuploadScreenshot": "صورة الإيصال الجديد",
     "reuploadSubmit": "إرسال الإيصال الجديد للمراجعة",
-    "reuploadSuccess": "تم إرسال إيصال التحويل بنجاح وبانتظار مراجعة الإدارة"
+    "reuploadSuccess": "تم إرسال إيصال التحويل بنجاح وبانتظار مراجعة الإدارة",
+    "cancelOrderBtn": "إلغاء الطلب",
+    "cancelOrderSuccess": "تم إلغاء الطلب بنجاح",
+    "cancelOrderConfirmTitle": "إلغاء الطلب",
+    "cancelOrderConfirmMessage": "هل أنتِ متأكدة من رغبتكِ في إلغاء هذا الطلب؟",
+    "cancelOrderConfirmBtn": "نعم، إلغاء الطلب",
+    "loadOrdersError": "تعذر تحميل سجل الطلبات",
+    "receiptAlt": "إيصال تحويل فودافون كاش",
+    "reuploadReferencePlaceholder": "أدخلي رقم العملية المرجعي إن وجد",
+    "reuploadPhoneRequired": "يرجى إدخال رقم محفظة فودافون كاش المحول منها",
+    "reuploadScreenshotRequired": "يرجى إرفاق لقطة شاشة واضحة لإشعار التحويل الجديد",
+    "notFoundTitle": "الطلب غير موجود",
+    "notFoundDesc": "لم يتم العثور على بيانات هذا الطلب.",
+    "cancelReasonLabel": "سبب الإلغاء (اختياري)",
+    "cancelReasonPlaceholder": "يرجى كتابة سبب الإلغاء إن رغبت"
   },
   "favorites": {
     "title": "الوسائل المفضلة",
     "subtitle": "قائمتكِ الخاصة بالوسائل اليدوية المختارة لتجهيز الحضانة",
     "emptyTitle": "قائمة المفضلة فارغة",
-    "emptyDesc": "انقري على رمز القلب على أي وسيلة تعليمية لإضافتها هنا والرجوع إليها لاحقاً."
+    "emptyDesc": "انقري على رمز القلب على أي وسيلة تعليمية لإضافتها هنا والرجوع إليها لاحقاً.",
+    "loadErrorTitle": "تعذر تحميل المفضلة"
   },
   "addresses": {
     "title": "عناوين التوصيل للحضانة",
@@ -104,11 +138,15 @@
     "modalAddTitle": "إضافة عنوان حضانة جديد",
     "modalEditTitle": "تعديل عنوان الحضانة",
     "nameLabel": "اسم المسؤولة عن الاستلام",
+    "namePlaceholder": "اسم المستلمة الكامل",
     "phoneLabel": "رقم الهاتف للتواصل",
     "nurseryLabel": "اسم الحضانة أو المدرسة",
+    "nurseryPlaceholder": "مثال: حضانة براعم الإيمان",
     "govLabel": "المحافظة",
     "cityLabel": "المدينة أو المركز",
+    "cityPlaceholder": "مثال: مدينة نصر",
     "addressDetailsLabel": "العنوان التفصيلي (الشارع، رقم المبنى، علامة مميزة)",
+    "addressPlaceholder": "الشارع، رقم المبنى، الدور، علامة مميزة لتسهيل الوصول",
     "isDefaultCheckbox": "تعيين كعنوان افتراضي لطلبات الوسائل",
     "saveAddressBtn": "حفظ العنوان",
     "deleteConfirmTitle": "تأكيد حذف العنوان",
@@ -192,5 +230,25 @@
     "securityNoticeText": "سيتم إرسال كافة دفعات أرباح مبيعاتك القادمة إلى هذا الرقم فور اعتماده.",
     "cancelBtn": "إلغاء",
     "confirmWalletBtn": "تأكيد وحفظ الرقم"
+  },
+  "admin": {
+    "pageTitle": "حسابي والإعدادات الشخصية",
+    "pageSubtitle": "إدارة البيانات الشخصية، الصورة الرمزية، وكلمة المرور لحساب مدير المنصة",
+    "roleBadge": "مدير المنصة — صلاحيات كاملة",
+    "avatarUpdateTitle": "تحديث الصورة الشخصية",
+    "avatarFormatsHint": "صيغ مدعومة: JPG, PNG, WebP (حد أقصى 2MB)",
+    "personalInfoTitle": "البيانات الشخصية",
+    "personalInfoDesc": "تحديث اسم العرض ورقم الهاتف المسجل بحساب الإدارة",
+    "fullNameLabel": "الاسم الكامل",
+    "emailLabel": "البريد الإلكتروني",
+    "emailHelper": "البريد الإلكتروني الأساسي للحساب",
+    "phoneLabel": "رقم الهاتف (مصر)",
+    "saveChanges": "حفظ التعديلات",
+    "securityTitle": "الأمان وتغيير كلمة المرور",
+    "securityDesc": "يُنصح باختيار كلمة مرور قوية لا تقل عن 8 أحرف للحفاظ على أمان لوحة التحكم",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة المرور الجديدة",
+    "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
+    "updatePassword": "تحديث كلمة المرور"
   }
 }

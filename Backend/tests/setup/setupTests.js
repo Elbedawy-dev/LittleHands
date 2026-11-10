@@ -27,6 +27,7 @@ process.env.EMAIL_DRIVER = 'console'
 env.NODE_ENV = 'test'
 env.STORAGE_DRIVER = 'memory'
 env.EMAIL_DRIVER = 'console'
+env.CLIENT_ORIGINS_ARRAY = ['http://localhost:5173', 'http://littlehands-edu.vercel.app']
 
 let mongoServer
 

@@ -13,6 +13,10 @@ const router = Router()
 // Seller profile management
 router.patch('/me/profile', authenticate, authorize('seller'), csrfGuard, validate(sellerProfileSchema), sellerController.updateSellerProfile)
 
+// Seller custom educational aid requests
+router.get('/me/custom-requests', authenticate, authorize('seller'), sellerController.getCustomRequests)
+router.post('/me/custom-requests/:id/claim', authenticate, authorize('seller'), csrfGuard, sellerController.claimCustomRequest)
+
 // Public seller discovery
 router.get('/', sellerController.getSellers)
 router.get('/:id', sellerController.getSeller)

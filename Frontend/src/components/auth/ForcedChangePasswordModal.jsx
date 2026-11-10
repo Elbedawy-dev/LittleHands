@@ -1,15 +1,14 @@
 import { AlertCircle, CheckCircle2, Lock, ShieldAlert } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { authService } from '../../services/authService'
+import { getFriendlyError } from '../../utils'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
-import { authService } from '../../services/authService'
-import { getFriendlyError } from '../../utils'
 
 export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
-  const { t, i18n } = useTranslation()
-  const isEn = i18n.language === 'en'
+  const { t } = useTranslation('auth')
 
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -23,17 +22,22 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
     setError('')
 
     if (!current) {
-      setError(isEn ? 'Please enter your current/temporary password' : 'يرجى إدخال كلمة المرور المؤقتة الحالية')
+      setError(t('forcedChangePassword.errors.currentRequired'))
       return
     }
 
     if (next.length < 8) {
-      setError(isEn ? 'New password must be at least 8 characters' : 'كلمة المرور الجديدة يجب ألا تقل عن 8 خانات')
+      setError(t('forcedChangePassword.errors.newMin'))
+      return
+    }
+
+    if (next === current) {
+      setError(t('forcedChangePassword.errors.sameAsCurrent'))
       return
     }
 
     if (next !== confirm) {
-      setError(isEn ? 'Passwords do not match' : 'كلمتا المرور غير متطابقتين')
+      setError(t('forcedChangePassword.errors.mismatch'))
       return
     }
 
@@ -45,7 +49,7 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
         onSuccess()
       }, 1500)
     } catch (err) {
-      setError(getFriendlyError(err, t))
+      setError(getFriendlyError(err, t) || t('forcedChangePassword.errors.failed'))
     } finally {
       setLoading(false)
     }
@@ -54,7 +58,7 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
   return (
     <Modal
       isOpen={isOpen}
-      onClose={() => {}} // Non-closable modal
+      onClose={() => {}}
       showClose={false}
       maxWidth="max-w-md"
     >
@@ -65,12 +69,10 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
           </div>
           <div>
             <h2 className="text-base font-bold text-text-main">
-              {isEn ? 'Password Change Required' : 'تغيير كلمة المرور مطلوب'}
+              {t('forcedChangePassword.title')}
             </h2>
             <p className="text-xs text-text-muted">
-              {isEn
-                ? 'Your account was created with a temporary password. Please set a new password to continue.'
-                : 'تم إنشاء حسابك بكلمة مرور مؤقتة، يرجى تعيين كلمة مرور جديدة وخاصة بك للمتابعة.'}
+              {t('forcedChangePassword.subtitle', { name: '' }).replace(' ،', '،')}
             </p>
           </div>
         </div>
@@ -85,15 +87,15 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
         {success ? (
           <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>{isEn ? 'Password changed successfully! Loading...' : 'تم تحديث كلمة المرور بنجاح! جاري المتابعة...'}</span>
+            <span>{t('forcedChangePassword.successToast')}</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
               id="forced-current-password"
               type="password"
-              label={isEn ? 'Temporary / Current Password' : 'كلمة المرور المؤقتة الحالية'}
-              placeholder="••••••••"
+              label={t('forcedChangePassword.currentLabel')}
+              placeholder={t('forcedChangePassword.currentPlaceholder')}
               icon={<Lock className="w-4 h-4" />}
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
@@ -104,8 +106,8 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
             <Input
               id="forced-next-password"
               type="password"
-              label={isEn ? 'New Password' : 'كلمة المرور الجديدة'}
-              placeholder="••••••••"
+              label={t('forcedChangePassword.newLabel')}
+              placeholder={t('forcedChangePassword.newPlaceholder')}
               icon={<Lock className="w-4 h-4" />}
               value={next}
               onChange={(e) => setNext(e.target.value)}
@@ -117,8 +119,8 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
             <Input
               id="forced-confirm-password"
               type="password"
-              label={isEn ? 'Confirm New Password' : 'تأكيد كلمة المرور الجديدة'}
-              placeholder="••••••••"
+              label={t('forcedChangePassword.confirmLabel')}
+              placeholder={t('forcedChangePassword.confirmPlaceholder')}
               icon={<Lock className="w-4 h-4" />}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
@@ -129,11 +131,11 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
 
             <div className="flex gap-2 pt-2">
               <Button type="submit" variant="primary" className="flex-1" loading={loading}>
-                {isEn ? 'Save Password' : 'حفظ كلمة المرور'}
+                {t('forcedChangePassword.submit')}
               </Button>
               {onLogout && (
                 <Button type="button" variant="outline" onClick={onLogout} disabled={loading}>
-                  {isEn ? 'Logout' : 'تسجيل الخروج'}
+                  {t('forcedChangePassword.logout')}
                 </Button>
               )}
             </div>
@@ -143,4 +145,3 @@ export function ForcedChangePasswordModal({ isOpen, onSuccess, onLogout }) {
     </Modal>
   )
 }
-

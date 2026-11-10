@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { AdminOrderDrawer } from '../../features/admin/orders/AdminOrderDrawer'
 import { AdminOrderFilters } from '../../features/admin/orders/AdminOrderFilters'
@@ -11,7 +12,7 @@ import { getFriendlyError } from '../../utils'
 
 /**
  * صفحة إدارة وتدقيق كافة طلبات المنصة
- * تتيح تصفية الطلبات، استعراض تفاصيل كل طلب، تدقيق نسب العمولات، وتحديث الحالات
+ * تتيح تصفية الطلبات، استعراض تفاصيل كل طلب، تدقيق نسب العمولات، تحديث الحالات، وحذف الطلبات غير المدفوعة
  */
 export default function AdminOrdersPage() {
   const { t } = useTranslation('admin-core')
@@ -20,6 +21,8 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [orderToDelete, setOrderToDelete] = useState(null)
+  const [deletingOrder, setDeletingOrder] = useState(false)
 
   // المرشحات
   const [filters, setFilters] = useState({
@@ -35,10 +38,9 @@ export default function AdminOrdersPage() {
     setLoading(true)
     try {
       const data = await orderService.getAllOrders()
-      setOrders(data)
+      setOrders(Array.isArray(data) ? data : [])
     } catch (err) {
-      console.error('Failed to load orders:', err)
-      toast.error(getFriendlyError(err, t))
+      toast.error(getFriendlyError(err, t) || t('orders.loadError'))
     } finally {
       setLoading(false)
     }
@@ -63,7 +65,8 @@ export default function AdminOrdersPage() {
 
   // تصفية الطلبات بناءً على المعايير المحددة
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    const safeOrders = Array.isArray(orders) ? orders : []
+    return safeOrders.filter((order) => {
       // 1. تصفية الحالة
       if (filters.status !== 'all' && order.status !== filters.status) {
         return false
@@ -71,7 +74,8 @@ export default function AdminOrdersPage() {
 
       // 2. تصفية البائعة
       if (filters.seller !== 'all') {
-        const hasSellerItem = order.items.some((it) => it.sellerId === filters.seller)
+        const items = Array.isArray(order.items) ? order.items : []
+        const hasSellerItem = items.some((it) => it.sellerId === filters.seller)
         if (!hasSellerItem) return false
       }
 
@@ -90,11 +94,11 @@ export default function AdminOrdersPage() {
       // 4. تصفية البحث النصي
       if (debouncedSearch.trim()) {
         const query = debouncedSearch.trim().toLowerCase()
-        const matchNumber = order.number.toLowerCase().includes(query)
-        const matchCustomer = order.delivery.name.toLowerCase().includes(query)
-        const matchPhone = order.delivery.phone.includes(query)
+        const matchNumber = (order.number || '').toLowerCase().includes(query)
+        const matchCustomer = (order.delivery?.name || '').toLowerCase().includes(query)
+        const matchPhone = (order.delivery?.phone || '').includes(query)
         const matchNursery =
-          order.delivery.nurseryName &&
+          order.delivery?.nurseryName &&
           order.delivery.nurseryName.toLowerCase().includes(query)
 
         if (!matchNumber && !matchCustomer && !matchPhone && !matchNursery) {
@@ -113,14 +117,32 @@ export default function AdminOrdersPage() {
 
   const handleStatusUpdated = async () => {
     await fetchOrders()
-    // تحديث بيانات الطلب المعروض في الدرج
     if (selectedOrder) {
       try {
         const updated = await orderService.getOrder(selectedOrder.id)
         setSelectedOrder(updated)
-      } catch (err) {
-        console.error(err)
+      } catch {
+        // ignore
       }
+    }
+  }
+
+  const handleConfirmDeleteOrder = async () => {
+    if (!orderToDelete) return
+    setDeletingOrder(true)
+    try {
+      await orderService.deleteOrder(orderToDelete.id)
+      toast.success(t('orders.delete.successToast', { number: orderToDelete.number }))
+      if (selectedOrder?.id === orderToDelete.id) {
+        setDrawerOpen(false)
+        setSelectedOrder(null)
+      }
+      setOrderToDelete(null)
+      await fetchOrders()
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    } finally {
+      setDeletingOrder(false)
     }
   }
 
@@ -143,6 +165,7 @@ export default function AdminOrdersPage() {
         orders={filteredOrders}
         loading={loading}
         onViewOrder={handleViewOrder}
+        onDeleteOrder={(order) => setOrderToDelete(order)}
       />
 
       {/* درج التفاصيل الشامل للطلب */}
@@ -151,6 +174,20 @@ export default function AdminOrdersPage() {
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onStatusUpdated={handleStatusUpdated}
+        onDeleteOrder={(order) => setOrderToDelete(order)}
+      />
+
+      {/* نافذة تأكيد الحذف النهائي */}
+      <ConfirmDialog
+        isOpen={Boolean(orderToDelete)}
+        onClose={() => !deletingOrder && setOrderToDelete(null)}
+        onConfirm={handleConfirmDeleteOrder}
+        title={t('orders.delete.confirmTitle')}
+        message={t('orders.delete.confirmMessage', { number: orderToDelete?.number || '' })}
+        confirmText={t('orders.delete.confirmBtn')}
+        cancelText={t('orders.delete.cancelBtn')}
+        variant="danger"
+        loading={deletingOrder}
       />
     </div>
   )

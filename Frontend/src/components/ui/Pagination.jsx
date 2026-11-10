@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils'
 
 export function Pagination({
@@ -7,6 +8,7 @@ export function Pagination({
   onPageChange,
   className,
 }) {
+  const { t } = useTranslation('common')
   if (totalPages <= 1) return null
 
   const getPageNumbers = () => {
@@ -36,7 +38,7 @@ export function Pagination({
   return (
     <div
       role="navigation"
-      aria-label="التنقل بين الصفحات"
+      aria-label={t('ui.paginationLabel')}
       className={cn('flex items-center justify-center gap-1.5 py-4 select-none', className)}
     >
       {/* زر الصفحة السابقة */}
@@ -45,7 +47,7 @@ export function Pagination({
         disabled={currentPage <= 1}
         onClick={() => onPageChange(currentPage - 1)}
         className="w-10 h-10 rounded-full flex items-center justify-center border border-surface-border bg-surface text-text-main disabled:opacity-30 disabled:pointer-events-none hover:border-brand-orange hover:text-brand-orange transition-colors"
-        aria-label="الصفحة السابقة"
+        aria-label={t('ui.previousPage')}
       >
         <ChevronRight className="w-4 h-4 rtl:rotate-0 rotate-180" />
       </button>
@@ -85,7 +87,7 @@ export function Pagination({
         disabled={currentPage >= totalPages}
         onClick={() => onPageChange(currentPage + 1)}
         className="w-10 h-10 rounded-full flex items-center justify-center border border-surface-border bg-surface text-text-main disabled:opacity-30 disabled:pointer-events-none hover:border-brand-orange hover:text-brand-orange transition-colors"
-        aria-label="الصفحة التالية"
+        aria-label={t('ui.nextPage')}
       >
         <ChevronLeft className="w-4 h-4 rtl:rotate-0 rotate-180" />
       </button>

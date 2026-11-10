@@ -168,6 +168,13 @@ const orderSchema = new mongoose.Schema(
       sparse: true,
       index: true,
     },
+    hiddenBySellers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        index: true,
+      },
+    ],
   },
   {
     timestamps: true,

@@ -31,9 +31,16 @@ export default function AdminCustomersPage() {
           orderService.getAllOrders().catch(() => []),
         ])
 
+        const safeCustomers = Array.isArray(customerList)
+          ? customerList
+          : Array.isArray(customerList?.items)
+          ? customerList.items
+          : []
+        const safeOrders = Array.isArray(allOrders) ? allOrders : []
+
         // إثراء بيانات كل عميلة بتاريخ آخر طلب
-        const enriched = customerList.map((c) => {
-          const userOrders = allOrders
+        const enriched = safeCustomers.map((c) => {
+          const userOrders = safeOrders
             .filter((o) => o.customerId === c.id)
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           const lastOrderDate = userOrders[0]?.createdAt || null

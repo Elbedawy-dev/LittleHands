@@ -22,7 +22,7 @@ export default function AccountFavoritesPage() {
     userService
       .getFavorites()
       .then((data) => {
-        if (mounted) setFavorites(data || [])
+        if (mounted) setFavorites(Array.isArray(data) ? data : [])
       })
       .catch((err) => {
         if (mounted) setError(getFriendlyError(err, t))
@@ -57,7 +57,7 @@ export default function AccountFavoritesPage() {
   if (error) {
     return (
       <EmptyState
-        title={isEn ? 'Failed to Load Favorites' : 'تعذر تحميل المفضلة'}
+        title={t('favorites.loadErrorTitle')}
         description={error}
         icon={<Heart className="w-10 h-10 text-rose-500/40" />}
       />

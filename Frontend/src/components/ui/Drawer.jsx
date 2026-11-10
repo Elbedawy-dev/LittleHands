@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../context/LanguageContext'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import { cn } from '../../utils'
@@ -15,6 +16,7 @@ export function Drawer({
   children,
   className,
 }) {
+  const { t } = useTranslation('common')
   const { isRtl } = useLanguage()
   useScrollLock(Boolean(isOpen))
 
@@ -131,7 +133,7 @@ export function Drawer({
                   type="button"
                   onClick={onClose}
                   className="p-2 rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors"
-                  aria-label="إغلاق"
+                  aria-label={t('ui.closeDrawer')}
                 >
                   <X className="w-5 h-5" />
                 </button>

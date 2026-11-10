@@ -3,7 +3,7 @@ import apiClient from './api'
 /**
  * Convert base64 dataURL to Blob for multipart upload
  */
-function dataURLtoBlob(dataurl) {
+function _dataURLtoBlob(dataurl) {
   const arr = dataurl.split(',')
   const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
   const bstr = atob(arr[1])
@@ -20,7 +20,11 @@ export const paymentService = {
    * Admin: List payments with optional query params
    */
   async getPayments(params = {}) {
-    return apiClient.get('/payments/admin', { params })
+    const res = await apiClient.get('/payments/admin', { params })
+    if (Array.isArray(res)) return res
+    if (Array.isArray(res?.items)) return res.items
+    if (Array.isArray(res?.payments)) return res.payments
+    return []
   },
 
   /**
@@ -54,9 +58,15 @@ export const paymentService = {
 
     if (screenshotFile instanceof File || screenshotFile instanceof Blob) {
       formData.append('screenshot', screenshotFile)
-    } else if (screenshotDataUrl && typeof screenshotDataUrl === 'string' && screenshotDataUrl.startsWith('data:')) {
-      const blob = dataURLtoBlob(screenshotDataUrl)
-      formData.append('screenshot', blob, 'screenshot.jpg')
+    } else {
+      const rawDataUrl =
+        (typeof screenshotFile === 'string' && screenshotFile.startsWith('data:') && screenshotFile) ||
+        (typeof screenshotDataUrl === 'string' && screenshotDataUrl.startsWith('data:') && screenshotDataUrl)
+      if (rawDataUrl) {
+        const blob = await fetch(rawDataUrl).then((r) => r.blob())
+        const file = new File([blob], 'screenshot.jpg', { type: blob.type || 'image/jpeg' })
+        formData.append('screenshot', file)
+      }
     }
 
     return apiClient.post(`/payments/orders/${orderId}/payment`, formData, {

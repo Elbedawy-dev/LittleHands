@@ -17,8 +17,24 @@ export const userService = {
    * تحديث بيانات الملف الشخصي
    * PATCH /users/me
    */
-  async updateProfile(data) {
-    const res = await apiClient.patch('/users/me', data)
+  async updateProfile(data = {}) {
+    const allowedKeys = [
+      'name',
+      'phone',
+      'nurseryName',
+      'governorate',
+      'city',
+      'address',
+      'accountType',
+      'locale',
+    ]
+    const cleanPayload = {}
+    for (const key of allowedKeys) {
+      if (data[key] !== undefined) {
+        cleanPayload[key] = data[key]
+      }
+    }
+    const res = await apiClient.patch('/users/me', cleanPayload)
     return res?.user || res
   },
 

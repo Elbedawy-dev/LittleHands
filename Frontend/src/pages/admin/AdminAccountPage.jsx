@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   KeyRound,
   Lock,
-  LogOut,
   Save,
   ShieldCheck,
 } from 'lucide-react'
@@ -15,19 +14,19 @@ import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
+import { LogoutCard } from '../../components/ui/LogoutCard'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { PasswordInput } from '../../components/ui/PasswordInput'
 import { useAuth } from '../../context/AuthContext'
-import { useLanguage } from '../../context/LanguageContext'
 import { authService } from '../../services/authService'
+import { userService } from '../../services/userService'
 import { getFriendlyError } from '../../utils'
 import { processAvatarImage } from '../../utils/avatar'
 
 export default function AdminAccountPage() {
-  const { t } = useTranslation(['profile', 'common', 'auth', 'admin-core'])
-  const { isRtl } = useLanguage()
+  const { t } = useTranslation(['profile', 'common', 'auth', 'admin-core', 'errors'])
   const navigate = useNavigate()
-  const { user, updateProfile, logout } = useAuth()
+  const { user, updateProfile, refreshUser, logout } = useAuth()
   const avatarInputRef = useRef(null)
 
   const [avatarLoading, setAvatarLoading] = useState(false)
@@ -51,7 +50,7 @@ export default function AdminAccountPage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [passwordError, setPasswordError] = useState('')
 
-  // معالجة رفع الصورة الشخصية وتصغيرها إلى 256px
+  // معالجة رفع الصورة الشخصية عبر مسار الرفع الرسمي وعدم إرسال data URL لأي مسار
   const handleAvatarFile = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -60,22 +59,21 @@ export default function AdminAccountPage() {
     setProfileError('')
     try {
       const dataUrl = await processAvatarImage(file)
-      await updateProfile({ avatar: dataUrl })
+      const blob = await fetch(dataUrl).then((r) => r.blob())
+      const avatarFile = new File([blob], file.name || 'avatar.webp', {
+        type: blob.type || 'image/webp',
+      })
+      await userService.uploadAvatar(avatarFile)
+      await refreshUser()
       setProfileSuccess(true)
       setTimeout(() => setProfileSuccess(false), 4000)
     } catch (err) {
       const msg =
         err.message === 'ERR_INVALID_IMAGE_TYPE'
-          ? isRtl
-            ? 'صيغة الصورة غير مدعومة (يرجى اختيار JPG أو PNG أو WebP)'
-            : 'Unsupported image format (choose JPG, PNG, or WebP)'
+          ? t('errors:ERR_INVALID_IMAGE_TYPE')
           : err.message === 'ERR_FILE_TOO_LARGE'
-            ? isRtl
-              ? 'حجم الصورة يتجاوز الحد المسموح به (5 ميجابايت)'
-              : 'File size exceeds limit (5MB)'
-            : isRtl
-              ? 'فشل تحديث الصورة الشخصية'
-              : 'Failed to update profile photo'
+            ? t('errors:ERR_FILE_TOO_LARGE')
+            : getFriendlyError(err, t) || t('profile:info.avatarError')
       setProfileError(msg)
     } finally {
       setAvatarLoading(false)
@@ -90,7 +88,7 @@ export default function AdminAccountPage() {
     setProfileSuccess(false)
 
     if (!formData.name.trim()) {
-      setProfileError(isRtl ? 'يرجى إدخال الاسم بالكامل' : 'Please enter full name')
+      setProfileError(t('profile:info.nameRequired'))
       return
     }
 
@@ -103,7 +101,7 @@ export default function AdminAccountPage() {
       setProfileSuccess(true)
       setTimeout(() => setProfileSuccess(false), 4000)
     } catch (err) {
-      setProfileError(getFriendlyError(err, t))
+      setProfileError(getFriendlyError(err, t) || t('profile:info.saveError'))
     } finally {
       setSavingProfile(false)
     }
@@ -116,21 +114,17 @@ export default function AdminAccountPage() {
     setPasswordSuccess(false)
 
     if (!passwordData.currentPassword) {
-      setPasswordError(isRtl ? 'يرجى إدخال كلمة المرور الحالية' : 'Please enter current password')
+      setPasswordError(t('profile:info.passwordRequiredFields'))
       return
     }
 
-    if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
-      setPasswordError(
-        isRtl
-          ? 'يجب ألا تقل كلمة المرور الجديدة عن 6 أحرف أو أرقام'
-          : 'New password must be at least 6 characters'
-      )
+    if (!passwordData.newPassword || passwordData.newPassword.length < 8) {
+      setPasswordError(t('profile:info.passwordTooShort'))
       return
     }
 
     if (passwordData.newPassword !== passwordData.confirmNewPassword) {
-      setPasswordError(isRtl ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match')
+      setPasswordError(t('profile:info.passwordMismatch'))
       return
     }
 
@@ -140,6 +134,7 @@ export default function AdminAccountPage() {
         current: passwordData.currentPassword,
         next: passwordData.newPassword,
       })
+      await refreshUser()
       setPasswordSuccess(true)
       setPasswordData({
         currentPassword: '',
@@ -148,7 +143,7 @@ export default function AdminAccountPage() {
       })
       setTimeout(() => setPasswordSuccess(false), 4000)
     } catch (err) {
-      setPasswordError(getFriendlyError(err, t))
+      setPasswordError(getFriendlyError(err, t) || t('profile:info.passwordUpdateError'))
     } finally {
       setSavingPassword(false)
     }
@@ -159,30 +154,29 @@ export default function AdminAccountPage() {
     navigate('/login')
   }
 
-  const pageTitle = isRtl ? 'حساب إدارة المنصة' : 'Platform Admin Account'
-  const pageSubtitle = isRtl
-    ? 'إدارة البيانات الشخصية والصورة الرمزية وكلمة المرور'
-    : 'Manage personal profile, avatar photo, and account security'
-
   return (
     <div className="space-y-6 max-w-4xl pb-12">
-      <PageHeader title={pageTitle} description={pageSubtitle} />
+      <PageHeader
+        title={t('profile:admin.pageTitle')}
+        description={t('profile:admin.pageSubtitle')}
+      />
 
       {/* قسم الصورة الشخصية والبيانات العامة */}
       <Card padding="lg" className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-surface-border">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-surface-border">
           {/* الصورة الرمزية مع زر الرفع */}
           <div className="relative group shrink-0">
             <Avatar
               src={user?.avatar}
-              name={user?.name || (isRtl ? 'إدارة المنصة' : 'Platform Admin')}
+              name={user?.name || t('common:roles.admin')}
               role="admin"
               size="xl"
             />
             <label
               htmlFor="admin-avatar-upload"
               className="absolute -bottom-1 -end-1 p-2 rounded-full bg-brand-orange text-white shadow-soft hover:bg-[#e07528] active:scale-95 transition-all cursor-pointer"
-              title={t('profile:header.avatarUpdate', 'تحديث الصورة الشخصية')}
+              title={t('profile:admin.avatarUpdateTitle')}
+              aria-label={t('profile:admin.avatarUpdateTitle')}
             >
               <Camera className="w-4 h-4" />
               <input
@@ -197,23 +191,21 @@ export default function AdminAccountPage() {
             </label>
           </div>
 
-          <div className="flex-1 text-center sm:text-start space-y-1">
-            <div className="flex items-center justify-center sm:justify-start gap-2">
+          <div className="flex flex-col items-start gap-1 text-start flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-heading font-black text-text-main" data-user-content="true">
-                {user?.name || (isRtl ? 'إدارة المنصة' : 'Platform Admin')}
+                {user?.name || t('common:roles.admin')}
               </h2>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>{isRtl ? 'صلاحيات الإدارة' : 'Admin Privileges'}</span>
+                <span>{t('profile:admin.roleBadge')}</span>
               </span>
             </div>
-            <p className="text-xs text-text-muted" dir="ltr">
+            <p className="text-xs text-text-muted font-mono" dir="ltr">
               {user?.email}
             </p>
             <p className="text-[11px] text-text-muted">
-              {isRtl
-                ? 'الصيغ المسموحة: JPG، PNG، WebP بحد أقصى 5 ميجابايت (تُصغر تلقائياً إلى 256 بكسل).'
-                : 'Allowed formats: JPG, PNG, WebP up to 5MB (automatically resized to 256px).'}
+              {t('profile:admin.avatarFormatsHint')}
             </p>
           </div>
         </div>
@@ -222,7 +214,7 @@ export default function AdminAccountPage() {
         {profileSuccess && (
           <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{t('profile:info.saveSuccess', 'تم حفظ التعديلات بنجاح')}</span>
+            <span>{t('profile:info.saveSuccess')}</span>
           </div>
         )}
 
@@ -237,29 +229,31 @@ export default function AdminAccountPage() {
         <form onSubmit={handleProfileSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label={t('profile:info.fullName', 'الاسم الكامل')}
+              label={t('profile:info.fullName')}
               value={formData.name}
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               required
             />
 
             <Input
-              label={t('profile:info.phone', 'رقم الهاتف')}
+              label={t('profile:info.phone')}
               value={formData.phone}
               onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
               placeholder="010XXXXXXXX"
               dir="ltr"
+              className="[unicode-bidi:isolate] text-start"
             />
           </div>
 
           <div>
             <Input
-              label={t('profile:info.email', 'البريد الإلكتروني')}
+              label={t('profile:info.email')}
               value={formData.email}
               disabled
               readOnly
               dir="ltr"
-              hint={isRtl ? 'البريد الإلكتروني لحساب الإدارة للقراءة فقط' : 'Admin email is read-only'}
+              className="[unicode-bidi:isolate] text-start"
+              helperText={t('profile:admin.emailHelper')}
             />
           </div>
 
@@ -269,9 +263,9 @@ export default function AdminAccountPage() {
               variant="primary"
               size="md"
               loading={savingProfile}
-              icon={<Save className="w-4 h-4" />}
+              startIcon={<Save className="w-4 h-4" />}
             >
-              {t('profile:info.saveBtn', 'حفظ التعديلات')}
+              {t('profile:info.saveBtn')}
             </Button>
           </div>
         </form>
@@ -282,17 +276,17 @@ export default function AdminAccountPage() {
         <div className="pb-4 border-b border-surface-border">
           <h3 className="text-base font-heading font-black text-text-main flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-brand-orange" />
-            <span>{t('profile:info.changePasswordTitle', 'تغيير كلمة المرور')}</span>
+            <span>{t('profile:info.changePasswordTitle')}</span>
           </h3>
           <p className="text-xs text-text-muted mt-0.5">
-            {t('profile:info.changePasswordSubtitle', 'تحديث كلمة المرور لحماية حسابك')}
+            {t('profile:info.changePasswordSubtitle')}
           </p>
         </div>
 
         {passwordSuccess && (
           <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{isRtl ? 'تم تحديث كلمة المرور بنجاح' : 'Password updated successfully'}</span>
+            <span>{t('profile:info.passwordUpdateSuccess')}</span>
           </div>
         )}
 
@@ -305,22 +299,22 @@ export default function AdminAccountPage() {
 
         <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-lg">
           <PasswordInput
-            label={t('profile:info.currentPassword', 'كلمة المرور الحالية')}
+            label={t('profile:info.currentPassword')}
             value={passwordData.currentPassword}
             onChange={(e) => setPasswordData((prev) => ({ ...prev, currentPassword: e.target.value }))}
             required
           />
 
           <PasswordInput
-            label={t('profile:info.newPassword', 'كلمة المرور الجديدة')}
+            label={t('profile:info.newPassword')}
             value={passwordData.newPassword}
             onChange={(e) => setPasswordData((prev) => ({ ...prev, newPassword: e.target.value }))}
             required
-            hint={isRtl ? '6 خانات على الأقل' : 'At least 6 characters'}
+            helperText={t('profile:info.passwordHelper')}
           />
 
           <PasswordInput
-            label={t('profile:info.confirmNewPassword', 'تأكيد كلمة المرور الجديدة')}
+            label={t('profile:info.confirmNewPassword')}
             value={passwordData.confirmNewPassword}
             onChange={(e) => setPasswordData((prev) => ({ ...prev, confirmNewPassword: e.target.value }))}
             required
@@ -332,39 +326,16 @@ export default function AdminAccountPage() {
               variant="secondary"
               size="md"
               loading={savingPassword}
-              icon={<Lock className="w-4 h-4" />}
+              startIcon={<Lock className="w-4 h-4" />}
             >
-              {t('profile:info.updatePasswordBtn', 'تحديث كلمة المرور')}
+              {t('profile:info.updatePasswordBtn')}
             </Button>
           </div>
         </form>
       </Card>
 
-      {/* قسم تسجيل الخروج */}
-      <Card padding="md" className="border-rose-200 dark:border-rose-900/50 bg-rose-50/40 dark:bg-rose-950/20">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <h4 className="text-sm font-bold text-rose-700 dark:text-rose-300">
-              {t('common:actions.logout', 'تسجيل الخروج')}
-            </h4>
-            <p className="text-xs text-text-muted mt-0.5">
-              {isRtl
-                ? 'إنهاء جلسة إدارة المنصة والعودة لصفحة تسجيل الدخول'
-                : 'End your administrative session and return to login page'}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="danger"
-            size="md"
-            onClick={handleLogout}
-            icon={<LogOut className="w-4 h-4 rtl:rotate-180" />}
-            data-testid="admin-account-logout-btn"
-          >
-            {t('common:actions.logout', 'تسجيل الخروج')}
-          </Button>
-        </div>
-      </Card>
+      {/* بطاقة تسجيل الخروج المشتركة */}
+      <LogoutCard onLogout={handleLogout} />
     </div>
   )
 }

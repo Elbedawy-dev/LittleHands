@@ -76,9 +76,17 @@ export default function AdminCustomRequestsPage() {
     setUpdatingId(id)
     try {
       await contactService.updateCustomRequestStatus(id, newStatus)
-      toast.success(isEn ? 'Status updated' : 'تم تحديث حالة الطلب')
+      toast.success(t('customRequests.statusUpdatedToast'))
       setRequests((prev) =>
-        prev.map((r) => (r.id === id || r._id === id ? { ...r, status: newStatus } : r))
+        prev.map((r) =>
+          r.id === id || r._id === id
+            ? {
+                ...r,
+                status: newStatus,
+                ...(newStatus === 'new' ? { claimedBy: null, claimedByName: null, claimedAt: null } : {}),
+              }
+            : r
+        )
       )
     } catch (err) {
       console.error('Failed to update status:', err)
@@ -165,7 +173,7 @@ export default function AdminCustomRequestsPage() {
       header: isEn ? 'Status' : 'الحالة',
       key: 'status',
       render: (r) => (
-        <div className="w-36">
+        <div className="w-36 space-y-1.5">
           <Select
             id={`request-status-${r.id || r._id}`}
             value={r.status || 'new'}
@@ -178,6 +186,11 @@ export default function AdminCustomRequestsPage() {
             <option value="contacted">{isEn ? 'Contacted' : 'تم التواصل'}</option>
             <option value="closed">{isEn ? 'Closed' : 'مكتمل / مغلق'}</option>
           </Select>
+          {r.claimedByName && (
+            <Badge variant="secondary" size="sm" className="truncate max-w-full block text-center">
+              {isEn ? `Claimed by: ${r.claimedByName}` : `استلمتها: ${r.claimedByName}`}
+            </Badge>
+          )}
         </div>
       ),
     },
@@ -201,9 +214,16 @@ export default function AdminCustomRequestsPage() {
             <User className="w-4 h-4 text-brand-orange" />
             <span>{r.name}</span>
           </div>
-          <Badge variant={cfg.variant} size="sm">
-            {isEn ? cfg.labelEn : cfg.label}
-          </Badge>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {r.claimedByName && (
+              <Badge variant="secondary" size="sm">
+                {isEn ? `Claimed by: ${r.claimedByName}` : `استلمتها: ${r.claimedByName}`}
+              </Badge>
+            )}
+            <Badge variant={cfg.variant} size="sm">
+              {isEn ? cfg.labelEn : cfg.label}
+            </Badge>
+          </div>
         </div>
 
         {r.nurseryName && (
@@ -255,12 +275,8 @@ export default function AdminCustomRequestsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={isEn ? 'Custom Nursery Requests' : 'طلبات الحضانات الخاصة'}
-        description={
-          isEn
-            ? 'Review and manage custom manufacturing requests submitted by nurseries and educators.'
-            : 'متابعة وإدارة طلبات تفصيل وتصنيع الوسائل التعليمية المخصصة للحضانات والمعلمات.'
-        }
+        title={t('customRequests.title')}
+        description={t('customRequests.description')}
       />
 
       {/* شريط البحث والتبويبات */}
@@ -281,7 +297,7 @@ export default function AdminCustomRequestsPage() {
           <div className="w-full sm:w-64">
             <Input
               id="custom-requests-search"
-              placeholder={isEn ? 'Search requests...' : 'بحث بالاسم، الهاتف، الحضانة...'}
+              placeholder={t('customRequests.searchPlaceholder')}
               icon={<Search className="w-4 h-4" />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -296,12 +312,8 @@ export default function AdminCustomRequestsPage() {
         loading={loading}
         renderMobileCard={renderMobileCard}
         keyExtractor={(r) => r.id || r._id}
-        emptyTitle={isEn ? 'No custom requests found' : 'لا توجد طلبات حضانات خاصة'}
-        emptyDescription={
-          isEn
-            ? 'Any custom order requests submitted via the contact form will appear here.'
-            : 'أي طلبات تفصيل وسيلة خاصة يتم إرسالها من النموذج ستظهر هنا.'
-        }
+        emptyTitle={t('customRequests.emptyTitle')}
+        emptyDescription={t('customRequests.emptyDescription')}
       />
     </div>
   )

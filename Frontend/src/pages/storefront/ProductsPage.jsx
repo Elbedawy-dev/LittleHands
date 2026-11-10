@@ -115,11 +115,11 @@ export default function ProductsPage() {
         page: currentPage,
         pageSize: 12,
       })
-      setProducts(res.items || [])
-      setTotalCount(res.total || 0)
-      setTotalPages(res.totalPages || 1)
+      setProducts(Array.isArray(res?.items) ? res.items : [])
+      setTotalCount(res?.total || 0)
+      setTotalPages(res?.totalPages || 1)
     } catch {
-      setError('تعذر تحميل الوسائل التعليمية، يرجى المحاولة لاحقاً')
+      setError(t('storefront:products.loadError'))
     } finally {
       setLoading(false)
     }
@@ -133,6 +133,7 @@ export default function ProductsPage() {
     currentInStock,
     currentSort,
     currentPage,
+    t,
   ])
 
   useEffect(() => {
@@ -256,11 +257,11 @@ export default function ProductsPage() {
           ) : error ? (
             /* حالة الخطأ */
             <EmptyState
-              title="حدث خطأ أثناء تحميل الوسائل"
+              title={t('storefront:products.loadErrorTitle')}
               description={error}
               action={
                 <Button onClick={fetchProducts} variant="secondary">
-                  إعادة المحاولة
+                  {t('common:status.retry')}
                 </Button>
               }
             />

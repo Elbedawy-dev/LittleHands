@@ -26,7 +26,8 @@ export const adminService = {
    * Admin: List all seller accounts
    */
   async getSellerAccounts() {
-    return apiClient.get('/admin/sellers/accounts')
+    const res = await apiClient.get('/admin/sellers/accounts')
+    return Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : []
   },
 
   /**

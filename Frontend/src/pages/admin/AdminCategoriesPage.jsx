@@ -34,8 +34,8 @@ export default function AdminCategoriesPage() {
         catalogService.getCategories(),
         productService.getManageableProducts().catch(() => []),
       ])
-      setCategories(cats)
-      setProducts(prods)
+      setCategories(Array.isArray(cats) ? cats : [])
+      setProducts(Array.isArray(prods) ? prods : [])
     } catch (err) {
       toast.error(getFriendlyError(err, t))
     } finally {

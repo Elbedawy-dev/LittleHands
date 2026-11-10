@@ -15,6 +15,7 @@ export const EVENT_TYPES = {
   ORDER_CANCELLED: 'order.cancelled', // { order }
   PAYOUT_RECORDED: 'payout.recorded', // { payout, seller }
   CUSTOM_REQUEST_CREATED: 'customRequest.created', // { request }
+  CUSTOM_REQUEST_CLAIMED: 'customRequest.claimed', // { request, seller }
 }
 
 export default EVENT_TYPES

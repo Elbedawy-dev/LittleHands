@@ -1,22 +1,53 @@
 import { RotateCcw, Search } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../../components/ui/Card'
 import { Input } from '../../../components/ui/Input'
 import { Select } from '../../../components/ui/Select'
-import { ORDER_STATUS, PLATFORM_CONFIG } from '../../../config/constants'
+import { ORDER_STATUS } from '../../../config/constants'
+import { adminService } from '../../../services/adminService'
 import { getDisplayName } from '../../../utils'
 
 /**
  * شريط تصفية وبحث الطلبات في لوحة تحكم الإدارة
- * يدعم التصفية حسب الحالة، البائعة الحرفية، النطاق الزمني، والبحث النصي
+ * يدعم التصفية حسب الحالة، البائعة الحرفية (ديناميكياً من API)، النطاق الزمني، والبحث النصي
  */
 export function AdminOrderFilters({
   filters,
   onChange,
   onReset,
+  sellers: sellersProp,
 }) {
-  const { t, i18n } = useTranslation('admin-core')
+  const { t, i18n } = useTranslation(['admin-core', 'common'])
   const isEn = i18n.language === 'en'
+  const [sellers, setSellers] = useState([])
+
+  useEffect(() => {
+    if (Array.isArray(sellersProp)) {
+      setSellers(sellersProp)
+      return
+    }
+    let mounted = true
+    adminService
+      .getSellerAccounts()
+      .then((list) => {
+        if (mounted) {
+          setSellers(Array.isArray(list) ? list : [])
+        }
+      })
+      .catch(() => {
+        if (mounted) setSellers([])
+      })
+    return () => {
+      mounted = false
+    }
+  }, [sellersProp])
+
+  const safeSellers = Array.isArray(sellersProp)
+    ? sellersProp
+    : Array.isArray(sellers)
+      ? sellers
+      : []
 
   const hasActiveFilters =
     filters.status !== 'all' ||
@@ -64,11 +95,15 @@ export function AdminOrderFilters({
             onChange={(e) => onChange('seller', e.target.value)}
           >
             <option value="all">{t('orders.filters.allSellers')}</option>
-            {PLATFORM_CONFIG.SELLERS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {getDisplayName(s, i18n.language)}
-              </option>
-            ))}
+            {safeSellers.map((s) => {
+              const sid = s.id || s._id
+              const sLabel = getDisplayName(s, i18n.language) || s.name || sid
+              return (
+                <option key={sid} value={sid}>
+                  {sLabel}
+                </option>
+              )
+            })}
           </Select>
         </div>
 
@@ -92,8 +127,8 @@ export function AdminOrderFilters({
               type="button"
               onClick={onReset}
               className="p-3 rounded-2xl border border-surface-border hover:bg-surface-subtle text-text-muted hover:text-text-main transition-colors shrink-0"
-              title={isEn ? 'Reset filters' : 'إعادة تعيين المرشحات'}
-              aria-label={isEn ? 'Reset filters' : 'إعادة تعيين المرشحات'}
+              title={t('common:actions.reset')}
+              aria-label={t('common:actions.reset')}
             >
               <RotateCcw className="w-4 h-4" />
             </button>

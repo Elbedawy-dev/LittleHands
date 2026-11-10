@@ -21,7 +21,7 @@ export const PasswordInput = forwardRef(function PasswordInput(
   },
   ref
 ) {
-  const { i18n } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const isEn = i18n.language === 'en'
   const [showPassword, setShowPassword] = useState(false)
   const inputId = id || name || `pwd_${Math.random().toString(36).slice(2, 7)}`
@@ -82,11 +82,7 @@ export const PasswordInput = forwardRef(function PasswordInput(
           type="button"
           onClick={() => setShowPassword((prev) => !prev)}
           className="absolute end-3.5 p-1.5 text-text-muted hover:text-text-main focus:outline-none focus:text-brand-orange cursor-pointer"
-          aria-label={
-            showPassword
-              ? (isEn ? 'Hide password' : 'إخفاء كلمة المرور')
-              : (isEn ? 'Show password' : 'إظهار كلمة المرور')
-          }
+          aria-label={showPassword ? t('ui.hidePassword') : t('ui.showPassword')}
           tabIndex={-1}
         >
           {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

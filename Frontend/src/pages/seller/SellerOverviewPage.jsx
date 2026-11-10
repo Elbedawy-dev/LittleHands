@@ -54,9 +54,10 @@ export default function SellerOverviewPage() {
         orderService.getSellerOrders(),
       ])
 
+      const safeOrders = Array.isArray(ords) ? ords : []
       // تصفية الطلبات الخاصة بهذه البائعة فقط
-      const myOrders = ords.filter((o) =>
-        (o.items || []).some((item) => !item.sellerId || item.sellerId === sellerId)
+      const myOrders = safeOrders.filter((o) =>
+        (Array.isArray(o.items) ? o.items : []).some((item) => !item.sellerId || item.sellerId === sellerId)
       )
 
       setOverview(ov)

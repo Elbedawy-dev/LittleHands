@@ -7,18 +7,13 @@ import { NotificationsList } from '../../features/notifications/NotificationsLis
  * تتابع إيصالات فودافون كاش المعلقة والطلبات والمدفوعات
  */
 export default function AdminNotificationsPage() {
-  const { i18n } = useTranslation()
-  const isEn = i18n.language === 'en'
+  const { t } = useTranslation('notifications')
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={isEn ? 'Admin Notifications & Audit Center' : 'مركز إشعارات وتدقيق الإدارة'}
-        description={
-          isEn
-            ? 'Real-time alerts to audit uploaded Vodafone Cash receipts, registered orders, and artisan payout transfers.'
-            : 'تنبيهات فورية لتدقيق إيصالات فودافون كاش المرفوعة، الطلبات المسجلة، وتحويلات أرباح البائعات.'
-        }
+        title={t('adminPageTitle')}
+        description={t('adminPageSubtitle')}
       />
 
       <NotificationsList role="admin" />

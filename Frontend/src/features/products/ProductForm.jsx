@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Switch } from '../../components/ui/Switch'
 import { Textarea } from '../../components/ui/Textarea'
-import { CATEGORIES, PLATFORM_CONFIG, STAGES } from '../../config/constants'
+import { CATEGORIES, STAGES } from '../../config/constants'
 import { useLanguage } from '../../context/LanguageContext'
 import { useFormat } from '../../hooks/useFormat'
 import { calcCommission, cn, getDisplayName } from '../../utils'
@@ -50,7 +50,7 @@ export function ProductForm({
   initialValues = {},
   onSubmit,
   isSubmitting = false,
-  sellers = PLATFORM_CONFIG.SELLERS,
+  sellers = [],
 }) {
   const { t, i18n } = useTranslation('seller')
   const { isRtl } = useLanguage()
@@ -517,7 +517,7 @@ export function ProductForm({
                 label={t('form.usage_ar')}
                 value={formData.usageAr}
                 onChange={(e) => handleChange('usageAr', e.target.value)}
-                placeholder={!isRtl ? 'e.g. Mount on wall or tabletop' : 'تثبت على الجدار أو الطاولة'}
+                placeholder={t('form.usage_ar_placeholder')}
                 error={errors.usageAr}
               />
               <Input
@@ -526,7 +526,7 @@ export function ProductForm({
                 label={t('form.care_ar')}
                 value={formData.careAr}
                 onChange={(e) => handleChange('careAr', e.target.value)}
-                placeholder={!isRtl ? 'e.g. Keep in a dry place and wipe gently' : 'تحفظ في مكان جاف وتمسح بلطف'}
+                placeholder={t('form.care_ar_placeholder')}
                 error={errors.careAr}
               />
             </div>
@@ -590,7 +590,7 @@ export function ProductForm({
                 label={t('form.usage_en')}
                 value={formData.usageEn}
                 onChange={(e) => handleChange('usageEn', e.target.value)}
-                placeholder="Classroom wall or table activities"
+                placeholder={t('form.usage_en_placeholder')}
                 error={errors.usageEn}
               />
               <Input
@@ -599,7 +599,7 @@ export function ProductForm({
                 label={t('form.care_en')}
                 value={formData.careEn}
                 onChange={(e) => handleChange('careEn', e.target.value)}
-                placeholder="Store dry, wipe gently"
+                placeholder={t('form.care_en_placeholder')}
                 error={errors.careEn}
               />
             </div>
@@ -635,8 +635,8 @@ export function ProductForm({
             error={errors.sellerId}
             required
           >
-            {sellers.map((s) => (
-              <option key={s.id} value={s.id}>
+            {(Array.isArray(sellers) ? sellers : []).map((s) => (
+              <option key={s.id || s._id} value={s.id || s._id}>
                 {getDisplayName(s, i18n.language)}
               </option>
             ))}

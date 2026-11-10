@@ -170,10 +170,44 @@
         "viewReceipt": "Preview Enlarged Receipt",
         "noPayment": "No payment receipt submitted yet"
       },
-      "timelineTitle": "Order Progress & Timeline"
+      "timelineTitle": "Order Progress & Timeline",
+      "refundTitle": "Order Refund",
+      "refundAmountLabel": "Amount to refund:",
+      "refundCompletedBadge": "Refunded",
+      "processRefundBtn": "Process Refund",
+      "refundReferenceLabel": "Reference:",
+      "refundDateLabel": "Date:",
+      "refundNoteLabel": "Note:",
+      "refundModalTitle": "Record Order Refund",
+      "refundModalDesc": "Enter the transaction reference number for the refund sent to the customer wallet:",
+      "refundReferenceInputLabel": "Transaction Reference *",
+      "refundReferencePlaceholder": "e.g. 9876543210",
+      "refundNoteInputLabel": "Note (Optional)",
+      "refundNotePlaceholder": "Reason or details",
+      "refundConfirmBtn": "Confirm Refund",
+      "refundReferenceRequired": "Reference number is required",
+      "refundSuccessToast": "Refund recorded successfully",
+      "receiptAlt": "Vodafone Cash Receipt",
+      "flags": {
+        "amount_mismatch": "Amount Mismatch",
+        "duplicate_reference": "Duplicate Reference",
+        "duplicate_screenshot": "Duplicate Receipt"
+      }
     },
+    "delete": {
+      "action": "Delete Order",
+      "disabledTooltip": "Paid or active orders cannot be deleted; cancel and refund the order first",
+      "confirmTitle": "Permanently Delete Order",
+      "confirmMessage": "Are you sure you want to permanently delete order {{number}}? The order record and any associated payment receipts will be removed. This action cannot be undone.",
+      "confirmBtn": "Yes, Delete Order",
+      "cancelBtn": "Cancel",
+      "successToast": "Order {{number}} deleted permanently"
+    },
+    "loadError": "An error occurred while loading the orders history",
+    "moreAids": "+{{count}} more aids",
     "empty": "No orders found matching the filter criteria",
-    "emptyTitle": "No orders found"
+    "emptyTitle": "No orders found",
+    "emptyDescription": "No orders found matching the selected filter criteria."
   },
   "sellers": {
     "title": "Sellers & Platform Earnings",
@@ -269,6 +303,16 @@
       "date": "Date",
       "empty": "No orders for this seller",
       "emptyDescription": "This seller's orders will appear here once they are placed."
-    }
+    },
+    "statusActiveToast": "Seller account activated successfully",
+    "statusSuspendedToast": "Seller account suspended"
+  },
+  "customRequests": {
+    "title": "Custom Nursery Requests",
+    "description": "Review and manage custom manufacturing requests submitted by nurseries and educators.",
+    "searchPlaceholder": "Search requests...",
+    "statusUpdatedToast": "Status updated",
+    "emptyTitle": "No custom requests found",
+    "emptyDescription": "Any custom order requests submitted via the contact form will appear here."
   }
 }

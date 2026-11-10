@@ -65,9 +65,6 @@ const DesignSystemPage = import.meta.env.DEV
 const EmailPreviewPage = import.meta.env.DEV
   ? lazy(() => import('../pages/dev/EmailPreviewPage'))
   : null
-const SellerCustomRequestsPreview = import.meta.env.DEV
-  ? lazy(() => import('../pages/dev/SellerCustomRequestsPreview'))
-  : null
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
 
 // عنصر التحميل للتبديل السلس
@@ -174,7 +171,6 @@ export const router = createBrowserRouter([
         ? [
             { path: 'dev/design-system', element: <SuspenseWrapper><DesignSystemPage /></SuspenseWrapper> },
             { path: 'dev/emails', element: <SuspenseWrapper><EmailPreviewPage /></SuspenseWrapper> },
-            { path: 'dev/seller-custom-requests', element: <SuspenseWrapper><SellerCustomRequestsPreview /></SuspenseWrapper> },
           ]
         : []),
 

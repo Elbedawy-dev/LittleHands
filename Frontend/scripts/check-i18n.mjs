@@ -219,6 +219,83 @@ for (const dirName of BACKEND_SERVICE_DIRS) {
 }
 
 // -------------------------------------------------------------
+// 4. Audit t('...') literal keys existence across project
+// -------------------------------------------------------------
+info('Auditing t(\'...\') calls in JSX/JS files for key presence in AR and EN...')
+
+// Build a comprehensive map of namespace keys
+const localeKeysMap = { ar: new Map(), en: new Map() }
+for (const nsFile of allNamespaces) {
+  const ns = nsFile.replace(/\.json$/, '')
+  const arPath = path.join(LOCALES_AR, nsFile)
+  const enPath = path.join(LOCALES_EN, nsFile)
+  if (fs.existsSync(arPath)) {
+    const arJson = JSON.parse(fs.readFileSync(arPath, 'utf8'))
+    localeKeysMap.ar.set(ns, new Set(getDeepKeys(arJson).map((e) => e.key)))
+  }
+  if (fs.existsSync(enPath)) {
+    const enJson = JSON.parse(fs.readFileSync(enPath, 'utf8'))
+    localeKeysMap.en.set(ns, new Set(getDeepKeys(enJson).map((e) => e.key)))
+  }
+}
+
+const T_CALL_REGEX = /\bt\(\s*['"]([a-zA-Z0-9_.:-]+)['"]/g
+const USE_TRANSLATION_REGEX = /useTranslation\(\s*(\[[^\]]*\]|['"][a-zA-Z0-9_-]+['"])/g
+
+for (const filePath of allSrcFiles) {
+  const relPath = path.relative(SRC, filePath)
+  if (relPath.startsWith('mocks') || relPath.startsWith('scripts') || relPath.startsWith('locales')) continue
+
+  const content = fs.readFileSync(filePath, 'utf8')
+  if (!content.includes('t(')) continue
+
+  // Determine namespaces used in this file
+  const fileNamespaces = new Set(['common'])
+  for (const m of content.matchAll(USE_TRANSLATION_REGEX)) {
+    const raw = m[1]
+    if (raw.startsWith('[')) {
+      const parts = raw.replace(/[\[\]'"]/g, '').split(',').map((s) => s.trim()).filter(Boolean)
+      parts.forEach((p) => fileNamespaces.add(p))
+    } else {
+      fileNamespaces.add(raw.replace(/['"]/g, '').trim())
+    }
+  }
+
+  for (const match of content.matchAll(T_CALL_REGEX)) {
+    const fullKey = match[1]
+    let targetNs = null
+    let keyName = fullKey
+
+    if (fullKey.includes(':')) {
+      const [nsPart, rest] = fullKey.split(':')
+      targetNs = nsPart
+      keyName = rest
+    }
+
+    const checkNamespaces = targetNs ? [targetNs] : Array.from(fileNamespaces)
+    let foundInAr = false
+    let foundInEn = false
+
+    for (const ns of checkNamespaces) {
+      if (localeKeysMap.ar.get(ns)?.has(keyName)) foundInAr = true
+      if (localeKeysMap.en.get(ns)?.has(keyName)) foundInEn = true
+    }
+
+    // Ignore known dynamic prefixes or errors handled dynamically
+    if (fullKey.startsWith('errors:') || fullKey.startsWith('types.') || fullKey.startsWith('descriptions.')) {
+      continue
+    }
+
+    if (!foundInAr) {
+      warn(`Key "${fullKey}" used in ${relPath} might be missing in AR translations`)
+    }
+    if (!foundInEn) {
+      warn(`Key "${fullKey}" used in ${relPath} might be missing in EN translations`)
+    }
+  }
+}
+
+// -------------------------------------------------------------
 // Result Summary
 // -------------------------------------------------------------
 console.log('\n----------------------------------------')

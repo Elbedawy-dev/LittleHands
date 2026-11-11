@@ -124,6 +124,8 @@
     "material_felt": "Craft Felt",
     "material_cardstock": "Laminated Cardstock",
     "material_fabric": "Fabric",
+    "material_canson": "Canson Paper",
+    "material_nasbian": "Nasbian",
     "size": "Dimensions & Size",
     "size_placeholder": "e.g. 50 x 70 cm, or circle diameter 30 cm",
     "description": "Aid Description & Classroom Utility",
@@ -135,6 +137,7 @@
     "submit_create": "Save & Publish Aid",
     "submit_edit": "Save Changes",
     "saving": "Saving...",
+    "uploading_image_progress": "Compressing and uploading image ({{current}} of {{total}})...",
     "unsaved_warning": "You have unsaved changes! Are you sure you want to leave this page?",
     "success_create": "Teaching aid created successfully",
     "success_edit": "Teaching aid updated successfully",
@@ -161,7 +164,8 @@
       "desc_required": "Aid description is required",
       "desc_min": "Please provide a sufficient description (at least 10 characters)",
       "desc_max": "Description exceeds maximum limit (500 characters)",
-      "images_required": "Please upload at least one image of the teaching aid"
+      "images_required": "Please upload at least one image of the teaching aid",
+      "image_upload_failed": "Failed to upload image, please try again"
     }
   },
   "orders": {

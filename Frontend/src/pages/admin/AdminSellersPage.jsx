@@ -2,6 +2,7 @@ import { UserPlus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useNotifications } from '../../context/NotificationContext'
@@ -21,7 +22,8 @@ import { getFriendlyError } from '../../utils'
  * إدارة المستحقات المالية للبائعتين، حساب عمولة الوساطة (20٪)، وتسجيل حوالات فودافون كاش
  */
 export default function AdminSellersPage() {
-  const { t } = useTranslation('admin-core')
+  const { t, i18n } = useTranslation('admin-core')
+  const isEn = i18n.language === 'en'
   const { fetchNotifications } = useNotifications()
 
   const [sellers, setSellers] = useState([])
@@ -36,6 +38,10 @@ export default function AdminSellersPage() {
 
   // حالة نافذة إنشاء حساب بائعة جديدة
   const [createSellerModalOpen, setCreateSellerModalOpen] = useState(false)
+
+  // حالة حذف حساب بائعة
+  const [sellerToDelete, setSellerToDelete] = useState(null)
+  const [isDeletingSeller, setIsDeletingSeller] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -104,6 +110,22 @@ export default function AdminSellersPage() {
     }
   }
 
+  const handleConfirmDeleteSeller = async () => {
+    if (!sellerToDelete) return
+    setIsDeletingSeller(true)
+    try {
+      const id = sellerToDelete.userId || sellerToDelete.sellerId || sellerToDelete.id
+      await adminService.deleteUser(id)
+      toast.success(t('sellers.deleteSuccess'))
+      setSellerToDelete(null)
+      await fetchData()
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    } finally {
+      setIsDeletingSeller(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -148,6 +170,7 @@ export default function AdminSellersPage() {
               seller={seller}
               onRecordPayout={handleOpenPayoutModal}
               onToggleStatus={handleToggleStatus}
+              onDeleteSeller={(s) => setSellerToDelete(s)}
             />
           ))}
         </div>
@@ -179,6 +202,20 @@ export default function AdminSellersPage() {
           await fetchData()
           fetchNotifications()
         }}
+      />
+
+      {/* نافذة تأكيد حذف حساب البائعة */}
+      <ConfirmDialog
+        isOpen={Boolean(sellerToDelete)}
+        onClose={() => !isDeletingSeller && setSellerToDelete(null)}
+        onConfirm={handleConfirmDeleteSeller}
+        title={t('sellers.deleteConfirmTitle')}
+        message={t('sellers.deleteConfirmMessage')}
+        confirmText={t('sellers.deleteConfirmBtn')}
+        cancelText={t('sellers.cancel', 'إلغاء')}
+        variant="danger"
+        loading={isDeletingSeller}
+        requireWord={isEn ? 'DELETE' : 'حذف'}
       />
     </div>
   )

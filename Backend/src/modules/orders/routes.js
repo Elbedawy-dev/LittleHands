@@ -105,6 +105,22 @@ router.delete(
   orderController.deleteOrder
 )
 
+router.post(
+  '/admin/:id/archive',
+  authenticate,
+  authorize('admin'),
+  csrfGuard,
+  orderController.archiveOrder
+)
+
+router.post(
+  '/admin/:id/unarchive',
+  authenticate,
+  authorize('admin'),
+  csrfGuard,
+  orderController.unarchiveOrder
+)
+
 // Customer Cancel & Detail
 router.post(
   '/:id/cancel',

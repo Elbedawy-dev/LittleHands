@@ -1,5 +1,5 @@
-import apiClient from './api'
-import paymentService from './paymentService'
+import apiClient from './api.js'
+import paymentService from './paymentService.js'
 
 export const orderService = {
   /**
@@ -118,6 +118,20 @@ export const orderService = {
    */
   async deleteOrder(id) {
     return apiClient.delete(`/orders/admin/${id}`)
+  },
+
+  /**
+   * Admin: Archive a delivered order
+   */
+  async archiveOrder(id) {
+    return apiClient.post(`/orders/admin/${id}/archive`)
+  },
+
+  /**
+   * Admin: Unarchive an order
+   */
+  async unarchiveOrder(id) {
+    return apiClient.post(`/orders/admin/${id}/unarchive`)
   },
 
   /**

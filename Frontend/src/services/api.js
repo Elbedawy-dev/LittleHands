@@ -1,7 +1,7 @@
 import axios from 'axios'
-import i18n from '../config/i18n.js'
+import i18n from 'i18next'
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
+export const API_BASE_URL = import.meta.env?.VITE_API_URL || '/api/v1'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -16,7 +16,14 @@ const apiClient = axios.create({
 
 // Request interceptor: attach Accept-Language and Idempotency-Key
 apiClient.interceptors.request.use((config) => {
-  const currentLang = i18n.language || localStorage.getItem('lh_lang') || 'ar'
+  let currentLang = 'ar'
+  try {
+    if (typeof localStorage !== 'undefined') {
+      currentLang = localStorage.getItem('lh_lang') || 'ar'
+    }
+  } catch {
+    currentLang = 'ar'
+  }
   config.headers['Accept-Language'] = currentLang
 
   // Strip any accidental Authorization header / tokens
@@ -38,19 +45,52 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
-// Silent refresh queue state
-let isRefreshing = false
-let failedQueue = []
+// Single-flight token refresh with retry on cold-start / network timeout
+let refreshPromise = null
 
-const processQueue = (error) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error)
-    } else {
-      prom.resolve()
+async function performTokenRefresh() {
+  if (refreshPromise) {
+    return refreshPromise
+  }
+
+  refreshPromise = (async () => {
+    let attempts = 0
+    const maxAttempts = 3 // 1 initial attempt + 2 retries on network/cold-start
+
+    while (attempts < maxAttempts) {
+      attempts += 1
+      try {
+        const res = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          {
+            withCredentials: true,
+            timeout: 10000,
+            headers: {
+              'X-Requested-With': 'lh-web',
+              Accept: 'application/json',
+            },
+          }
+        )
+        return res
+      } catch (err) {
+        const status = err.response?.status
+        const isNetworkOr5xx = !status || status >= 500 || err.code === 'ECONNABORTED'
+
+        // Only retry on network, timeout, or 5xx cold start
+        if (isNetworkOr5xx && attempts < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 600 * attempts))
+          continue
+        }
+
+        throw err
+      }
     }
+  })().finally(() => {
+    refreshPromise = null
   })
-  failedQueue = []
+
+  return refreshPromise
 }
 
 // Response interceptor: unwrap { success, data } and handle 401 refresh
@@ -102,7 +142,7 @@ apiClient.interceptors.response.use(
       error.message = backendMessage
     }
 
-    // 401 Silent Token Refresh Queue
+    // 401 Silent Token Refresh with single-flight mutex
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       // Do not attempt refresh on auth endpoints to prevent loops
       const url = originalRequest.url || ''
@@ -110,37 +150,17 @@ apiClient.interceptors.response.use(
         return Promise.reject(error)
       }
 
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject })
-        })
-          .then(() => apiClient(originalRequest))
-          .catch((err) => Promise.reject(err))
-      }
-
       originalRequest._retry = true
-      isRefreshing = true
 
       try {
-        await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          {},
-          {
-            withCredentials: true,
-            headers: {
-              'X-Requested-With': 'lh-web',
-              Accept: 'application/json',
-            },
-          }
-        )
-
-        isRefreshing = false
-        processQueue(null)
+        await performTokenRefresh()
         return apiClient(originalRequest)
       } catch (refreshErr) {
-        isRefreshing = false
-        processQueue(refreshErr)
-        window.dispatchEvent(new CustomEvent('lh:auth:logout'))
+        const status = refreshErr.response?.status
+        // Strictly only logout on confirmed 401 or 403 (never on cold-start/network/5xx)
+        if (status === 401 || status === 403) {
+          window.dispatchEvent(new CustomEvent('lh:auth:logout'))
+        }
         return Promise.reject(refreshErr)
       }
     }

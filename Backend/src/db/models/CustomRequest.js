@@ -23,6 +23,12 @@ const customRequestSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     status: {
       type: String,
       enum: ['new', 'pending', 'contacted', 'closed'],

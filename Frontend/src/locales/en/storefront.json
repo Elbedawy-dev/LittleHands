@@ -121,7 +121,12 @@
     "loadError": "Failed to load teaching aids, please try again later",
     "loadErrorTitle": "Failed to load teaching aids"
   },
+  "favorites": {
+    "add": "Add to favorites",
+    "remove": "Remove from favorites"
+  },
   "productDetails": {
+    "madeBy": "Crafted by: {{name}}",
     "notFoundTitle": "Teaching aid not found",
     "notFoundDesc": "It may have been removed or moved",
     "backToProducts": "Back to Teaching Aids",

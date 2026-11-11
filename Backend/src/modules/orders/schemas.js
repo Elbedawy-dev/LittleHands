@@ -69,6 +69,7 @@ export const orderQuerySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   q: z.string().optional(),
+  archived: z.union([z.string(), z.boolean()]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(10),
 })

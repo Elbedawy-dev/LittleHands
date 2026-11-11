@@ -4,6 +4,7 @@ import {
   CheckCheck,
   Clock,
   ExternalLink,
+  Trash2,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -15,7 +16,8 @@ import { useLanguage } from '../../context/LanguageContext'
 import { useNotifications } from '../../context/NotificationContext'
 import { useFormat } from '../../hooks/useFormat'
 import { useScrollLock } from '../../hooks/useScrollLock'
-import { cn } from '../../utils'
+import { cn, pickLocaleText } from '../../utils'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { getNotificationBadge } from './NotificationsList'
 
 /**
@@ -24,12 +26,22 @@ import { getNotificationBadge } from './NotificationsList'
  * - Mobile: Full-screen modal sheet (100dvh, opaque surface, portal to document.body)
  */
 export function NotificationsDropdown({ open, onClose, triggerRef }) {
-  const { t } = useTranslation(['notifications', 'common'])
+  const { t, i18n } = useTranslation(['notifications', 'common'])
   const { isRtl } = useLanguage()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications } = useNotifications()
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    fetchNotifications,
+    deleteNotification,
+    deleteNotifications,
+  } = useNotifications()
   const { formatRelativeTime } = useFormat()
+  const [confirmDialog, setConfirmDialog] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Refetch notifications list when the dropdown opens
   useEffect(() => {
@@ -134,22 +146,57 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
 
   // Resolve dynamic notification title and message
   const resolveNotificationText = (item) => {
-    let title = item.title
-    let message = item.message
+    const lang = i18n?.language || 'ar'
+    let title = typeof item.title === 'object' ? pickLocaleText(item.title, lang) : item.title
+    let message = typeof item.message === 'object' ? pickLocaleText(item.message, lang) : item.message
 
-    if (item.type) {
-      const i18nTitleKey = `types.${item.type}`
-      const translatedTitle = t(i18nTitleKey, { defaultValue: '' })
-      if (translatedTitle) title = translatedTitle
+    if (!title && item.type) {
+      if (item.type === 'custom_request') {
+        const isClaimed =
+          Boolean(item.params?.sellerName) ||
+          (item.title?.ar && item.title.ar.includes('استلام')) ||
+          (item.message?.ar && item.message.ar.includes('استلمت'))
+        title = isClaimed
+          ? t('types.custom_request_claimed', { defaultValue: 'استلام طلب تفصيل' })
+          : t('types.custom_request_new', { defaultValue: 'طلب تفصيل جديد' })
+      } else {
+        title = t(`types.${item.type}`, { defaultValue: t('types.generic', { defaultValue: 'إشعار جديد' }) })
+      }
+    }
 
-      const i18nDescKey = `descriptions.${item.type}`
-      const translatedDesc = t(i18nDescKey, item.params || {}, { defaultValue: '' })
-      if (translatedDesc) message = translatedDesc
+    if (!message && item.type) {
+      message = t(`descriptions.${item.type}`, { ...(item.params || {}), defaultValue: '' })
     }
 
     return {
-      title: title || t('types.generic', 'إشعار جديد'),
+      title: title || t('types.generic', { defaultValue: 'إشعار جديد' }),
       message: message || '',
+    }
+  }
+
+  const handleDeleteItem = async (e, id) => {
+    e.stopPropagation()
+    try {
+      await deleteNotification(id)
+    } catch (err) {
+      console.error('Failed to delete notification:', err)
+    }
+  }
+
+  const handleConfirmClear = async () => {
+    if (!confirmDialog) return
+    setIsDeleting(true)
+    try {
+      if (confirmDialog === 'clearRead') {
+        await deleteNotifications(true)
+      } else if (confirmDialog === 'clearAll') {
+        await deleteNotifications(false)
+      }
+      setConfirmDialog(null)
+    } catch (err) {
+      console.error('Failed to clear notifications:', err)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -174,7 +221,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
             key={item.id}
             onClick={handleClick}
             className={cn(
-              'p-3.5 flex items-start gap-3 transition-colors cursor-pointer hover:bg-surface-subtle/80',
+              'group p-3.5 flex items-start gap-3 transition-colors cursor-pointer hover:bg-surface-subtle/80 relative',
               isUnread && 'bg-brand-orange/5'
             )}
           >
@@ -187,7 +234,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
               {badge.icon}
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 pe-6">
               <div className="flex items-center justify-between gap-1 mb-0.5">
                 <h5
                   className={cn(
@@ -212,6 +259,17 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
                 <span>{formatRelativeTime(item.createdAt)}</span>
               </div>
             </div>
+
+            {/* زر حذف الإشعار - ظاهر دائماً على الموبايل وعند hover على سطح المكتب */}
+            <button
+              type="button"
+              onClick={(e) => handleDeleteItem(e, item.id)}
+              className="absolute top-3 end-3 p-1.5 rounded-lg text-text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
+              title={t('deleteNotification', 'حذف الإشعار')}
+              aria-label={t('deleteNotification', 'حذف الإشعار')}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           </div>
         )
       })}
@@ -272,32 +330,55 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex px-4 gap-2 pb-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab('all')}
-          className={cn(
-            'px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors select-none',
-            activeTab === 'all'
-              ? 'bg-brand-orange text-white shadow-soft font-black'
-              : 'text-text-muted hover:text-text-main bg-surface-subtle'
-          )}
-        >
-          {t('tabAll', 'الكل')} ({roleFiltered.length})
-        </button>
+      <div className="flex items-center justify-between px-4 gap-2 pb-2">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={cn(
+              'px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors select-none cursor-pointer',
+              activeTab === 'all'
+                ? 'bg-brand-orange text-white shadow-soft font-black'
+                : 'text-text-muted hover:text-text-main bg-surface-subtle'
+            )}
+          >
+            {t('tabAll', 'الكل')} ({roleFiltered.length})
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('unread')}
-          className={cn(
-            'px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors select-none',
-            activeTab === 'unread'
-              ? 'bg-brand-orange text-white shadow-soft font-black'
-              : 'text-text-muted hover:text-text-main bg-surface-subtle'
-          )}
-        >
-          {t('tabUnread', 'غير المقروءة')} ({unreadCount})
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('unread')}
+            className={cn(
+              'px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors select-none cursor-pointer',
+              activeTab === 'unread'
+                ? 'bg-brand-orange text-white shadow-soft font-black'
+                : 'text-text-muted hover:text-text-main bg-surface-subtle'
+            )}
+          >
+            {t('tabUnread', 'غير المقروءة')} ({unreadCount})
+          </button>
+        </div>
+
+        {roleFiltered.length > 0 && (
+          <div className="flex items-center gap-1.5 text-[11px]">
+            {roleFiltered.some((n) => n.read) && (
+              <button
+                type="button"
+                onClick={() => setConfirmDialog('clearRead')}
+                className="px-2 py-1 rounded-md text-text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors font-medium cursor-pointer"
+              >
+                {t('clearRead', 'مسح المقروءة')}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setConfirmDialog('clearAll')}
+              className="px-2 py-1 rounded-md text-text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors font-medium cursor-pointer"
+            >
+              {t('clearAll', 'مسح الكل')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -430,6 +511,25 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
           </Link>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(confirmDialog)}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={handleConfirmClear}
+        loading={isDeleting}
+        title={
+          confirmDialog === 'clearRead'
+            ? t('confirmClearReadTitle', 'مسح الإشعارات المقروءة')
+            : t('confirmClearAllTitle', 'مسح جميع الإشعارات')
+        }
+        message={
+          confirmDialog === 'clearRead'
+            ? t('confirmClearReadMessage', 'هل أنتِ متأكدة من رغبتكِ في حذف جميع الإشعارات المقروءة؟')
+            : t('confirmClearAllMessage', 'هل أنتِ متأكدة من حذف كافة الإشعارات نهائياً؟')
+        }
+        confirmText={t('common:actions.delete', 'حذف')}
+        cancelText={t('common:actions.cancel', 'إلغاء')}
+      />
     </>,
     document.body
   )

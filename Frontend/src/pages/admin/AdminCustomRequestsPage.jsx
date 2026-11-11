@@ -2,13 +2,16 @@ import {
   Building2,
   Phone,
   Search,
+  Trash2,
   User,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '../../components/ui/Badge'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DataTable } from '../../components/ui/DataTable'
 import { Input } from '../../components/ui/Input'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -53,6 +56,8 @@ export default function AdminCustomRequestsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearch = useDebounce(searchQuery, 300)
   const [updatingId, setUpdatingId] = useState(null)
+  const [requestToDelete, setRequestToDelete] = useState(null)
+  const [isDeletingRequest, setIsDeletingRequest] = useState(false)
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
@@ -93,6 +98,22 @@ export default function AdminCustomRequestsPage() {
       toast.error(getFriendlyError(err, t))
     } finally {
       setUpdatingId(null)
+    }
+  }
+
+  const handleDeleteRequest = async () => {
+    if (!requestToDelete) return
+    const id = requestToDelete.id || requestToDelete._id
+    try {
+      setIsDeletingRequest(true)
+      await contactService.deleteCustomRequest(id)
+      toast.success(isEn ? 'Custom request deleted successfully' : 'تم حذف طلب التفصيل بنجاح')
+      setRequestToDelete(null)
+      await fetchRequests()
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    } finally {
+      setIsDeletingRequest(false)
     }
   }
 
@@ -203,6 +224,25 @@ export default function AdminCustomRequestsPage() {
         </span>
       ),
     },
+    {
+      header: isEn ? 'Actions' : 'إجراءات',
+      key: 'actions',
+      render: (r) => (
+        <div className="flex items-center justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setRequestToDelete(r)}
+            className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            title={isEn ? 'Delete Request' : 'حذف الطلب'}
+            aria-label={isEn ? 'Delete Request' : 'حذف الطلب'}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+    },
   ]
 
   const renderMobileCard = (r) => {
@@ -253,19 +293,32 @@ export default function AdminCustomRequestsPage() {
             {r.createdAt ? formatDate(r.createdAt) : '—'}
           </span>
 
-          <div className="w-36">
-            <Select
-              id={`request-status-mob-${r.id || r._id}`}
-              value={r.status || 'new'}
-              onChange={(e) => handleStatusChange(r.id || r._id, e.target.value)}
-              disabled={updatingId === (r.id || r._id)}
-              className="text-xs py-1 h-8"
+          <div className="flex items-center gap-2">
+            <div className="w-32">
+              <Select
+                id={`request-status-mob-${r.id || r._id}`}
+                value={r.status || 'new'}
+                onChange={(e) => handleStatusChange(r.id || r._id, e.target.value)}
+                disabled={updatingId === (r.id || r._id)}
+                className="text-xs py-1 h-8"
+              >
+                <option value="new">{isEn ? 'New' : 'طلب جديد'}</option>
+                <option value="pending">{isEn ? 'Pending' : 'قيد المتابعة'}</option>
+                <option value="contacted">{isEn ? 'Contacted' : 'تم التواصل'}</option>
+                <option value="closed">{isEn ? 'Closed' : 'مكتمل / مغلق'}</option>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setRequestToDelete(r)}
+              className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+              title={isEn ? 'Delete Request' : 'حذف الطلب'}
+              aria-label={isEn ? 'Delete Request' : 'حذف الطلب'}
             >
-              <option value="new">{isEn ? 'New' : 'طلب جديد'}</option>
-              <option value="pending">{isEn ? 'Pending' : 'قيد المتابعة'}</option>
-              <option value="contacted">{isEn ? 'Contacted' : 'تم التواصل'}</option>
-              <option value="closed">{isEn ? 'Closed' : 'مكتمل / مغلق'}</option>
-            </Select>
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </Card>
@@ -314,6 +367,23 @@ export default function AdminCustomRequestsPage() {
         keyExtractor={(r) => r.id || r._id}
         emptyTitle={t('customRequests.emptyTitle')}
         emptyDescription={t('customRequests.emptyDescription')}
+      />
+
+      {/* نافذة تأكيد حذف طلب التفصيل */}
+      <ConfirmDialog
+        isOpen={Boolean(requestToDelete)}
+        onClose={() => !isDeletingRequest && setRequestToDelete(null)}
+        onConfirm={handleDeleteRequest}
+        title={isEn ? 'Delete Custom Request' : 'حذف طلب التفصيل'}
+        message={
+          isEn
+            ? `Are you sure you want to delete the custom request from "${requestToDelete?.name}"? This action cannot be undone.`
+            : `هل أنتِ متأكدة من رغبتكِ في حذف طلب التفصيل المقدم من "${requestToDelete?.name}"؟ لا يمكن التراجع عن هذا الإجراء.`
+        }
+        confirmText={isEn ? 'Delete' : 'حذف'}
+        cancelText={isEn ? 'Cancel' : 'إلغاء'}
+        variant="danger"
+        loading={isDeletingRequest}
       />
     </div>
   )

@@ -1,4 +1,4 @@
-import apiClient from './api'
+import apiClient from './api.js'
 
 export const notificationService = {
   /**
@@ -27,6 +27,24 @@ export const notificationService = {
    */
   async markAllRead() {
     return apiClient.post('/notifications/read-all')
+  },
+
+  /**
+   * Delete a single notification
+   * DELETE /notifications/:id
+   */
+  async deleteNotification(id) {
+    return apiClient.delete(`/notifications/${id}`)
+  },
+
+  /**
+   * Delete all notifications (or read-only when read=true)
+   * DELETE /notifications
+   */
+  async deleteNotifications(readOnly = false) {
+    return apiClient.delete('/notifications', {
+      params: readOnly ? { read: true } : {},
+    })
   },
 }
 

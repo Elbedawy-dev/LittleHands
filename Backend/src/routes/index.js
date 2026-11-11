@@ -123,8 +123,7 @@ router.post('/jobs/run/:jobName', authenticate, authorize('admin'), csrfGuard, a
   }
 })
 
-const cronRoute = '/jobs/cron'
-router.get(cronRoute, async (req, res, next) => {
+router.get('/jobs/cron', async (req, res, next) => {
   const secret = process.env.CRON_SECRET
   if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
     return next(new AppError('UNAUTHENTICATED', 401))

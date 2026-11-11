@@ -85,6 +85,25 @@ const localizedOptionalDetail = z.union([
     .optional(),
 ])
 
+export const productImageInputSchema = z
+  .object({
+    key: z.string().trim().min(1, 'Image key is required'),
+    url: z
+      .string()
+      .trim()
+      .refine(
+        (val) => {
+          if (!val || typeof val !== 'string') return false
+          if (val.startsWith('blob:') || val.startsWith('data:')) return false
+          return /^https?:\/\//i.test(val) || val.startsWith('/test-memory/') || val.startsWith('/storage/')
+        },
+        {
+          message: 'Product image URL must be a valid http(s) URL (blob: and data: URLs are forbidden)',
+        }
+      ),
+  })
+  .strict()
+
 export const productMutationSchema = z
   .object({
     name: localizedSafeText(2),
@@ -110,7 +129,7 @@ export const productMutationSchema = z
     stage: z.string().optional(),
     stages: z.array(z.string()).optional(),
     materials: z.array(z.string()).optional(),
-    images: z.array(z.any()).optional(),
+    images: z.array(productImageInputSchema).optional(),
     inStock: z.boolean().optional(),
     stock: z.coerce.number().int().min(0).optional(),
     stockCount: z.coerce.number().int().min(0).optional(),
@@ -194,7 +213,7 @@ export const productUpdateSchema = z
     stage: z.string().optional(),
     stages: z.array(z.string()).optional(),
     materials: z.array(z.string()).optional(),
-    images: z.array(z.any()).optional(),
+    images: z.array(productImageInputSchema).optional(),
     inStock: z.boolean().optional(),
     stock: z.coerce.number().int().min(0).optional(),
     stockCount: z.coerce.number().int().min(0).optional(),

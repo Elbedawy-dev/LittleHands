@@ -3,7 +3,16 @@ import { fromPiasters } from '../../utils/money.js'
 const iso = (d) => (d ? new Date(d).toISOString() : null)
 
 /** Admin-only customer row: contact + account info and order statistics (no credentials/lock data). */
-export function toCustomerSummaryDTO(user, { ordersCount = 0, totalSpentPiasters = 0, lastOrderAt = null } = {}) {
+export function toCustomerSummaryDTO(
+  user,
+  {
+    ordersCount = 0,
+    totalSpentPiasters = 0,
+    lastOrderAt = null,
+    customRequestsCount = 0,
+    lastCustomRequestAt = null,
+  } = {}
+) {
   const u = user.toObject ? user.toObject() : user
   return {
     id: (u._id || u.id).toString(),
@@ -21,5 +30,8 @@ export function toCustomerSummaryDTO(user, { ordersCount = 0, totalSpentPiasters
     lastOrderAt: iso(lastOrderAt),
     // Alias used by the existing customers table
     lastOrderDate: iso(lastOrderAt),
+    customRequestsCount,
+    lastCustomRequestAt: iso(lastCustomRequestAt),
+    lastCustomRequestDate: iso(lastCustomRequestAt),
   }
 }

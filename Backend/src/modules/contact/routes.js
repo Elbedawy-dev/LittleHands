@@ -2,6 +2,7 @@ import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { contactController } from './controller.js'
 import { csrfGuard } from '../../middlewares/csrfGuard.js'
+import { optionalAuth } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
 import { AppError } from '../../utils/appError.js'
 import { customRequestSchema } from './schemas.js'
@@ -25,6 +26,7 @@ router.post(
   '/custom-requests',
   strictCustomRequestLimiter,
   csrfGuard,
+  optionalAuth,
   validate(customRequestSchema),
   contactController.sendCustomRequest
 )

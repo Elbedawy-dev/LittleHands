@@ -10,6 +10,8 @@ const NotificationContext = createContext({
   fetchUnreadCount: async () => {},
   markAsRead: async () => {},
   markAllAsRead: async () => {},
+  deleteNotification: async () => {},
+  deleteNotifications: async () => {},
 })
 
 export function NotificationProvider({ children }) {
@@ -102,6 +104,38 @@ export function NotificationProvider({ children }) {
     }
   }
 
+  const deleteNotification = async (id) => {
+    try {
+      await notificationService.deleteNotification(id)
+      setNotifications((prev) => {
+        const target = prev.find((n) => n.id === id)
+        if (target && !target.read) {
+          setUnreadCount((c) => Math.max(0, c - 1))
+        }
+        return prev.filter((n) => n.id !== id)
+      })
+    } catch (err) {
+      console.error('Failed to delete notification:', err)
+      throw err
+    }
+  }
+
+  const deleteNotifications = async (readOnly = false) => {
+    try {
+      await notificationService.deleteNotifications(readOnly)
+      setNotifications((prev) => {
+        if (readOnly) {
+          return prev.filter((n) => !n.read)
+        }
+        setUnreadCount(0)
+        return []
+      })
+    } catch (err) {
+      console.error('Failed to clear notifications:', err)
+      throw err
+    }
+  }
+
   return (
     <NotificationContext.Provider
       value={{
@@ -112,6 +146,8 @@ export function NotificationProvider({ children }) {
         fetchUnreadCount,
         markAsRead,
         markAllAsRead,
+        deleteNotification,
+        deleteNotifications,
       }}
     >
       {children}

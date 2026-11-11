@@ -1,4 +1,4 @@
-import { Eye, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Eye, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../../components/ui/Button'
 import { DataTable } from '../../../components/ui/DataTable'
@@ -20,6 +20,8 @@ export function AdminOrdersTable({
   loading = false,
   onViewOrder,
   onDeleteOrder,
+  onArchiveOrder,
+  onUnarchiveOrder,
 }) {
   const { t, i18n } = useTranslation('admin-core')
   const isEn = i18n.language === 'en'
@@ -113,6 +115,36 @@ export function AdminOrdersTable({
               {t('orders.table.viewDetails')}
             </Button>
 
+            {o.archivedAt ? (
+              onUnarchiveOrder && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onUnarchiveOrder(o)}
+                  className="px-2.5 text-brand-orange border-brand-orange/30 hover:bg-brand-orange/10"
+                  title={t('orders.archive.unarchiveAction')}
+                  aria-label={t('orders.archive.unarchiveAction')}
+                >
+                  <ArchiveRestore className="w-4 h-4" />
+                </Button>
+              )
+            ) : o.status === 'delivered' ? (
+              onArchiveOrder && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onArchiveOrder(o)}
+                  className="px-2.5 text-text-muted hover:text-text-main border-surface-border hover:bg-surface-subtle"
+                  title={t('orders.archive.action')}
+                  aria-label={t('orders.archive.action')}
+                >
+                  <Archive className="w-4 h-4" />
+                </Button>
+              )
+            ) : null}
+
             {onDeleteOrder && (
               canDelete ? (
                 <Button
@@ -161,6 +193,8 @@ export function AdminOrdersTable({
           order={o}
           onViewOrder={onViewOrder}
           onDeleteOrder={onDeleteOrder}
+          onArchiveOrder={onArchiveOrder}
+          onUnarchiveOrder={onUnarchiveOrder}
           formatDate={formatDate}
           t={t}
           isEn={isEn}
@@ -174,7 +208,17 @@ export function AdminOrdersTable({
 /**
  * بطاقة عرض الطلب المخصصة للشاشات الصغيرة
  */
-function AdminOrderMobileCard({ order: o, onViewOrder, onDeleteOrder, formatDate, t, isEn, lang }) {
+function AdminOrderMobileCard({
+  order: o,
+  onViewOrder,
+  onDeleteOrder,
+  onArchiveOrder,
+  onUnarchiveOrder,
+  formatDate,
+  t,
+  isEn,
+  lang,
+}) {
   const itemsList = Array.isArray(o.items) ? o.items : []
   const itemsText = itemsList
     .map((i) => (typeof i.name === 'object' ? pickLocaleText(i.name, lang) : i.name))
@@ -230,6 +274,36 @@ function AdminOrderMobileCard({ order: o, onViewOrder, onDeleteOrder, formatDate
         >
           {t('orders.table.viewDetails')}
         </Button>
+
+        {o.archivedAt ? (
+          onUnarchiveOrder && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onUnarchiveOrder(o)}
+              className="px-3 text-brand-orange border-brand-orange/30 hover:bg-brand-orange/10"
+              title={t('orders.archive.unarchiveAction')}
+              aria-label={t('orders.archive.unarchiveAction')}
+            >
+              <ArchiveRestore className="w-4 h-4" />
+            </Button>
+          )
+        ) : o.status === 'delivered' ? (
+          onArchiveOrder && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onArchiveOrder(o)}
+              className="px-3 text-text-muted hover:text-text-main border-surface-border hover:bg-surface-subtle"
+              title={t('orders.archive.action')}
+              aria-label={t('orders.archive.action')}
+            >
+              <Archive className="w-4 h-4" />
+            </Button>
+          )
+        ) : null}
 
         {onDeleteOrder && (
           canDelete ? (

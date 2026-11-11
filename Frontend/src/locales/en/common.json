@@ -48,6 +48,7 @@
     "addToCart": "Add to Aids",
     "orderNow": "Order Now",
     "upload": "Upload File",
+    "retry": "Retry",
     "download": "Download",
     "refresh": "Refresh",
     "submit": "Submit",
@@ -96,7 +97,9 @@
   "materials": {
     "felt": "Craft felt",
     "cardstock": "Laminated cardstock",
-    "fabric": "Fabric"
+    "fabric": "Fabric",
+    "canson": "Canson Paper",
+    "nasbian": "Nasbian"
   },
   "vodafoneCash": {
     "title": "Vodafone Cash",
@@ -153,6 +156,8 @@
     "passwordMaskPlaceholder": "••••••••",
     "confirmDialogDefaultTitle": "Are you sure?",
     "confirmDialogDefaultConfirm": "Yes, Confirm",
-    "confirmDialogDefaultCancel": "Cancel"
+    "confirmDialogDefaultCancel": "Cancel",
+    "connection_error": "Cannot connect to server",
+    "connection_error_desc": "Please check your internet connection and try again."
   }
 }

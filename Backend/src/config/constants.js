@@ -156,7 +156,7 @@ export const ACCOUNT_TYPES = ['parent', 'teacher', 'nursery']
 
 export const EDUCATIONAL_STAGES = ['nursery', 'kg1', 'kg2', 'primary']
 
-export const MATERIAL_TYPES = ['felt', 'paper', 'fabric', 'cardstock']
+export const MATERIAL_TYPES = ['felt', 'paper', 'fabric', 'cardstock', 'canson', 'nasbian']
 
 export const ORDER_STATUSES = [
   'pending_payment',

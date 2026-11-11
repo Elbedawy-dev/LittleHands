@@ -12,5 +12,7 @@ router.get('/', authenticate, notificationController.getNotifications)
 router.get('/unread-count', authenticate, notificationController.getUnreadCount)
 router.patch('/:id/read', authenticate, csrfGuard, notificationController.markRead)
 router.post('/read-all', authenticate, csrfGuard, notificationController.markAllRead)
+router.delete('/:id', authenticate, csrfGuard, notificationController.deleteNotification)
+router.delete('/', authenticate, csrfGuard, notificationController.deleteNotifications)
 
 export default router

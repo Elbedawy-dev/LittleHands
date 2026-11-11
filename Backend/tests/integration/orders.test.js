@@ -245,7 +245,7 @@ describe('Orders Module Integration Tests', () => {
         categoryId: 'alphabet-boards',
         stages: ['nursery'],
         materials: ['felt'],
-        images: ['/storage/public/test_img.webp'],
+        images: [{ key: 'test_img', url: 'https://example.com/test_img.webp' }],
         published: false,
       })
       expect([200, 201]).toContain(createRes.status)
@@ -786,7 +786,7 @@ describe('Orders Module Integration Tests', () => {
       expect(restoredProduct.stock).toBe(7)
 
       const auditEntry = await AuditLog.findOne({
-        action: 'order.delete',
+        action: { $in: ['ORDER_DELETED', 'order.delete'] },
         entityId: order._id.toString(),
       })
       expect(auditEntry).not.toBeNull()

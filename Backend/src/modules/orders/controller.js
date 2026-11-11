@@ -72,7 +72,7 @@ export const orderController = {
   getAllOrders: asyncHandler(async (req, res) => {
     const page = Number(req.query.page) || 1
     const pageSize = Number(req.query.pageSize) || 10
-    const { status, sellerId, from, to, q } = req.query
+    const { status, sellerId, from, to, q, archived } = req.query
 
     const { items, total } = await orderService.getAllOrders({
       status,
@@ -80,6 +80,7 @@ export const orderController = {
       from,
       to,
       q,
+      archived,
       page,
       pageSize,
     })
@@ -126,6 +127,16 @@ export const orderController = {
     const result = await orderService.deleteOrder(req.params.id, req.user, {
       ip: req.ip || '',
     })
+    return ok(res, result)
+  }),
+
+  archiveOrder: asyncHandler(async (req, res) => {
+    const result = await orderService.archiveOrder(req.params.id, req.user)
+    return ok(res, result)
+  }),
+
+  unarchiveOrder: asyncHandler(async (req, res) => {
+    const result = await orderService.unarchiveOrder(req.params.id, req.user)
     return ok(res, result)
   }),
 

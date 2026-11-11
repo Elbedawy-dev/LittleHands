@@ -19,8 +19,9 @@ export function PaymentRejectModal({
   payment,
   loading = false,
 }) {
-  const { t } = useTranslation('admin-core')
-  const [reason, setReason] = useState(REJECT_REASONS[0])
+  const { t, i18n } = useTranslation('admin-core')
+  const isEn = i18n.language === 'en'
+  const [reason, setReason] = useState(REJECT_REASONS[0].id)
   const [notes, setNotes] = useState('')
   const [notifyClient, setNotifyClient] = useState(true)
 
@@ -75,8 +76,8 @@ export function PaymentRejectModal({
           required
         >
           {REJECT_REASONS.map((r) => (
-            <option key={r} value={r}>
-              {r}
+            <option key={r.id} value={r.id}>
+              {isEn ? r.en : r.ar}
             </option>
           ))}
         </Select>

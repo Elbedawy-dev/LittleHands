@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { CustomerListTable, CustomerStats } from '../../features/admin/customers'
 import { adminService } from '../../services/adminService'
@@ -8,10 +9,11 @@ import { orderService } from '../../services/orderService'
 import { getFriendlyError } from '../../utils'
 
 /**
- * صفحة قاعدة بيانات العملاء والحضانات المشتركة (للقراءة فقط)
+ * صفحة قاعدة بيانات العملاء والحضانات المشتركة
  */
 export default function AdminCustomersPage() {
-  const { t } = useTranslation('admin-manage')
+  const { t, i18n } = useTranslation('admin-manage')
+  const isEn = i18n.language === 'en'
 
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -20,55 +22,64 @@ export default function AdminCustomersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGovernorate, setSelectedGovernorate] = useState('')
 
-  useEffect(() => {
-    let isMounted = true
+  // حالة حذف عميلة
+  const [customerToDelete, setCustomerToDelete] = useState(null)
+  const [isDeletingCustomer, setIsDeletingCustomer] = useState(false)
 
-    async function loadCustomersData() {
-      try {
-        setLoading(true)
-        const [customerList, allOrders] = await Promise.all([
-          adminService.getCustomers(),
-          orderService.getAllOrders().catch(() => []),
-        ])
+  const loadCustomersData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const [customerList, allOrders] = await Promise.all([
+        adminService.getCustomers(),
+        orderService.getAllOrders().catch(() => []),
+      ])
 
-        const safeCustomers = Array.isArray(customerList)
-          ? customerList
-          : Array.isArray(customerList?.items)
-          ? customerList.items
-          : []
-        const safeOrders = Array.isArray(allOrders) ? allOrders : []
+      const safeCustomers = Array.isArray(customerList)
+        ? customerList
+        : Array.isArray(customerList?.items)
+        ? customerList.items
+        : []
+      const safeOrders = Array.isArray(allOrders) ? allOrders : []
 
-        // إثراء بيانات كل عميلة بتاريخ آخر طلب
-        const enriched = safeCustomers.map((c) => {
-          const userOrders = safeOrders
-            .filter((o) => o.customerId === c.id)
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          const lastOrderDate = userOrders[0]?.createdAt || null
+      // إثراء بيانات كل عميلة بتاريخ آخر طلب
+      const enriched = safeCustomers.map((c) => {
+        const userOrders = safeOrders
+          .filter((o) => o.customerId === c.id)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        const lastOrderDate = userOrders[0]?.createdAt || null
 
-          return {
-            ...c,
-            lastOrderDate,
-          }
-        })
-
-        if (isMounted) {
-          setCustomers(enriched)
+        return {
+          ...c,
+          lastOrderDate,
         }
-      } catch (err) {
-        toast.error(getFriendlyError(err, t))
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
+      })
 
-    loadCustomersData()
-
-    return () => {
-      isMounted = false
+      setCustomers(enriched)
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    } finally {
+      setLoading(false)
     }
   }, [t])
+
+  useEffect(() => {
+    loadCustomersData()
+  }, [loadCustomersData])
+
+  const handleConfirmDeleteCustomer = async () => {
+    if (!customerToDelete) return
+    setIsDeletingCustomer(true)
+    try {
+      await adminService.deleteUser(customerToDelete.id)
+      toast.success(t('customers.deleteSuccess'))
+      setCustomerToDelete(null)
+      await loadCustomersData()
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    } finally {
+      setIsDeletingCustomer(false)
+    }
+  }
 
   // تصفية العميلات حسب البحث والمحافظة
   const filteredCustomers = useMemo(() => {
@@ -113,6 +124,21 @@ export default function AdminCustomersPage() {
         onSearchChange={setSearchQuery}
         selectedGovernorate={selectedGovernorate}
         onSelectGovernorate={setSelectedGovernorate}
+        onDeleteCustomer={(c) => setCustomerToDelete(c)}
+      />
+
+      {/* نافذة تأكيد حذف حساب العميلة */}
+      <ConfirmDialog
+        isOpen={Boolean(customerToDelete)}
+        onClose={() => !isDeletingCustomer && setCustomerToDelete(null)}
+        onConfirm={handleConfirmDeleteCustomer}
+        title={t('customers.deleteTitle')}
+        message={t('customers.deleteMessage', { name: customerToDelete?.name || '' })}
+        confirmText={t('customers.deleteConfirmBtn')}
+        cancelText={t('customers.cancel', 'إلغاء')}
+        variant="danger"
+        loading={isDeletingCustomer}
+        requireWord={isEn ? 'DELETE' : 'حذف'}
       />
     </div>
   )

@@ -1,3 +1,4 @@
+import { Archive } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -24,6 +25,10 @@ export default function AdminOrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState(null)
   const [deletingOrder, setDeletingOrder] = useState(false)
 
+  // التبويب: الطلبات النشطة مقابل الأرشيف
+  const [archivedTab, setArchivedTab] = useState('active')
+  const [isBulkArchiving, setIsBulkArchiving] = useState(false)
+
   // المرشحات
   const [filters, setFilters] = useState({
     status: 'all',
@@ -37,14 +42,16 @@ export default function AdminOrdersPage() {
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await orderService.getAllOrders()
+      const data = await orderService.getAllOrders({
+        archived: archivedTab === 'archived' ? 'true' : 'false',
+      })
       setOrders(Array.isArray(data) ? data : [])
     } catch (err) {
       toast.error(getFriendlyError(err, t) || t('orders.loadError'))
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [t, archivedTab])
 
   useEffect(() => {
     fetchOrders()
@@ -127,6 +134,45 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const unarchivedDeliveredCount = useMemo(() => {
+    return orders.filter((o) => o.status === 'delivered' && !o.archivedAt).length
+  }, [orders])
+
+  const handleArchiveOrder = async (order) => {
+    try {
+      await orderService.archiveOrder(order.id)
+      toast.success(t('orders.archive.successToast', { number: order.number }))
+      await fetchOrders()
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    }
+  }
+
+  const handleUnarchiveOrder = async (order) => {
+    try {
+      await orderService.unarchiveOrder(order.id)
+      toast.success(t('orders.archive.unarchiveSuccessToast', { number: order.number }))
+      await fetchOrders()
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    }
+  }
+
+  const handleBulkArchive = async () => {
+    const toArchive = orders.filter((o) => o.status === 'delivered' && !o.archivedAt)
+    if (toArchive.length === 0) return
+    setIsBulkArchiving(true)
+    try {
+      await Promise.all(toArchive.map((o) => orderService.archiveOrder(o.id)))
+      toast.success(t('orders.archive.bulkArchiveSuccess'))
+      await fetchOrders()
+    } catch (err) {
+      toast.error(getFriendlyError(err, t))
+    } finally {
+      setIsBulkArchiving(false)
+    }
+  }
+
   const handleConfirmDeleteOrder = async () => {
     if (!orderToDelete) return
     setDeletingOrder(true)
@@ -153,6 +199,46 @@ export default function AdminOrdersPage() {
         description={t('orders.description')}
       />
 
+      {/* تبويبات الأرشفة وأزرار الإجراءات السريعة */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex p-1 rounded-2xl bg-surface-subtle border border-surface-border">
+          <button
+            type="button"
+            onClick={() => setArchivedTab('active')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              archivedTab === 'active'
+                ? 'bg-surface text-brand-orange shadow-xs'
+                : 'text-text-muted hover:text-text-main'
+            }`}
+          >
+            {t('orders.tabs.active')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setArchivedTab('archived')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              archivedTab === 'archived'
+                ? 'bg-surface text-brand-orange shadow-xs'
+                : 'text-text-muted hover:text-text-main'
+            }`}
+          >
+            {t('orders.tabs.archived')}
+          </button>
+        </div>
+
+        {archivedTab === 'active' && unarchivedDeliveredCount > 0 && (
+          <button
+            type="button"
+            onClick={handleBulkArchive}
+            disabled={isBulkArchiving}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface border border-surface-border hover:border-brand-orange/40 text-text-main transition-colors cursor-pointer"
+          >
+            <Archive className="w-3.5 h-3.5 text-brand-orange" />
+            <span>{t('orders.archive.bulkArchiveBtn')} ({unarchivedDeliveredCount})</span>
+          </button>
+        )}
+      </div>
+
       {/* مرشحات البحث والتصفية */}
       <AdminOrderFilters
         filters={filters}
@@ -166,6 +252,8 @@ export default function AdminOrdersPage() {
         loading={loading}
         onViewOrder={handleViewOrder}
         onDeleteOrder={(order) => setOrderToDelete(order)}
+        onArchiveOrder={handleArchiveOrder}
+        onUnarchiveOrder={handleUnarchiveOrder}
       />
 
       {/* درج التفاصيل الشامل للطلب */}

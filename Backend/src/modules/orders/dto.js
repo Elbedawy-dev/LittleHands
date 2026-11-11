@@ -92,6 +92,7 @@ export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) 
       byId: t.byId?.toString ? t.byId.toString() : (t.byId || null),
     })),
     notes: o.notes || '',
+    archivedAt: o.archivedAt?.toISOString ? o.archivedAt.toISOString() : (o.archivedAt || null),
     createdAt: o.createdAt?.toISOString ? o.createdAt.toISOString() : o.createdAt,
     updatedAt: o.updatedAt?.toISOString ? o.updatedAt.toISOString() : o.updatedAt,
   }

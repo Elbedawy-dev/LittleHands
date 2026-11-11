@@ -6,6 +6,11 @@ import { Address } from '../../db/models/Address.js'
 import { Favorite } from '../../db/models/Favorite.js'
 import { Product } from '../../db/models/Product.js'
 import { RefreshToken } from '../../db/models/RefreshToken.js'
+import { Order } from '../../db/models/Order.js'
+import { Notification } from '../../db/models/Notification.js'
+import { OtpCode } from '../../db/models/OtpCode.js'
+import { CustomRequest } from '../../db/models/CustomRequest.js'
+import { Payout } from '../../db/models/Payout.js'
 import { storage } from '../../infra/storage/index.js'
 import { audit } from '../../infra/audit/index.js'
 import { eventBus, EVENT_TYPES } from '../../events/index.js'
@@ -14,6 +19,7 @@ import { mapProductDTO } from '../../utils/dto.js'
 import { randomToken } from '../../utils/crypto.js'
 import { normalizeEgyptianPhone, isValidEgyptianPhone } from '../../utils/phone.js'
 import { authService } from '../auth/service.js'
+import { sellerFinancials } from '../earnings/service.js'
 
 export const userService = {
   /**
@@ -464,11 +470,239 @@ export const userService = {
   },
 
   /**
-   * Admin: List seller accounts
+   * Admin: List seller accounts (excluding deleted)
    */
   async getSellerAccounts() {
-    const sellers = await User.find({ role: 'seller' }).sort({ createdAt: -1 })
+    const sellers = await User.find({ role: 'seller', status: { $ne: 'deleted' } }).sort({ createdAt: -1 })
     return sellers
+  },
+
+  /**
+   * Customer: Self delete account (requires password verification)
+   */
+  async deleteAccount(userId, password, { ip = '' } = {}) {
+    const user = await User.findById(userId).select('+passwordHash')
+    if (!user) {
+      throw new AppError('NOT_FOUND', 404)
+    }
+
+    const isValid = await bcrypt.compare(password, user.passwordHash)
+    if (!isValid) {
+      throw new AppError('INVALID_CREDENTIALS', 400, 'كلمة المرور غير صحيحة')
+    }
+
+    // Active orders check
+    const activeOrder = await Order.findOne({
+      customerId: user._id,
+      status: { $in: ['pending_payment', 'payment_confirmed', 'preparing', 'shipped'] },
+    })
+    if (activeOrder) {
+      throw new AppError('ACCOUNT_HAS_ACTIVE_ORDERS', 409, 'لا يمكن حذف الحساب لوجود طلبات نشطة جاري تنفيذها')
+    }
+
+    const orderCount = await Order.countDocuments({ customerId: user._id })
+
+    // Clean tokens, OTPs, notifications, addresses, favorites, and avatar
+    await Promise.all([
+      RefreshToken.deleteMany({ userId: user._id }),
+      OtpCode.deleteMany({ userId: user._id }),
+      Notification.deleteMany({ recipient: user._id }),
+      Address.deleteMany({ userId: user._id }),
+      Favorite.deleteMany({ userId: user._id }),
+    ])
+
+    if (user.avatar?.key) {
+      await storage.remove(user.avatar.key).catch(() => {})
+    }
+
+    if (orderCount === 0) {
+      await CustomRequest.updateMany({ customerId: user._id }, { $set: { customerId: null } })
+      await User.findByIdAndDelete(user._id)
+      await audit.log(user._id, 'USER_ACCOUNT_DELETED', 'User', user._id.toString(), { mode: 'hard' }, ip)
+      return { success: true, mode: 'hard' }
+    }
+
+    // Anonymize user record to preserve historical order integrity
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          name: 'حساب محذوف',
+          email: `deleted-${user._id}@deleted.invalid`,
+          phone: `00000000000-${user._id}`,
+          avatar: { key: null, url: null },
+          governorate: '',
+          city: '',
+          address: '',
+          nurseryName: '',
+          status: 'deleted',
+          deletedAt: new Date(),
+          emailVerified: false,
+        },
+      }
+    )
+
+    await audit.log(user._id, 'USER_ACCOUNT_ANONYMIZED', 'User', user._id.toString(), { mode: 'anonymized' }, ip)
+    return { success: true, mode: 'anonymized' }
+  },
+
+  /**
+   * Admin: Delete user (customer or seller)
+   */
+  async deleteUserByAdmin(adminId, targetUserId, { ip = '' } = {}) {
+    if (!mongoose.isValidObjectId(targetUserId)) {
+      throw new AppError('NOT_FOUND', 404)
+    }
+
+    if (adminId.toString() === targetUserId.toString()) {
+      throw new AppError('BAD_REQUEST', 400, 'Cannot delete yourself')
+    }
+
+    const target = await User.findById(targetUserId)
+    if (!target) {
+      throw new AppError('NOT_FOUND', 404)
+    }
+
+    if (target.role === 'admin') {
+      throw new AppError('FORBIDDEN', 403, 'Cannot delete an admin account')
+    }
+
+    if (target.role === 'customer') {
+      const activeOrder = await Order.findOne({
+        customerId: target._id,
+        status: { $in: ['pending_payment', 'payment_confirmed', 'preparing', 'shipped'] },
+      })
+      if (activeOrder) {
+        throw new AppError('ACCOUNT_HAS_ACTIVE_ORDERS', 409, 'لا يمكن حذف الحساب لوجود طلبات نشطة جاري تنفيذها')
+      }
+
+      const orderCount = await Order.countDocuments({ customerId: target._id })
+
+      await Promise.all([
+        RefreshToken.deleteMany({ userId: target._id }),
+        OtpCode.deleteMany({ userId: target._id }),
+        Notification.deleteMany({ recipient: target._id }),
+        Address.deleteMany({ userId: target._id }),
+        Favorite.deleteMany({ userId: target._id }),
+      ])
+
+      if (target.avatar?.key) {
+        await storage.remove(target.avatar.key).catch(() => {})
+      }
+
+      if (orderCount === 0) {
+        await CustomRequest.updateMany({ customerId: target._id }, { $set: { customerId: null } })
+        await User.findByIdAndDelete(target._id)
+        await audit.log(adminId, 'USER_DELETED_BY_ADMIN', 'User', target._id.toString(), { mode: 'hard', targetRole: 'customer' }, ip)
+        return { success: true, mode: 'hard', id: target._id.toString() }
+      }
+
+      await User.updateOne(
+        { _id: target._id },
+        {
+          $set: {
+            name: 'حساب محذوف',
+            email: `deleted-${target._id}@deleted.invalid`,
+            phone: `00000000000-${target._id}`,
+            avatar: { key: null, url: null },
+            governorate: '',
+            city: '',
+            address: '',
+            nurseryName: '',
+            status: 'deleted',
+            deletedAt: new Date(),
+            deletedBy: adminId,
+            emailVerified: false,
+          },
+        }
+      )
+
+      await audit.log(adminId, 'USER_ANONYMIZED_BY_ADMIN', 'User', target._id.toString(), { mode: 'anonymized', targetRole: 'customer' }, ip)
+      return { success: true, mode: 'anonymized', id: target._id.toString() }
+    }
+
+    if (target.role === 'seller') {
+      const activeOrder = await Order.findOne({
+        'items.sellerId': target._id,
+        status: { $in: ['pending_payment', 'payment_confirmed', 'preparing', 'shipped'] },
+      })
+      if (activeOrder) {
+        throw new AppError('SELLER_HAS_ACTIVE_ORDERS', 409, 'لا يمكن حذف البائعة لوجود طلبات نشطة لمنتجاتها')
+      }
+
+      const financials = await sellerFinancials(target._id)
+      const duePiasters = Math.max(0, (financials.net || 0) - (financials.paid || 0))
+      if (duePiasters > 0) {
+        throw new AppError('SELLER_HAS_ACTIVE_OBLIGATIONS', 409, 'لا يمكن حذف البائعة لوجود مستحقات مالية غير مسددة')
+      }
+
+      const hasPendingPayout = await Payout.exists({ sellerId: target._id, status: 'pending' })
+      if (hasPendingPayout) {
+        throw new AppError('SELLER_HAS_ACTIVE_OBLIGATIONS', 409, 'لا يمكن حذف البائعة لوجود دفعات معلقة')
+      }
+
+      // Release claimed custom requests back to pool
+      await CustomRequest.updateMany(
+        { claimedBy: target._id, status: 'pending' },
+        { $set: { claimedBy: null, claimedAt: null, status: 'new' } }
+      )
+
+      // Handle products: hard delete unsold products and wipe images, soft-delete products with orders
+      const products = await Product.find({ sellerId: target._id })
+      for (const product of products) {
+        const hasOrder = await Order.exists({ 'items.productId': product._id })
+        if (hasOrder) {
+          await Product.updateOne({ _id: product._id }, { $set: { deletedAt: new Date(), published: false } })
+        } else {
+          for (const img of product.images || []) {
+            if (img.key) await storage.remove(img.key).catch(() => {})
+          }
+          await Product.findByIdAndDelete(product._id)
+        }
+      }
+
+      await Promise.all([
+        RefreshToken.deleteMany({ userId: target._id }),
+        OtpCode.deleteMany({ userId: target._id }),
+        Notification.deleteMany({ recipient: target._id }),
+      ])
+
+      if (target.avatar?.key) {
+        await storage.remove(target.avatar.key).catch(() => {})
+      }
+
+      const hasOrderHistory = await Order.exists({ 'items.sellerId': target._id })
+      const hasPayoutHistory = await Payout.exists({ sellerId: target._id })
+
+      if (hasOrderHistory || hasPayoutHistory) {
+        await User.updateOne(
+          { _id: target._id },
+          {
+            $set: {
+              name: 'حساب محذوف',
+              email: `deleted-${target._id}@deleted.invalid`,
+              phone: `00000000000-${target._id}`,
+              avatar: { key: null, url: null },
+              status: 'deleted',
+              deletedAt: new Date(),
+              deletedBy: adminId,
+              'seller.displayName': { ar: 'بائعة سابقة', en: 'Former Seller' },
+              'seller.bio': { ar: '', en: '' },
+              emailVerified: false,
+            },
+          }
+        )
+
+        await audit.log(adminId, 'SELLER_ANONYMIZED_BY_ADMIN', 'User', target._id.toString(), { mode: 'anonymized' }, ip)
+        return { success: true, mode: 'anonymized', id: target._id.toString() }
+      }
+
+      await User.findByIdAndDelete(target._id)
+      await audit.log(adminId, 'SELLER_DELETED_BY_ADMIN', 'User', target._id.toString(), { mode: 'hard' }, ip)
+      return { success: true, mode: 'hard', id: target._id.toString() }
+    }
+
+    throw new AppError('BAD_REQUEST', 400, 'Unsupported user role for deletion')
   },
 }
 

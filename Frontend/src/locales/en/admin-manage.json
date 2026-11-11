@@ -70,15 +70,22 @@
       "phone": "Phone Number",
       "governorate": "Governorate",
       "ordersCount": "Orders Count",
+      "customRequests": "Custom Requests",
       "lastOrderDate": "Last Order Date",
-      "totalSpent": "Total Purchases"
+      "totalSpent": "Total Purchases",
+      "actions": "Actions"
     },
     "nurseryTypeDefault": "Nursery / KG",
     "individualType": "Individual Teacher",
     "noOrdersYet": "No orders yet",
     "emptyTitle": "No registered customers found",
     "emptyMessage": "Check the teacher name, nursery name, or phone number",
-    "errorLoading": "Failed to load customers database"
+    "errorLoading": "Failed to load customers database",
+    "deleteTitle": "Delete Customer Account",
+    "deleteMessage": "Are you sure you want to delete customer account {{name}}? Active orders will block deletion, and previous orders will be retained with anonymized personal data for accounting records.",
+    "deleteConfirmBtn": "Yes, Delete Account",
+    "deleteSuccess": "Customer account deleted successfully",
+    "cancel": "Cancel"
   },
   "categories": {
     "title": "Approved Educational Categories",

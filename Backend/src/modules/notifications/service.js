@@ -137,6 +137,57 @@ export const notificationService = {
 
     return { count: result.modifiedCount || 0 }
   },
+
+  /**
+   * Deletes a single notification (Owner-only with object-level authorization).
+   * Returns 404 for notifications caller does not own.
+   *
+   * @param {Object} user
+   * @param {string} notificationId
+   * @returns {Promise<{ success: boolean, id: string }>}
+   */
+  async deleteNotification(user, notificationId) {
+    if (!mongoose.Types.ObjectId.isValid(notificationId)) {
+      throw new AppError('NOT_FOUND', 404)
+    }
+
+    const notif = await Notification.findById(notificationId)
+    if (!notif) {
+      throw new AppError('NOT_FOUND', 404)
+    }
+
+    const userId = user._id ? user._id.toString() : user.id?.toString()
+    const notifUserId = notif.userId ? notif.userId.toString() : null
+
+    const isDirectOwner = notifUserId && notifUserId === userId
+    const isRoleOwner = !notifUserId && notif.role === user.role
+
+    if (!isDirectOwner && !isRoleOwner) {
+      throw new AppError('NOT_FOUND', 404)
+    }
+
+    await Notification.deleteOne({ _id: notif._id })
+    return { success: true, id: notificationId }
+  },
+
+  /**
+   * Deletes notifications for user (all, or read-only when readOnly=true).
+   *
+   * @param {Object} user
+   * @param {{ readOnly?: boolean }} options
+   * @returns {Promise<{ success: boolean, count: number }>}
+   */
+  async deleteNotifications(user, { readOnly = false } = {}) {
+    const filter = {
+      ...buildUserFilter(user),
+    }
+    if (readOnly) {
+      filter.read = true
+    }
+
+    const result = await Notification.deleteMany(filter)
+    return { success: true, count: result.deletedCount || 0 }
+  },
 }
 
 export default notificationService

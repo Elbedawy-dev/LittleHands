@@ -47,6 +47,24 @@ export const notificationController = {
     const result = await notificationService.markAllRead(req.user)
     return ok(res, result)
   }),
+
+  /**
+   * DELETE /api/v1/notifications/:id
+   */
+  deleteNotification: asyncHandler(async (req, res) => {
+    const params = notificationIdParamSchema.parse(req.params)
+    const result = await notificationService.deleteNotification(req.user, params.id)
+    return ok(res, result)
+  }),
+
+  /**
+   * DELETE /api/v1/notifications
+   */
+  deleteNotifications: asyncHandler(async (req, res) => {
+    const readOnly = req.query.read === 'true' || req.query.read === true
+    const result = await notificationService.deleteNotifications(req.user, { readOnly })
+    return ok(res, result)
+  }),
 }
 
 export default notificationController

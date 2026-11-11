@@ -42,6 +42,9 @@ export function getCookieOptions(type = 'access') {
   }
 }
 
+// Map to deduplicate concurrent parallel refresh requests for the same token
+const inFlightRefreshes = new Map()
+
 export const authService = {
   /**
    * Register a new customer
@@ -155,7 +158,10 @@ export const authService = {
       throw new AppError('INVALID_CREDENTIALS', 401)
     }
 
-    // Check suspension
+    // Check suspension / deletion
+    if (user.status === 'deleted') {
+      throw new AppError('ACCOUNT_DELETED', 403, 'هذا الحساب تم حذفه')
+    }
     if (user.status === 'suspended') {
       throw new AppError('ACCOUNT_SUSPENDED', 403)
     }
@@ -209,52 +215,66 @@ export const authService = {
     }
 
     const tokenHash = sha256(rawRefreshToken)
-    const tokenDoc = await RefreshToken.findOne({ tokenHash })
-
-    if (!tokenDoc) {
-      throw new AppError('UNAUTHENTICATED', 401)
+    if (inFlightRefreshes.has(tokenHash)) {
+      return await inFlightRefreshes.get(tokenHash)
     }
 
-    // Reuse detection: token already revoked! Revoke entire family!
-    if (tokenDoc.revokedAt) {
-      await RefreshToken.updateMany(
-        { family: tokenDoc.family },
-        { revokedAt: new Date() }
-      )
-      throw new AppError('UNAUTHENTICATED', 401, 'Token reuse detected')
-    }
+    const refreshPromise = (async () => {
+      const tokenDoc = await RefreshToken.findOne({ tokenHash })
 
-    if (tokenDoc.expiresAt < new Date()) {
-      throw new AppError('UNAUTHENTICATED', 401, 'Refresh token expired')
-    }
+      if (!tokenDoc) {
+        throw new AppError('UNAUTHENTICATED', 401)
+      }
 
-    const user = await User.findById(tokenDoc.userId)
-    if (!user || user.status === 'suspended') {
-      throw new AppError('ACCOUNT_SUSPENDED', 403)
-    }
+      // Reuse detection: token already revoked! Revoke entire family!
+      if (tokenDoc.revokedAt) {
+        await RefreshToken.updateMany(
+          { family: tokenDoc.family },
+          { revokedAt: new Date() }
+        )
+        throw new AppError('UNAUTHENTICATED', 401, 'Token reuse detected')
+      }
 
-    const newRefreshToken = generateRefreshToken()
-    const newHashedToken = sha256(newRefreshToken)
+      if (tokenDoc.expiresAt < new Date()) {
+        throw new AppError('UNAUTHENTICATED', 401, 'Refresh token expired')
+      }
 
-    tokenDoc.revokedAt = new Date()
-    tokenDoc.replacedBy = newHashedToken
-    await tokenDoc.save()
+      const user = await User.findById(tokenDoc.userId)
+      if (!user || user.status === 'suspended' || user.status === 'deleted') {
+        throw new AppError(user?.status === 'deleted' ? 'ACCOUNT_DELETED' : 'ACCOUNT_SUSPENDED', 403)
+      }
 
-    await RefreshToken.create({
-      userId: user._id,
-      tokenHash: newHashedToken,
-      family: tokenDoc.family,
-      expiresAt: new Date(Date.now() + (env.REFRESH_TTL_DAYS || 7) * 24 * 60 * 60 * 1000),
-      ip,
-      userAgent,
-    })
+      const newRefreshToken = generateRefreshToken()
+      const newHashedToken = sha256(newRefreshToken)
 
-    const newAccessToken = generateAccessToken(user)
+      tokenDoc.revokedAt = new Date()
+      tokenDoc.replacedBy = newHashedToken
+      await tokenDoc.save()
 
-    return {
-      user,
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      await RefreshToken.create({
+        userId: user._id,
+        tokenHash: newHashedToken,
+        family: tokenDoc.family,
+        expiresAt: new Date(Date.now() + (env.REFRESH_TTL_DAYS || 7) * 24 * 60 * 60 * 1000),
+        ip,
+        userAgent,
+      })
+
+      const newAccessToken = generateAccessToken(user)
+
+      return {
+        user,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        rotated: true,
+      }
+    })()
+
+    inFlightRefreshes.set(tokenHash, refreshPromise)
+    try {
+      return await refreshPromise
+    } finally {
+      inFlightRefreshes.delete(tokenHash)
     }
   },
 

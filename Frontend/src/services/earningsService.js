@@ -1,4 +1,4 @@
-import apiClient from './api'
+import apiClient from './api.js'
 
 export const earningsService = {
   /**
@@ -21,6 +21,14 @@ export const earningsService = {
    */
   async getSellerEarnings(query = {}) {
     return apiClient.get('/earnings/seller/earnings', { params: query })
+  },
+
+  /**
+   * Seller: Get own payouts history
+   * GET /earnings/seller/payouts
+   */
+  async getSellerPayouts(params = {}) {
+    return apiClient.get('/earnings/seller/payouts', { params })
   },
 
   /**

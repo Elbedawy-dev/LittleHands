@@ -15,10 +15,11 @@ const router = Router()
 // All routes here strictly require admin authentication
 router.use(authenticate, authorize('admin'))
 
-// Admin accounts: POST /admin/sellers, GET /admin/sellers/accounts, PATCH /admin/users/:id/status
+// Admin accounts: POST /admin/sellers, GET /admin/sellers/accounts, PATCH /admin/users/:id/status, DELETE /admin/users/:id
 router.post('/sellers', csrfGuard, validate(createSellerSchema), userController.createSeller)
 router.get('/sellers/accounts', userController.getSellerAccounts)
 router.patch('/users/:id/status', csrfGuard, validate(updateUserStatusSchema), userController.updateUserStatus)
+router.delete('/users/:id', csrfGuard, userController.deleteUserByAdmin)
 
 // Customers overview & list: GET /admin/customers
 router.get('/customers', adminController.getCustomers)
@@ -42,8 +43,9 @@ router.put('/settings/shipping-rates', csrfGuard, settingsController.updateShipp
 router.put('/categories/order', csrfGuard, validate(reorderCategoriesSchema), adminController.reorderCategories)
 router.put('/categories/:slug', csrfGuard, validate(updateCategorySchema), adminController.updateCategory)
 
-// Custom Requests: GET /admin/custom-requests, PATCH /admin/custom-requests/:id
+// Custom Requests: GET /admin/custom-requests, PATCH /admin/custom-requests/:id, DELETE /admin/custom-requests/:id
 router.get('/custom-requests', validate({ query: customRequestQuerySchema }), contactController.getCustomRequests)
 router.patch('/custom-requests/:id', csrfGuard, validate(updateCustomRequestStatusSchema), contactController.updateCustomRequestStatus)
+router.delete('/custom-requests/:id', csrfGuard, contactController.deleteCustomRequest)
 
 export default router

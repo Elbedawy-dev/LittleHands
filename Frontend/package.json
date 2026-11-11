@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint . && npm run check:children",
+    "lint": "eslint . && npm run check:children && npm run check:contracts",
     "preview": "vite preview",
     "check:children": "node scripts/check-no-object-children.mjs",
+    "check:contracts": "node scripts/check-contracts.mjs",
     "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {

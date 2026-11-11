@@ -6,6 +6,7 @@ import {
   addressSchema,
   updateAddressSchema,
   notificationPrefsSchema,
+  deleteAccountSchema,
 } from './schemas.js'
 import { authenticate, authorize } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
@@ -24,6 +25,7 @@ const upload = multer({
 // Profile & me
 router.get('/me', authenticate, userController.getProfile)
 router.patch('/me', authenticate, csrfGuard, validate(updateProfileSchema), userController.updateProfile)
+router.delete('/me', authenticate, authorize('customer'), csrfGuard, validate(deleteAccountSchema), userController.deleteMyAccount)
 
 // Avatar upload
 router.post('/me/avatar', authenticate, csrfGuard, upload.single('avatar'), userController.uploadAvatar)

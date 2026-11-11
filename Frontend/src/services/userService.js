@@ -84,7 +84,10 @@ export const userService = {
   async saveAddress(addressData) {
     const id = addressData.id || addressData._id
     if (id) {
-      const res = await apiClient.put(`/users/me/addresses/${id}`, addressData)
+      const payload = { ...addressData }
+      delete payload.id
+      delete payload._id
+      const res = await apiClient.put(`/users/me/addresses/${id}`, payload)
       return res
     }
     const res = await apiClient.post('/users/me/addresses', addressData)
@@ -106,6 +109,17 @@ export const userService = {
    */
   async updateNotificationPrefs(prefs) {
     const res = await apiClient.patch('/users/me/notification-prefs', prefs)
+    return res
+  },
+
+  /**
+   * حذف حساب المستخدم الحالي (للعملاء)
+   * DELETE /users/me
+   */
+  async deleteMyAccount(password) {
+    const res = await apiClient.delete('/users/me', {
+      data: { password },
+    })
     return res
   },
 }

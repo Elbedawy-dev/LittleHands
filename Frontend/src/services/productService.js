@@ -34,7 +34,10 @@ export const productService = {
       materials: values.materials || ['felt'],
       images: values.images || [],
       published: values.isPublished !== undefined ? Boolean(values.isPublished) : values.published !== false,
-      featured: values.isFeatured !== undefined ? Boolean(values.isFeatured) : Boolean(values.featured),
+    }
+
+    if (values.isFeatured !== undefined && values.isFeatured !== null) {
+      payload.isFeatured = Boolean(values.isFeatured)
     }
 
     if (!payload.sellerId) {
@@ -60,9 +63,11 @@ export const productService = {
       payload.published = Boolean(payload.isPublished)
       delete payload.isPublished
     }
-    if (payload.isFeatured !== undefined && payload.featured === undefined) {
-      payload.featured = Boolean(payload.isFeatured)
-      delete payload.isFeatured
+    if (payload.featured !== undefined) {
+      if (payload.isFeatured === undefined) {
+        payload.isFeatured = Boolean(payload.featured)
+      }
+      delete payload.featured
     }
 
     const res = await apiClient.patch(`/products/manage/products/${id}`, payload)
@@ -119,7 +124,7 @@ export const productService = {
       },
     })
 
-    return res?.urls || res || []
+    return res
   },
 }
 

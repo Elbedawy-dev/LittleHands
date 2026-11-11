@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Package,
   Receipt,
+  Trash2,
   Truck,
   Wallet,
 } from 'lucide-react'
@@ -14,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
@@ -90,21 +92,29 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
   const { t, i18n } = useTranslation('notifications')
   const isEn = i18n.language === 'en'
   const { user } = useAuth()
-  const { notifications, markAsRead, markAllAsRead } = useNotifications()
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    deleteNotifications,
+  } = useNotifications()
   const { formatRelativeTime, formatDateTime } = useFormat()
 
   const currentRole = propRole || (user ? user.role : 'customer')
   const [activeTab, setActiveTab] = useState('all') // 'all' | 'unread'
   const [categoryFilter, setCategoryFilter] = useState('all') // 'all' | 'orders' | 'payments' | 'shipping' | 'payouts'
   const [localNotifications, setLocalNotifications] = useState([])
+  const [confirmDialog, setConfirmDialog] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // جلب الإشعارات الخاصة بالدور المحدد لتحقيق الموثوقية
   useEffect(() => {
     let mounted = true
     async function load() {
       try {
-        const data = await notificationService.getNotifications(currentRole)
-        if (mounted) setLocalNotifications(Array.isArray(data) ? data : [])
+        const data = await notificationService.getNotifications()
+        if (mounted) setLocalNotifications(Array.isArray(data) ? data : (data?.items || []))
       } catch (err) {
         console.warn('Failed to load notifications:', err)
       }
@@ -145,6 +155,34 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
   const handleMarkAll = () => {
     markAllAsRead(currentRole)
     setLocalNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+  }
+
+  const handleDeleteItem = async (id) => {
+    try {
+      await deleteNotification(id)
+      setLocalNotifications((prev) => prev.filter((n) => n.id !== id))
+    } catch (err) {
+      console.error('Failed to delete notification:', err)
+    }
+  }
+
+  const handleConfirmClear = async () => {
+    if (!confirmDialog) return
+    setIsDeleting(true)
+    try {
+      if (confirmDialog === 'clearRead') {
+        await deleteNotifications(true)
+        setLocalNotifications((prev) => prev.filter((n) => !n.read))
+      } else if (confirmDialog === 'clearAll') {
+        await deleteNotifications(false)
+        setLocalNotifications([])
+      }
+      setConfirmDialog(null)
+    } catch (err) {
+      console.error('Failed to clear notifications:', err)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   // التصفية حسب التبويب والتصنيف
@@ -235,17 +273,39 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
           </button>
         </div>
 
-        {/* زر تحديد الكل كمقروء */}
-        {currentUnreadCount > 0 && (
-          <button
-            type="button"
-            onClick={handleMarkAll}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-orange-text dark:text-brand-orange hover:underline cursor-pointer self-end sm:self-center"
-          >
-            <CheckCheck className="w-4 h-4" />
-            <span>{isEn ? 'Mark all as read' : 'تحديد الكل كمقروء'}</span>
-          </button>
-        )}
+        {/* أزرار الإجراءات السريعة */}
+        <div className="flex flex-wrap items-center gap-2 self-end sm:self-center">
+          {currentUnreadCount > 0 && (
+            <button
+              type="button"
+              onClick={handleMarkAll}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-orange-text dark:text-brand-orange hover:underline cursor-pointer"
+            >
+              <CheckCheck className="w-4 h-4" />
+              <span>{isEn ? 'Mark all as read' : 'تحديد الكل كمقروء'}</span>
+            </button>
+          )}
+
+          {roleFiltered.some((n) => n.read) && (
+            <button
+              type="button"
+              onClick={() => setConfirmDialog('clearRead')}
+              className="text-xs font-bold text-text-muted hover:text-rose-600 transition-colors cursor-pointer px-2.5 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            >
+              {t('clearRead', 'مسح المقروءة')}
+            </button>
+          )}
+
+          {roleFiltered.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setConfirmDialog('clearAll')}
+              className="text-xs font-bold text-text-muted hover:text-rose-600 transition-colors cursor-pointer px-2.5 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            >
+              {t('clearAll', 'مسح الكل')}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* تصنيفات الفلترة السريعة */}
@@ -298,6 +358,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
                     key={n.id}
                     notification={n}
                     onMarkRead={handleMarkItemRead}
+                    onDelete={handleDeleteItem}
                     formatRelativeTime={formatRelativeTime}
                     formatDateTime={formatDateTime}
                     isEn={isEn}
@@ -324,6 +385,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
                     key={n.id}
                     notification={n}
                     onMarkRead={handleMarkItemRead}
+                    onDelete={handleDeleteItem}
                     formatRelativeTime={formatRelativeTime}
                     formatDateTime={formatDateTime}
                     isEn={isEn}
@@ -336,6 +398,25 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(confirmDialog)}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={handleConfirmClear}
+        loading={isDeleting}
+        title={
+          confirmDialog === 'clearRead'
+            ? t('confirmClearReadTitle', 'مسح الإشعارات المقروءة')
+            : t('confirmClearAllTitle', 'مسح جميع الإشعارات')
+        }
+        message={
+          confirmDialog === 'clearRead'
+            ? t('confirmClearReadMessage', 'هل أنتِ متأكدة من رغبتكِ في حذف جميع الإشعارات المقروءة؟')
+            : t('confirmClearAllMessage', 'هل أنتِ متأكدة من حذف كافة الإشعارات نهائياً؟')
+        }
+        confirmText={t('common:actions.delete', 'حذف')}
+        cancelText={t('common:actions.cancel', 'إلغاء')}
+      />
     </div>
   )
 }
@@ -346,6 +427,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
 function NotificationItem({
   notification,
   onMarkRead,
+  onDelete,
   formatRelativeTime,
   formatDateTime,
   isEn,
@@ -355,13 +437,27 @@ function NotificationItem({
   const badge = getNotificationBadge(notification, isEn)
   const isUnread = !notification.read
 
-  const titleText = typeof notification.title === 'object'
+  const storedTitle = typeof notification.title === 'object'
     ? pickLocaleText(notification.title, lang)
     : notification.title
 
-  const messageText = typeof notification.message === 'object'
+  const storedMessage = typeof notification.message === 'object'
     ? pickLocaleText(notification.message, lang)
     : notification.message
+
+  const titleText = storedTitle || (
+    notification.type === 'custom_request'
+      ? (Boolean(notification.params?.sellerName) || (notification.title?.ar && notification.title.ar.includes('استلام'))
+          ? t('types.custom_request_claimed', { defaultValue: 'استلام طلب تفصيل' })
+          : t('types.custom_request_new', { defaultValue: 'طلب تفصيل جديد' }))
+      : (notification.type ? t(`types.${notification.type}`, { defaultValue: t('types.generic', { defaultValue: 'إشعار جديد' }) }) : t('types.generic', { defaultValue: 'إشعار جديد' }))
+  )
+
+  const messageText = storedMessage || (
+    notification.type
+      ? t(`descriptions.${notification.type}`, { ...(notification.params || {}), defaultValue: '' })
+      : ''
+  )
 
   return (
     <div
@@ -385,7 +481,7 @@ function NotificationItem({
         </div>
 
         {/* النصوص */}
-        <div className="flex-1 min-w-0" data-user-content="true">
+        <div className="flex-1 min-w-0 pe-6 sm:pe-0" data-user-content="true">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <h4
               className={cn(
@@ -422,8 +518,8 @@ function NotificationItem({
         </div>
       </div>
 
-      {/* الطرف الأيسر: نقطة غير مقروء + رابط الانتقال إن وجد */}
-      <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
+      {/* الطرف الأيسر: نقطة غير مقروء + زر الحذف + رابط الانتقال إن وجد */}
+      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
         {isUnread && (
           <span
             className="w-2.5 h-2.5 rounded-full bg-brand-orange shadow-xs animate-pulse"
@@ -431,6 +527,19 @@ function NotificationItem({
             aria-label={t('unreadAria')}
           />
         )}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(notification.id)
+          }}
+          className="p-1.5 rounded-lg text-text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
+          title={t('deleteNotification', 'حذف الإشعار')}
+          aria-label={t('deleteNotification', 'حذف الإشعار')}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
 
         {notification.link && (
           <Link

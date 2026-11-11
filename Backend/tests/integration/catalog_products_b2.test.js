@@ -198,7 +198,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
           categoryId: 'flash-cards',
           price: 120,
           description: { ar: 'بطاقات مقواة آمنة للأطفال', en: 'Safe cardstock cards' },
-          images: ['/storage/public/test.webp'],
+          images: [{ key: 'test', url: 'https://example.com/test.webp' }],
         })
       expect(createRes.status).toBe(201)
       const productId = createRes.body.data.id
@@ -478,7 +478,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
         categoryId: 'alphabet-boards',
         price: 150,
         description: { ar: 'وسيلة تعليمية من الجوخ', en: 'Educational felt aid' },
-        images: ['/storage/public/img.webp'],
+        images: [{ key: 'img', url: 'https://example.com/img.webp' }],
       })
 
       expect(res.status).toBe(400)
@@ -513,7 +513,10 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
         categoryId: 'alphabet-boards',
         price: 180,
         description: { ar: 'وسيلة تعليمية تفاعلية من الجوخ', en: 'Interactive felt aid' },
-        images: [url1, url2],
+        images: [
+          { key: key1, url: url1 },
+          { key: key2, url: url2 },
+        ],
       })
       expect(createRes.status).toBe(201)
       const productId = createRes.body.data.id
@@ -525,7 +528,7 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
 
       // 3. Update product keeping only url1 -> key2 is marked detached (attachedAt = null)
       const patchRes = await agent.patch(`/api/v1/products/manage/products/${productId}`).send({
-        images: [url1],
+        images: [{ key: key1, url: url1 }],
       })
       expect(patchRes.status).toBe(200)
 

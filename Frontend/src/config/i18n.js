@@ -105,6 +105,13 @@ i18n
     interpolation: {
       escapeValue: false,
     },
+    parseMissingKeyHandler: (key) => {
+      // In production, avoid leaking raw dotted translation keys to the user
+      if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
+        return ''
+      }
+      return key
+    },
   })
 
 export default i18n

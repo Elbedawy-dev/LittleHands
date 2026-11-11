@@ -48,6 +48,7 @@
     "addToCart": "إضافة للوسائل",
     "orderNow": "اطلب الآن",
     "upload": "رفع ملف",
+    "retry": "إعادة المحاولة",
     "download": "تحميل",
     "refresh": "تحديث",
     "submit": "إرسال",
@@ -96,7 +97,9 @@
   "materials": {
     "felt": "جوخ ملون",
     "cardstock": "ورق مقوى ومغلف",
-    "fabric": "قماش مقوى وآمن"
+    "fabric": "قماش مقوى وآمن",
+    "canson": "كانسون",
+    "nasbian": "ناصبيان"
   },
   "vodafoneCash": {
     "title": "فودافون كاش",
@@ -153,6 +156,8 @@
     "passwordMaskPlaceholder": "••••••••",
     "confirmDialogDefaultTitle": "هل أنتِ متأكدة؟",
     "confirmDialogDefaultConfirm": "نعم، تأكيد",
-    "confirmDialogDefaultCancel": "إلغاء"
+    "confirmDialogDefaultCancel": "إلغاء",
+    "connection_error": "تعذر الاتصال بالخادم",
+    "connection_error_desc": "يرجى التحقق من اتصالك بالإنترنت ثم إعادة المحاولة."
   }
 }

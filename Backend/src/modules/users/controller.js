@@ -113,6 +113,18 @@ export const userController = {
       total: sellers.length,
     })
   }),
+
+  deleteMyAccount: asyncHandler(async (req, res) => {
+    const result = await userService.deleteAccount(req.userId, req.body.password, { ip: req.ip })
+    res.clearCookie('lh_at', { path: '/' })
+    res.clearCookie('lh_rt', { path: '/' })
+    return ok(res, result)
+  }),
+
+  deleteUserByAdmin: asyncHandler(async (req, res) => {
+    const result = await userService.deleteUserByAdmin(req.userId, req.params.id, { ip: req.ip })
+    return ok(res, result)
+  }),
 }
 
 export default userController

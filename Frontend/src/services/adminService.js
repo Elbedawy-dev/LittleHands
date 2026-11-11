@@ -1,4 +1,4 @@
-import apiClient from './api'
+import apiClient from './api.js'
 
 export const adminService = {
   /**
@@ -55,7 +55,16 @@ export const adminService = {
    * Admin: Reorder categories
    */
   async reorderCategories(slugsOrIds) {
-    return apiClient.put('/admin/categories/order', slugsOrIds)
+    const payload = Array.isArray(slugsOrIds) ? { slugs: slugsOrIds } : slugsOrIds
+    return apiClient.put('/admin/categories/order', payload)
+  },
+
+  /**
+   * Admin: Delete user (customer or seller)
+   * DELETE /admin/users/:id
+   */
+  async deleteUser(userId) {
+    return apiClient.delete(`/admin/users/${userId}`)
   },
 }
 

@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Phone, Send } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Phone, Send, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Button } from '../../../components/ui/Button'
@@ -15,6 +15,7 @@ export function AdminSellerCard({
   seller,
   onRecordPayout,
   onToggleStatus,
+  onDeleteSeller,
 }) {
   const { t, i18n } = useTranslation('admin-core')
 
@@ -83,6 +84,19 @@ export function AdminSellerCard({
                 {isSuspended
                   ? (i18n.language === 'en' ? 'Activate Account' : 'تفعيل الحساب')
                   : (i18n.language === 'en' ? 'Suspend Account' : 'إيقاف الحساب')}
+              </button>
+            )}
+
+            {onDeleteSeller && (
+              <button
+                type="button"
+                onClick={() => onDeleteSeller(seller)}
+                className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 underline cursor-pointer inline-flex items-center gap-1 transition-colors"
+                title={t('sellers.deleteAccount')}
+                aria-label={t('sellers.deleteAccount')}
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>{t('sellers.deleteAccount')}</span>
               </button>
             )}
           </div>

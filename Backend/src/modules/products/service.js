@@ -184,7 +184,7 @@ export const productService = {
       details,
       images,
       published: isPublished,
-      isFeatured: !!data.isFeatured,
+      isFeatured: user.role === 'admin' ? !!data.isFeatured : false,
       deletedAt: null,
       searchText,
     })
@@ -260,7 +260,7 @@ export const productService = {
       if (data.stages.length > 0) product.stage = data.stages[0]
     }
     if (data.materials !== undefined) product.materials = data.materials
-    if (data.isFeatured !== undefined) product.isFeatured = Boolean(data.isFeatured)
+    if (data.isFeatured !== undefined && user.role === 'admin') product.isFeatured = Boolean(data.isFeatured)
 
     // Details update
     if (data.details || data.sizeAr || data.sizeEn || data.usageAr || data.usageEn || data.careAr || data.careEn) {
@@ -440,7 +440,11 @@ export const productService = {
       uploadedKeys.push(result.key)
     }
 
-    return { urls: uploadedUrls, keys: uploadedKeys }
+    return {
+      urls: uploadedUrls,
+      keys: uploadedKeys,
+      images: uploadedUrls.map((url, i) => ({ key: uploadedKeys[i], url })),
+    }
   },
 }
 

@@ -7,7 +7,7 @@ export function ImageUploader({
   images = [],
   onChange,
   maxImages = 5,
-  maxSizeMb = 5,
+  maxSizeMb = 3.5,
   disabled = false,
   className,
 }) {
@@ -15,11 +15,24 @@ export function ImageUploader({
   const fileInputRef = useRef(null)
   const [error, setError] = useState('')
 
+  // Normalize images to uniform { id, url, key?, file? } objects
+  const normalizedImages = (images || []).map((img, i) => {
+    if (typeof img === 'string') {
+      return { id: `existing_${i}_${img}`, url: img, key: img.split('/').pop() }
+    }
+    return {
+      id: img.id || img.key || img.url || `img_${i}`,
+      url: img.url,
+      key: img.key,
+      file: img.file,
+    }
+  })
+
   const handleFiles = (files) => {
     setError('')
     if (!files || files.length === 0) return
 
-    const newImages = [...images]
+    const newImages = [...normalizedImages]
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
 
     for (let i = 0; i < files.length; i++) {
@@ -41,21 +54,33 @@ export function ImageUploader({
       }
 
       const blobUrl = URL.createObjectURL(file)
-      newImages.push(blobUrl)
+      newImages.push({
+        id: `new_${file.lastModified}_${file.size}_${i}`,
+        url: blobUrl,
+        file,
+      })
     }
 
     onChange(newImages)
   }
 
   const handleRemove = (index) => {
-    const updated = images.filter((_, idx) => idx !== index)
+    const item = normalizedImages[index]
+    if (item?.file && item.url?.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(item.url)
+      } catch {
+        // ignore
+      }
+    }
+    const updated = normalizedImages.filter((_, idx) => idx !== index)
     onChange(updated)
   }
 
   const handleMove = (index, direction) => {
     const targetIdx = index + direction
-    if (targetIdx < 0 || targetIdx >= images.length) return
-    const updated = [...images]
+    if (targetIdx < 0 || targetIdx >= normalizedImages.length) return
+    const updated = [...normalizedImages]
     const temp = updated[index]
     updated[index] = updated[targetIdx]
     updated[targetIdx] = temp
@@ -66,13 +91,13 @@ export function ImageUploader({
     <div className={cn('space-y-4', className)}>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {/* معاينة الصور المرفوعة */}
-        {images.map((img, idx) => (
+        {normalizedImages.map((img, idx) => (
           <div
-            key={idx}
+            key={img.id || idx}
             className="group relative aspect-square rounded-[18px] overflow-hidden border-2 border-surface-border bg-surface-subtle"
           >
             <img
-              src={img}
+              src={img.url}
               alt={t('ui.imageAlt', { index: idx + 1 })}
               className="w-full h-full object-cover"
             />

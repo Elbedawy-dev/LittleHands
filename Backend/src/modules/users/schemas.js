@@ -103,6 +103,12 @@ export const createSellerSchema = z
 
 export const updateUserStatusSchema = z
   .object({
-    status: z.enum(['active', 'suspended']),
+    status: z.enum(['active', 'suspended', 'deleted']),
+  })
+  .strict()
+
+export const deleteAccountSchema = z
+  .object({
+    password: z.string().min(1, 'Password is required'),
   })
   .strict()

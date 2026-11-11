@@ -4,7 +4,7 @@ import { ok, created, paginated } from '../../utils/response.js'
 
 export const contactController = {
   sendCustomRequest: asyncHandler(async (req, res) => {
-    const request = await contactService.sendCustomRequest(req.body)
+    const request = await contactService.sendCustomRequest(req.body, req.userId)
     return created(res, request)
   }),
 
@@ -19,6 +19,11 @@ export const contactController = {
       req.body.status
     )
     return ok(res, request)
+  }),
+
+  deleteCustomRequest: asyncHandler(async (req, res) => {
+    const result = await contactService.deleteCustomRequest(req.params.id)
+    return ok(res, result)
   }),
 }
 

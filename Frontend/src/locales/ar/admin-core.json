@@ -133,6 +133,7 @@
       "date": "التاريخ",
       "actions": "تفاصيل الطلب",
       "viewDetails": "عرض التفاصيل",
+      "itemCount": "{{count}} وسائل",
       "itemCount_one": "وسيلة واحدة",
       "itemCount_other": "{{count}} وسائل"
     },
@@ -202,6 +203,22 @@
       "confirmBtn": "نعم، احذف الطلب",
       "cancelBtn": "إلغاء",
       "successToast": "تم حذف الطلب {{number}} نهائياً بنجاح"
+    },
+    "tabs": {
+      "active": "الطلبات الحالية",
+      "archived": "الأرشيف"
+    },
+    "archive": {
+      "action": "أرشفة",
+      "unarchiveAction": "إلغاء الأرشفة",
+      "successToast": "تم نقل الطلب {{number}} إلى الأرشيف",
+      "unarchiveSuccessToast": "تم إلغاء أرشفة الطلب {{number}} بنجاح",
+      "confirmTitle": "أرشفة الطلب",
+      "confirmMessage": "هل أنت متأكد من نقل الطلب {{number}} إلى الأرشيف؟ سيتم إخفاؤه من قائمة الطلبات النشطة.",
+      "confirmBtn": "نعم، أرشفة",
+      "cancelBtn": "إلغاء",
+      "bulkArchiveBtn": "أرشفة الطلبات المكتملة",
+      "bulkArchiveSuccess": "تمت أرشفة الطلبات المكتملة بنجاح"
     },
     "loadError": "حدث خطأ أثناء تحميل سجل الطلبات",
     "moreAids": "+{{count}} وسائل أخرى",
@@ -305,7 +322,13 @@
       "emptyDescription": "ستظهر هنا طلبات هذه البائعة فور تسجيلها."
     },
     "statusActiveToast": "تم تفعيل حساب البائعة بنجاح",
-    "statusSuspendedToast": "تم إيقاف حساب البائعة"
+    "statusSuspendedToast": "تم إيقاف حساب البائعة",
+    "deleteAccount": "حذف الحساب",
+    "deleteConfirmTitle": "حذف حساب البائعة",
+    "deleteConfirmMessage": "هل أنت متأكد من حذف حساب هذه البائعة نهائياً؟ إذا كانت هناك التزامات أو طلبات نشطة سيتم منع الحذف. الوسائل غير المباعة سيتم حذفها وصورها من التخزين، أما الوسائل المباعة ستُحفظ برمجياً للحسابات.",
+    "deleteConfirmBtn": "نعم، حذف الحساب",
+    "deleteSuccess": "تم حذف حساب البائعة بنجاح",
+    "cancel": "إلغاء"
   },
   "customRequests": {
     "title": "طلبات الحضانات الخاصة",

@@ -12,6 +12,8 @@ import { CATEGORIES, STAGES } from '../../config/constants'
 import { useLanguage } from '../../context/LanguageContext'
 import { useFormat } from '../../hooks/useFormat'
 import { calcCommission, cn, getDisplayName } from '../../utils'
+import { compressImage } from '../../utils/imageCompression'
+import { productService } from '../../services/productService'
 
 // التحقق من المصطلحات غير المسموح بها في المحتوى
 const FORBIDDEN_WORDS = [
@@ -39,6 +41,8 @@ const APPROVED_MATERIALS = [
   { id: 'felt', labelAr: 'جوخ ملون', labelEn: 'Craft Felt' },
   { id: 'cardstock', labelAr: 'ورق مقوى ومغلف حرارياً', labelEn: 'Laminated Cardstock' },
   { id: 'fabric', labelAr: 'قماش', labelEn: 'Fabric' },
+  { id: 'canson', labelAr: 'كانسون', labelEn: 'Canson Paper' },
+  { id: 'nasbian', labelAr: 'ناصبيان', labelEn: 'Nasbian' },
 ]
 
 /**
@@ -121,6 +125,7 @@ export function ProductForm({
 
   const [errors, setErrors] = useState({})
   const [isDirty, setIsDirty] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState(null)
 
   // حساب نسبة اكتمال الحقول لكل لغة
   const arCompleteness = useMemo(() => {
@@ -202,7 +207,7 @@ export function ProductForm({
     return calcCommission(numPrice)
   }, [formData.price])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     const fieldErrors = {}
@@ -328,40 +333,140 @@ export function ProductForm({
     }
 
     setIsDirty(false)
+
+    // Sequential image compression & upload (1 image per request, <3.5MB, max 1600px)
+    let finalImages = []
+    const rawImages = formData.images || []
+    const filesToUpload = rawImages.filter((img) => img && (img.file || (typeof img === 'object' && img.file)))
+
+    if (filesToUpload.length > 0) {
+      try {
+        let uploadedCount = 0
+        const totalToUpload = filesToUpload.length
+
+        for (let i = 0; i < rawImages.length; i++) {
+          const item = rawImages[i]
+          if (item && item.file) {
+            uploadedCount += 1
+            setUploadStatus({
+              message: t('form.uploading_image_progress', {
+                current: uploadedCount,
+                total: totalToUpload,
+                defaultValue: `جاري ضغط ورفع الصورة (${uploadedCount} من ${totalToUpload})...`,
+              }),
+              percent: 15,
+            })
+
+            const compressedFile = await compressImage(item.file, {
+              maxDimension: 1600,
+              quality: 0.85,
+              maxSizeMb: 3.5,
+            })
+
+            setUploadStatus((prev) => ({
+              ...prev,
+              percent: 45,
+            }))
+
+            const uploadRes = await productService.uploadImages(compressedFile, (pct) => {
+              setUploadStatus((prev) => ({
+                ...prev,
+                percent: Math.min(95, 45 + Math.round(pct * 0.5)),
+              }))
+            })
+
+            const uploadedKey =
+              uploadRes?.keys?.[0] ||
+              uploadRes?.images?.[0]?.key ||
+              (uploadRes?.key ? uploadRes.key : '')
+            const uploadedUrl =
+              uploadRes?.urls?.[0] ||
+              uploadRes?.images?.[0]?.url ||
+              (typeof uploadRes === 'string' ? uploadRes : '')
+
+            if (!uploadedUrl) {
+              throw new Error('Image upload failed: no URL returned')
+            }
+
+            if (item.url && item.url.startsWith('blob:')) {
+              try {
+                URL.revokeObjectURL(item.url)
+              } catch {
+                // ignore
+              }
+            }
+
+            finalImages.push({
+              key: uploadedKey || uploadedUrl.split('/').pop() || `img_${Date.now()}`,
+              url: uploadedUrl,
+            })
+          } else {
+            // Existing uploaded image
+            const key = (typeof item === 'object' ? item.key : '') || (typeof item === 'string' ? item.split('/').pop() : '') || `img_${Date.now()}`
+            const url = (typeof item === 'object' ? item.url : item) || ''
+            finalImages.push({ key, url })
+          }
+        }
+        setUploadStatus(null)
+      } catch (uploadErr) {
+        console.error('Image upload error:', uploadErr)
+        setUploadStatus(null)
+        setErrors({
+          images: t('form.errors.image_upload_failed', {
+            defaultValue: 'تعذر رفع صور الوسيلة التعليمية. يرجى التحقق من اتصالك والمحاولة مرة أخرى.',
+          }),
+        })
+        return
+      }
+    } else {
+      finalImages = rawImages.map((img) => ({
+        key: (typeof img === 'object' ? img.key : '') || (typeof img === 'string' ? img.split('/').pop() : '') || `img_${Date.now()}`,
+        url: (typeof img === 'object' ? img.url : img) || '',
+      }))
+    }
+
+    const submissionData = {
+      ...formData,
+      price: numPrice,
+      stockCount: numStock,
+      images: finalImages,
+      name: {
+        ar: formData.nameAr.trim(),
+        en: formData.nameEn.trim(),
+      },
+      nameEn: formData.nameEn.trim(),
+      description: {
+        ar: formData.descAr.trim(),
+        en: formData.descEn.trim(),
+      },
+      details: {
+        material: {
+          ar: formData.materials.join('، '),
+          en: formData.materials.join(', '),
+        },
+        size: {
+          ar: formData.sizeAr.trim(),
+          en: formData.sizeEn.trim(),
+        },
+        usage: {
+          ar: formData.usageAr.trim(),
+          en: formData.usageEn.trim(),
+        },
+        care: {
+          ar: formData.careAr.trim(),
+          en: formData.careEn.trim(),
+        },
+      },
+      size: formData.sizeAr.trim(),
+    }
+
+    if (mode !== 'admin') {
+      delete submissionData.isFeatured
+      delete submissionData.featured
+    }
+
     if (onSubmit) {
-      onSubmit({
-        ...formData,
-        price: numPrice,
-        stockCount: numStock,
-        name: {
-          ar: formData.nameAr.trim(),
-          en: formData.nameEn.trim(),
-        },
-        nameEn: formData.nameEn.trim(),
-        description: {
-          ar: formData.descAr.trim(),
-          en: formData.descEn.trim(),
-        },
-        details: {
-          material: {
-            ar: formData.materials.join('، '),
-            en: formData.materials.join(', '),
-          },
-          size: {
-            ar: formData.sizeAr.trim(),
-            en: formData.sizeEn.trim(),
-          },
-          usage: {
-            ar: formData.usageAr.trim(),
-            en: formData.usageEn.trim(),
-          },
-          care: {
-            ar: formData.careAr.trim(),
-            en: formData.careEn.trim(),
-          },
-        },
-        size: formData.sizeAr.trim(),
-      })
+      onSubmit(submissionData)
     }
   }
 
@@ -378,8 +483,24 @@ export function ProductForm({
           images={formData.images}
           onChange={(imgs) => handleChange('images', imgs)}
           maxImages={6}
-          maxSizeMb={5}
+          maxSizeMb={3.5}
+          disabled={isSubmitting || !!uploadStatus}
         />
+
+        {uploadStatus && (
+          <div className="rounded-2xl p-3.5 bg-brand-orange/10 border border-brand-orange/30 text-xs font-semibold text-brand-orange space-y-2 animate-pulse">
+            <div className="flex items-center justify-between">
+              <span>{uploadStatus.message}</span>
+              <span className="font-mono">{uploadStatus.percent}%</span>
+            </div>
+            <div className="w-full bg-brand-orange/20 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-brand-orange h-1.5 transition-all duration-300 rounded-full"
+                style={{ width: `${uploadStatus.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {errors.images && (
           <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 mt-1">
@@ -772,7 +893,8 @@ export function ProductForm({
           type="submit"
           variant="primary"
           size="lg"
-          loading={isSubmitting}
+          loading={isSubmitting || !!uploadStatus}
+          disabled={isSubmitting || !!uploadStatus}
           className="whitespace-nowrap px-8 h-12 rounded-full font-bold shadow-soft"
         >
           {initialValues.id ? t('form.submit_edit') : t('form.submit_create')}

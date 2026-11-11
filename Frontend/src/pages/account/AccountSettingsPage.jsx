@@ -1,21 +1,33 @@
 import {
+  AlertTriangle,
   Bell,
   CheckCircle2,
   Globe,
   Moon,
   Sun,
+  Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-hot-toast'
 import { Card } from '../../components/ui/Card'
 import { Switch } from '../../components/ui/Switch'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { Modal } from '../../components/ui/Modal'
+import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { useTheme } from '../../context/ThemeContext'
+import { userService } from '../../services/userService'
+import { getFriendlyError } from '../../utils/errors'
 import { cn } from '../../utils'
 
 export default function AccountSettingsPage() {
   const { t, i18n } = useTranslation('profile')
   const isEn = i18n.language === 'en'
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const { language, setLanguage } = useLanguage()
   const { theme, toggleTheme } = useTheme()
 
@@ -24,6 +36,34 @@ export default function AccountSettingsPage() {
   const [emailNotifs, setEmailNotifs] = useState(true)
   const [smsNotifs, setSmsNotifs] = useState(true)
   const [savedFeedback, setSavedFeedback] = useState('')
+
+  // حالة حذف الحساب
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [confirmWord, setConfirmWord] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDeleteAccount = async (e) => {
+    e?.preventDefault()
+    if (!deletePassword) return
+    const required = isEn ? 'DELETE' : 'حذف'
+    if (confirmWord.trim() !== required) return
+
+    try {
+      setIsDeleting(true)
+      setDeleteError('')
+      await userService.deleteMyAccount(deletePassword)
+      toast.success(isEn ? 'Account deleted successfully' : 'تم حذف الحساب بنجاح')
+      setIsDeleteModalOpen(false)
+      await logout()
+      navigate('/')
+    } catch (err) {
+      setDeleteError(getFriendlyError(err, t))
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const triggerFeedback = (message) => {
     setSavedFeedback(message)
@@ -203,6 +243,125 @@ export default function AccountSettingsPage() {
           />
         </div>
       </Card>
+
+      {/* منطقة الخطر - حذف الحساب للعميلات */}
+      {user?.role === 'customer' && (
+        <Card padding="lg" className="border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10 space-y-4">
+          <div className="pb-3 border-b border-rose-200 dark:border-rose-900/40 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="w-5 h-5" />
+              <h2 className="text-base font-heading font-black">
+                {isEn ? 'Danger Zone' : 'منطقة الخطر'}
+              </h2>
+            </div>
+          </div>
+          <p className="text-xs text-text-muted leading-relaxed">
+            {isEn
+              ? 'Deleting your account will remove your saved addresses, notifications, and personal profile. If you have past orders, your identity will be anonymized to preserve order integrity. Active in-progress orders will prevent deletion.'
+              : 'حذف حسابكِ سيؤدي إلى مسح عناوينكِ المحفوظة وإشعاراتكِ وبياناتكِ الشخصية. في حال وجود طلبات سابقة، سيتم تعمية الحساب للحفاظ على سلامة المعاملات. لا يمكن حذف الحساب في حال وجود طلبات نشطة جاري تنفيذها.'}
+          </p>
+          <div className="pt-2 flex justify-end">
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                setDeletePassword('')
+                setConfirmWord('')
+                setDeleteError('')
+                setIsDeleteModalOpen(true)
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>{isEn ? 'Delete My Account' : 'حذف حسابي'}</span>
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* نافذة تأكيد حذف الحساب */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (!isDeleting) {
+            setIsDeleteModalOpen(false)
+            setDeletePassword('')
+            setConfirmWord('')
+            setDeleteError('')
+          }
+        }}
+        maxWidth="max-w-md"
+        showClose={!isDeleting}
+      >
+        <form onSubmit={handleDeleteAccount} className="flex flex-col items-center text-center py-2 space-y-4">
+          <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+
+          <h3 className="text-lg font-bold font-heading text-text-main">
+            {isEn ? 'Permanently Delete Account' : 'حذف الحساب نهائياً'}
+          </h3>
+
+          <p className="text-xs text-text-muted leading-relaxed">
+            {isEn
+              ? 'This action cannot be undone. Please enter your password and type "DELETE" to confirm.'
+              : 'هذا الإجراء نهائي ولا يمكن التراجع عنه. يرجى إدخال كلمة المرور وكتابة "حذف" للتأكيد.'}
+          </p>
+
+          <div className="w-full text-start space-y-3">
+            <Input
+              type="password"
+              label={isEn ? 'Current Password' : 'كلمة المرور الحالية'}
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              disabled={isDeleting}
+              required
+            />
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-text-muted block">
+                {isEn ? (
+                  <span>Type <strong className="text-rose-600 font-mono select-all">"DELETE"</strong> to confirm:</span>
+                ) : (
+                  <span>لتأكيد الحذف، اكتبي <strong className="text-rose-600 font-mono select-all">"حذف"</strong>:</span>
+                )}
+              </label>
+              <Input
+                type="text"
+                value={confirmWord}
+                onChange={(e) => setConfirmWord(e.target.value)}
+                placeholder={isEn ? 'DELETE' : 'حذف'}
+                disabled={isDeleting}
+                dir="auto"
+              />
+            </div>
+
+            {deleteError && (
+              <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                {deleteError}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 w-full pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+            >
+              {isEn ? 'Cancel' : 'إلغاء'}
+            </Button>
+            <Button
+              type="submit"
+              variant="danger"
+              loading={isDeleting}
+              disabled={!deletePassword || confirmWord.trim() !== (isEn ? 'DELETE' : 'حذف')}
+            >
+              {isEn ? 'Delete Account' : 'تأكيد الحذف'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

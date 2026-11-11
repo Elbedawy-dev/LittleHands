@@ -9,7 +9,7 @@ export const contactService = {
    * Submits a public custom teaching aid request.
    * Traps bots silently if honeypot field is filled.
    */
-  async sendCustomRequest(data) {
+  async sendCustomRequest(data, customerId = null) {
     // 1. Honeypot check
     if (data.website || data.hp || data.honeypot) {
       // Return synthetic success without storing in database or notifying admin
@@ -30,6 +30,7 @@ export const contactService = {
       phone: data.phone.trim(),
       nurseryName: (data.nurseryName || '').trim(),
       details: data.details.trim(),
+      customerId: customerId || null,
       status: 'new',
     })
 
@@ -92,6 +93,22 @@ export const contactService = {
     }
 
     return toCustomRequestDTO(request)
+  },
+
+  /**
+   * Deletes a custom request (Admin only).
+   */
+  async deleteCustomRequest(id) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      throw new AppError('NOT_FOUND', 404)
+    }
+
+    const request = await CustomRequest.findByIdAndDelete(id)
+    if (!request) {
+      throw new AppError('NOT_FOUND', 404)
+    }
+
+    return { id, success: true }
   },
 }
 

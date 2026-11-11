@@ -1,4 +1,4 @@
-import apiClient from './api'
+import apiClient from './api.js'
 
 export const contactService = {
   /**
@@ -25,6 +25,14 @@ export const contactService = {
    */
   async updateCustomRequestStatus(id, status) {
     return apiClient.patch(`/admin/custom-requests/${id}`, { status })
+  },
+
+  /**
+   * Admin: Delete custom request
+   * DELETE /admin/custom-requests/:id
+   */
+  async deleteCustomRequest(id) {
+    return apiClient.delete(`/admin/custom-requests/${id}`)
   },
 }
 

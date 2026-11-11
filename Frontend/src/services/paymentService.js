@@ -1,4 +1,4 @@
-import apiClient from './api'
+import apiClient from './api.js'
 
 /**
  * Convert base64 dataURL to Blob for multipart upload

@@ -17,7 +17,15 @@ export const notificationIdParamSchema = z.object({
   id: z.string().min(1, 'Notification ID is required'),
 })
 
+export const deleteNotificationsQuerySchema = z.object({
+  read: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => val === true || val === 'true'),
+})
+
 export default {
   getNotificationsQuerySchema,
   notificationIdParamSchema,
+  deleteNotificationsQuerySchema,
 }

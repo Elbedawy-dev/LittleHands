@@ -300,6 +300,7 @@ export const orderService = {
     const filter = {
       'items.sellerId': currentUser._id,
       hiddenBySellers: { $ne: currentUser._id },
+      archivedAt: null,
     }
 
     if (status && status !== 'all') {
@@ -472,10 +473,19 @@ export const orderService = {
     from = '',
     to = '',
     q = '',
+    archived = false,
     page = 1,
     pageSize = 10,
   } = {}) {
     const filter = {}
+
+    if (archived === true || archived === 'true') {
+      filter.archivedAt = { $ne: null }
+    } else if (archived === 'all') {
+      // no filter on archivedAt
+    } else {
+      filter.archivedAt = null
+    }
 
     if (status && status !== 'all') {
       filter.status = status
@@ -873,13 +883,14 @@ export const orderService = {
 
     await audit.log(
       currentUser._id,
-      'order.delete',
+      'ORDER_DELETED',
       'Order',
       orderIdStr,
       {
         number: orderNum,
         status: orderDoc.status,
         total: orderDoc.total,
+        snapshot: orderDoc.toObject(),
       },
       ip
     )
@@ -889,6 +900,65 @@ export const orderService = {
       number: orderNum,
       deleted: true,
     }
+  },
+
+  /**
+   * Admin archives a delivered order
+   */
+  async archiveOrder(orderId, currentUser) {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new AppError('FORBIDDEN', 403)
+    }
+
+    const isObjectId = mongoose.isValidObjectId(orderId)
+    const filter = isObjectId ? { $or: [{ _id: orderId }, { number: String(orderId) }] } : { number: String(orderId) }
+    const orderDoc = await Order.findOne(filter)
+
+    if (!orderDoc) {
+      throw new AppError('ORDER_NOT_FOUND', 404)
+    }
+
+    if (orderDoc.status !== 'delivered') {
+      throw new AppError('ORDER_CANNOT_BE_ARCHIVED', 400, 'يمكن أرشفة الطلبات المستلمة (المكتملة) فقط')
+    }
+
+    orderDoc.archivedAt = new Date()
+    orderDoc.archivedBy = currentUser._id
+    await orderDoc.save()
+
+    await audit.log(currentUser._id, 'ORDER_ARCHIVED', 'Order', orderDoc._id.toString(), {
+      number: orderDoc.number,
+      archivedAt: orderDoc.archivedAt,
+    })
+
+    return { success: true, order: orderDoc }
+  },
+
+  /**
+   * Admin unarchives an order
+   */
+  async unarchiveOrder(orderId, currentUser) {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new AppError('FORBIDDEN', 403)
+    }
+
+    const isObjectId = mongoose.isValidObjectId(orderId)
+    const filter = isObjectId ? { $or: [{ _id: orderId }, { number: String(orderId) }] } : { number: String(orderId) }
+    const orderDoc = await Order.findOne(filter)
+
+    if (!orderDoc) {
+      throw new AppError('ORDER_NOT_FOUND', 404)
+    }
+
+    orderDoc.archivedAt = null
+    orderDoc.archivedBy = null
+    await orderDoc.save()
+
+    await audit.log(currentUser._id, 'ORDER_UNARCHIVED', 'Order', orderDoc._id.toString(), {
+      number: orderDoc.number,
+    })
+
+    return { success: true, order: orderDoc }
   },
 
   /**

@@ -69,7 +69,7 @@ async function paidBySeller(sellerId) {
   return new Map(rows.map((r) => [r._id.toString(), r.paid]))
 }
 
-async function sellerFinancials(sellerId) {
+export async function sellerFinancials(sellerId) {
   const key = sellerId.toString()
   const [totals, paid] = await Promise.all([totalsBySeller(sellerId), paidBySeller(sellerId)])
   const t = totals.get(key) || { sales: 0, commission: 0, net: 0, ordersCount: 0 }

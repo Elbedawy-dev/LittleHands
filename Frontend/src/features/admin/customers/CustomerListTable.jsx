@@ -1,4 +1,4 @@
-import { Building2, Calendar, Mail, Phone, Search } from 'lucide-react'
+import { Building2, Calendar, Mail, Phone, Search, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { Select } from '../../../components/ui/Select'
@@ -16,6 +16,7 @@ export function CustomerListTable({
   onSearchChange,
   selectedGovernorate = '',
   onSelectGovernorate,
+  onDeleteCustomer,
 }) {
   const { t, i18n } = useTranslation('admin-manage')
   const { formatMoney, formatNumber, formatDate } = useFormat()
@@ -89,8 +90,10 @@ export function CustomerListTable({
                   <th className="py-4 px-4 text-start">{t('customers.table.phone')}</th>
                   <th className="py-4 px-4 text-start">{t('customers.table.governorate')}</th>
                   <th className="py-4 px-4 text-center">{t('customers.table.ordersCount')}</th>
+                  <th className="py-4 px-4 text-center">{t('customers.table.customRequests')}</th>
                   <th className="py-4 px-4 text-start">{t('customers.table.lastOrderDate')}</th>
                   <th className="py-4 px-4 text-end">{t('customers.table.totalSpent')}</th>
+                  <th className="py-4 px-4 text-end">{t('customers.table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
@@ -154,6 +157,13 @@ export function CustomerListTable({
                       </span>
                     </td>
 
+                    {/* عدد الطلبات الخاصة */}
+                    <td className="py-4 px-4 whitespace-nowrap text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full text-xs font-bold font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        {formatNumber(c.customRequestsCount || 0)}
+                      </span>
+                    </td>
+
                     {/* تاريخ آخر طلب */}
                     <td className="py-4 px-4 whitespace-nowrap text-xs text-text-muted">
                       {c.lastOrderDate ? (
@@ -166,6 +176,21 @@ export function CustomerListTable({
                     {/* إجمالي المشتريات */}
                     <td className="py-4 px-4 whitespace-nowrap text-end font-bold text-text-main">
                       {formatMoney(c.totalSpent || 0)}
+                    </td>
+
+                    {/* الإجراءات */}
+                    <td className="py-4 px-4 whitespace-nowrap text-end">
+                      {onDeleteCustomer && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteCustomer(c)}
+                          className="inline-flex items-center justify-center p-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title={t('customers.deleteTitle')}
+                          aria-label={t('customers.deleteTitle')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -227,11 +252,17 @@ export function CustomerListTable({
                 </div>
 
                 {/* الطلبيات وإجمالي المشتريات */}
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border/60 text-xs">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-surface-border/60 text-xs">
                   <div>
                     <span className="text-text-muted text-[11px] block">{t('customers.table.ordersCount')}</span>
                     <span className="font-bold font-mono text-text-main">
                       {formatNumber(c.ordersCount || 0)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-text-muted text-[11px] block">{t('customers.table.customRequests')}</span>
+                    <span className="font-bold font-mono text-amber-600 dark:text-amber-400">
+                      {formatNumber(c.customRequestsCount || 0)}
                     </span>
                   </div>
                   <div>
@@ -240,7 +271,7 @@ export function CustomerListTable({
                       {formatMoney(c.totalSpent || 0)}
                     </span>
                   </div>
-                  <div className="col-span-2 pt-1">
+                  <div className="col-span-3 pt-1">
                     <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
                       <Calendar className="w-3 h-3 text-text-muted" />
                       <span>{t('customers.table.lastOrderDate')}: </span>
@@ -250,6 +281,20 @@ export function CustomerListTable({
                     </div>
                   </div>
                 </div>
+
+                {/* زر الحذف للشاشات الصغيرة */}
+                {onDeleteCustomer && (
+                  <div className="pt-2 border-t border-surface-border/60 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteCustomer(c)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{t('customers.deleteTitle')}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

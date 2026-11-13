@@ -45,6 +45,10 @@ const customRequestSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    closedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

@@ -1,6 +1,6 @@
 import { User } from 'lucide-react'
-import { useState } from 'react'
-import { cn } from '../../utils'
+import { useState, useRef, useEffect } from 'react'
+import { cn, getImageUrl } from '../../utils'
 
 /**
  * استخراج أول حرف من أول كلمة + أول حرف من آخر كلمة في الاسم
@@ -33,6 +33,15 @@ export function Avatar({
 }) {
   const [failedSrc, setFailedSrc] = useState(null)
   const [loadedSrc, setLoadedSrc] = useState(null)
+  const imgRef = useRef(null)
+
+  const resolvedSrc = getImageUrl(src)
+
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
+      setLoadedSrc(resolvedSrc)
+    }
+  }, [resolvedSrc])
 
   const sizes = {
     sm: 'w-8 h-8 text-xs',
@@ -49,8 +58,8 @@ export function Avatar({
   }
 
   const initials = getInitials(name)
-  const showImage = Boolean(src) && failedSrc !== src
-  const isImageReady = showImage && loadedSrc === src
+  const showImage = Boolean(resolvedSrc) && failedSrc !== resolvedSrc
+  const isImageReady = showImage && loadedSrc === resolvedSrc
 
   return (
     <div
@@ -64,10 +73,11 @@ export function Avatar({
     >
       {showImage && (
         <img
-          src={src}
+          ref={imgRef}
+          src={resolvedSrc}
           alt=""
-          onLoad={() => setLoadedSrc(src)}
-          onError={() => setFailedSrc(src)}
+          onLoad={() => setLoadedSrc(resolvedSrc)}
+          onError={() => setFailedSrc(resolvedSrc)}
           className={cn(
             'w-full h-full object-cover',
             isImageReady ? 'opacity-100' : 'opacity-0 absolute inset-0 pointer-events-none'

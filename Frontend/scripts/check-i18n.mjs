@@ -296,6 +296,94 @@ for (const filePath of allSrcFiles) {
 }
 
 // -------------------------------------------------------------
+// 5. Audit t('...') calls for missing interpolation variables
+// -------------------------------------------------------------
+info('Auditing t(\'...\') calls for missing interpolation variables...')
+
+const keysWithVarsMap = new Map()
+for (const nsFile of allNamespaces) {
+  const ns = nsFile.replace(/\.json$/, '')
+  const arPath = path.join(LOCALES_AR, nsFile)
+  if (fs.existsSync(arPath)) {
+    const arJson = JSON.parse(fs.readFileSync(arPath, 'utf8'))
+    const entries = getDeepKeys(arJson)
+    for (const entry of entries) {
+      if (typeof entry.value === 'string') {
+        const matches = entry.value.match(/\{\{([^}]+)\}\}/g)
+        if (matches) {
+          const vars = matches.map((m) => m.slice(2, -2).trim())
+          keysWithVarsMap.set(`${ns}:${entry.key}`, { ns, key: entry.key, vars, text: entry.value })
+          keysWithVarsMap.set(entry.key, { ns, key: entry.key, vars, text: entry.value })
+        }
+      }
+    }
+  }
+}
+
+for (const filePath of allSrcFiles) {
+  const relPath = path.relative(SRC, filePath)
+  if (relPath.startsWith('mocks') || relPath.startsWith('scripts') || relPath.startsWith('locales')) continue
+
+  const content = fs.readFileSync(filePath, 'utf8')
+  if (!content.includes('t(')) continue
+
+  let idx = 0
+  while (idx < content.length) {
+    const tIdx = content.indexOf('t(', idx)
+    if (tIdx === -1) break
+
+    const prevChar = tIdx > 0 ? content[tIdx - 1] : ' '
+    if (/[a-zA-Z0-9_$]/.test(prevChar)) {
+      idx = tIdx + 2
+      continue
+    }
+
+    let depth = 1
+    let cur = tIdx + 2
+    let inString = null
+    while (cur < content.length && depth > 0) {
+      const ch = content[cur]
+      if (inString) {
+        if (ch === '\\') {
+          cur += 2
+          continue
+        }
+        if (ch === inString) {
+          inString = null
+        }
+      } else {
+        if (ch === "'" || ch === '"' || ch === '`') {
+          inString = ch
+        } else if (ch === '(') {
+          depth++
+        } else if (ch === ')') {
+          depth--
+        }
+      }
+      cur++
+    }
+
+    const fullCall = content.slice(tIdx, cur)
+    idx = cur
+
+    const matchKey = fullCall.match(/^t\(\s*['"]([a-zA-Z0-9_.:-]+)['"]/)
+    if (!matchKey) continue
+    const keyName = matchKey[1]
+    const argsRest = fullCall.slice(matchKey[0].length)
+
+    const infoVar = keysWithVarsMap.get(keyName)
+    if (infoVar) {
+      for (const v of infoVar.vars) {
+        const varRegex = new RegExp(`\\b${v}\\b`)
+        if (!varRegex.test(argsRest)) {
+          error(`Call to t('${keyName}') in ${relPath} is missing interpolation variable "${v}" for translation: "${infoVar.text}"`)
+        }
+      }
+    }
+  }
+}
+
+// -------------------------------------------------------------
 // Result Summary
 // -------------------------------------------------------------
 console.log('\n----------------------------------------')

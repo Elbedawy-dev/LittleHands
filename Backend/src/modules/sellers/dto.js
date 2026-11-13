@@ -69,6 +69,7 @@ export function toSellerCustomRequestDTO(doc, sellerId) {
     customerName: r.name,
     details: r.details,
     status: r.status,
+    locked: Boolean(r.status === 'closed'),
     createdAt: r.createdAt,
     claimed: Boolean(r.claimedBy),
     claimedByMe: isClaimedByMe,

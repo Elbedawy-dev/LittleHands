@@ -4,6 +4,7 @@ import { authenticate, authorize } from '../../middlewares/auth.js'
 import { csrfGuard } from '../../middlewares/csrfGuard.js'
 import { validate } from '../../middlewares/validate.js'
 import { sellerProfileSchema } from '../users/schemas.js'
+import { updateSellerCustomRequestStatusSchema } from './schemas.js'
 
 const router = Router()
 
@@ -16,6 +17,7 @@ router.patch('/me/profile', authenticate, authorize('seller'), csrfGuard, valida
 // Seller custom educational aid requests
 router.get('/me/custom-requests', authenticate, authorize('seller'), sellerController.getCustomRequests)
 router.post('/me/custom-requests/:id/claim', authenticate, authorize('seller'), csrfGuard, sellerController.claimCustomRequest)
+router.patch('/me/custom-requests/:id/status', authenticate, authorize('seller'), csrfGuard, validate(updateSellerCustomRequestStatusSchema), sellerController.updateCustomRequestStatus)
 
 // Public seller discovery
 router.get('/', sellerController.getSellers)

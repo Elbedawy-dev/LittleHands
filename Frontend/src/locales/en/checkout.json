@@ -67,10 +67,15 @@
     "reference": "Reference Number:",
     "receiptAttached": "Receipt attached and ready for verification",
     "itemsSummary": "Ordered Teaching Aids",
+    "qty": "Quantity",
     "submitOrder": "Confirm Order & Submit Payment Receipt",
     "submitting": "Submitting order and uploading receipt...",
     "backStep": "Back to Payment",
     "notice": "Upon confirming, the transfer receipt will be sent to the administration team for swift review and verification."
+  },
+  "errorBoundary": {
+    "title": "An unexpected error occurred while processing order details",
+    "description": "We apologize for this temporary issue. Click retry to return and complete your order."
   },
   "orderSummary": {
     "title": "Order Summary",

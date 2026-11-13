@@ -5,12 +5,16 @@ import { Product } from '../../src/db/models/Product.js'
 import { Order } from '../../src/db/models/Order.js'
 
 let counter = 1
+let cachedPasswordHash = null
 
 export async function createUser(overrides = {}) {
   const num = counter++
   const role = overrides.role || 'customer'
-  const salt = await bcrypt.genSalt(10)
-  const passwordHash = await bcrypt.hash('TestPass123!', salt)
+  if (!cachedPasswordHash) {
+    const salt = await bcrypt.genSalt(10)
+    cachedPasswordHash = await bcrypt.hash('TestPass123!', salt)
+  }
+  const passwordHash = overrides.passwordHash || cachedPasswordHash
 
   const defaultUser = {
     name: overrides.name || (role === 'seller' ? 'البائعة الأولى' : `مستخدم تجريبي ${num}`),

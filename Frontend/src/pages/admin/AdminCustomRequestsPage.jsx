@@ -15,35 +15,16 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DataTable } from '../../components/ui/DataTable'
 import { Input } from '../../components/ui/Input'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Select } from '../../components/ui/Select'
 import { Tabs } from '../../components/ui/Tabs'
+import {
+  CUSTOM_REQUEST_STATUS_CONFIG,
+  getCustomRequestStatusLabel,
+  getCustomRequestStatusVariant,
+} from '../../features/custom-requests/customRequestStatusConfig'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useFormat } from '../../hooks/useFormat'
 import { contactService } from '../../services/contactService'
 import { getFriendlyError } from '../../utils'
-
-const STATUS_CONFIG = {
-  new: {
-    label: 'طلب جديد',
-    labelEn: 'New',
-    variant: 'danger',
-  },
-  pending: {
-    label: 'قيد المتابعة',
-    labelEn: 'Pending',
-    variant: 'warning',
-  },
-  contacted: {
-    label: 'تم التواصل',
-    labelEn: 'Contacted',
-    variant: 'info',
-  },
-  closed: {
-    label: 'مكتمل / مغلق',
-    labelEn: 'Closed',
-    variant: 'success',
-  },
-}
 
 export default function AdminCustomRequestsPage() {
   const { t, i18n } = useTranslation(['admin-core', 'common'])
@@ -55,7 +36,6 @@ export default function AdminCustomRequestsPage() {
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearch = useDebounce(searchQuery, 300)
-  const [updatingId, setUpdatingId] = useState(null)
   const [requestToDelete, setRequestToDelete] = useState(null)
   const [isDeletingRequest, setIsDeletingRequest] = useState(false)
 
@@ -76,30 +56,6 @@ export default function AdminCustomRequestsPage() {
   useEffect(() => {
     fetchRequests()
   }, [fetchRequests])
-
-  const handleStatusChange = async (id, newStatus) => {
-    setUpdatingId(id)
-    try {
-      await contactService.updateCustomRequestStatus(id, newStatus)
-      toast.success(t('customRequests.statusUpdatedToast'))
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === id || r._id === id
-            ? {
-                ...r,
-                status: newStatus,
-                ...(newStatus === 'new' ? { claimedBy: null, claimedByName: null, claimedAt: null } : {}),
-              }
-            : r
-        )
-      )
-    } catch (err) {
-      console.error('Failed to update status:', err)
-      toast.error(getFriendlyError(err, t))
-    } finally {
-      setUpdatingId(null)
-    }
-  }
 
   const handleDeleteRequest = async () => {
     if (!requestToDelete) return
@@ -193,27 +149,22 @@ export default function AdminCustomRequestsPage() {
     {
       header: isEn ? 'Status' : 'الحالة',
       key: 'status',
-      render: (r) => (
-        <div className="w-36 space-y-1.5">
-          <Select
-            id={`request-status-${r.id || r._id}`}
-            value={r.status || 'new'}
-            onChange={(e) => handleStatusChange(r.id || r._id, e.target.value)}
-            disabled={updatingId === (r.id || r._id)}
-            className="text-xs py-1 h-8"
-          >
-            <option value="new">{isEn ? 'New' : 'طلب جديد'}</option>
-            <option value="pending">{isEn ? 'Pending' : 'قيد المتابعة'}</option>
-            <option value="contacted">{isEn ? 'Contacted' : 'تم التواصل'}</option>
-            <option value="closed">{isEn ? 'Closed' : 'مكتمل / مغلق'}</option>
-          </Select>
-          {r.claimedByName && (
-            <Badge variant="secondary" size="sm" className="truncate max-w-full block text-center">
-              {isEn ? `Claimed by: ${r.claimedByName}` : `استلمتها: ${r.claimedByName}`}
+      render: (r) => {
+        const variant = getCustomRequestStatusVariant(r.status)
+        const label = getCustomRequestStatusLabel(r.status, isEn)
+        return (
+          <div className="w-36 space-y-1.5">
+            <Badge variant={variant} size="sm" className="w-full text-center justify-center">
+              {label}
             </Badge>
-          )}
-        </div>
-      ),
+            {r.claimedByName && (
+              <Badge variant="secondary" size="sm" className="truncate max-w-full block text-center">
+                {isEn ? `Claimed by: ${r.claimedByName}` : `استلمتها: ${r.claimedByName}`}
+              </Badge>
+            )}
+          </div>
+        )
+      },
     },
     {
       header: isEn ? 'Date' : 'تاريخ الطلب',
@@ -246,7 +197,7 @@ export default function AdminCustomRequestsPage() {
   ]
 
   const renderMobileCard = (r) => {
-    const cfg = STATUS_CONFIG[r.status] || STATUS_CONFIG.new
+    const cfg = CUSTOM_REQUEST_STATUS_CONFIG[r.status] || CUSTOM_REQUEST_STATUS_CONFIG.new
     return (
       <Card padding="md" className="space-y-3">
         <div className="flex items-center justify-between">
@@ -261,7 +212,7 @@ export default function AdminCustomRequestsPage() {
               </Badge>
             )}
             <Badge variant={cfg.variant} size="sm">
-              {isEn ? cfg.labelEn : cfg.label}
+              {isEn ? cfg.labelEn : cfg.labelAr}
             </Badge>
           </div>
         </div>
@@ -293,33 +244,17 @@ export default function AdminCustomRequestsPage() {
             {r.createdAt ? formatDate(r.createdAt) : '—'}
           </span>
 
-          <div className="flex items-center gap-2">
-            <div className="w-32">
-              <Select
-                id={`request-status-mob-${r.id || r._id}`}
-                value={r.status || 'new'}
-                onChange={(e) => handleStatusChange(r.id || r._id, e.target.value)}
-                disabled={updatingId === (r.id || r._id)}
-                className="text-xs py-1 h-8"
-              >
-                <option value="new">{isEn ? 'New' : 'طلب جديد'}</option>
-                <option value="pending">{isEn ? 'Pending' : 'قيد المتابعة'}</option>
-                <option value="contacted">{isEn ? 'Contacted' : 'تم التواصل'}</option>
-                <option value="closed">{isEn ? 'Closed' : 'مكتمل / مغلق'}</option>
-              </Select>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setRequestToDelete(r)}
-              className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-              title={isEn ? 'Delete Request' : 'حذف الطلب'}
-              aria-label={isEn ? 'Delete Request' : 'حذف الطلب'}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setRequestToDelete(r)}
+            className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            title={isEn ? 'Delete Request' : 'حذف الطلب'}
+            aria-label={isEn ? 'Delete Request' : 'حذف الطلب'}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </Card>
     )

@@ -1,21 +1,20 @@
-import { AlertCircle, CheckCircle2, KeyRound, Lock, Save, User } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Save, User } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
-import { PasswordInput } from '../../components/ui/PasswordInput'
 import { Select } from '../../components/ui/Select'
 import { Textarea } from '../../components/ui/Textarea'
+import { ChangePasswordCard } from '../../features/profile'
 import { GOVERNORATES } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
-import { authService } from '../../services/authService'
 import { getFriendlyError } from '../../utils'
 
 export default function ProfilePage() {
   const { t, i18n } = useTranslation('profile')
   const isEn = i18n.language === 'en'
-  const { user, updateProfile, refreshUser } = useAuth()
+  const { user, updateProfile } = useAuth()
 
   // بيانات الملف الشخصي
   const [formData, setFormData] = useState({
@@ -28,20 +27,9 @@ export default function ProfilePage() {
     address: user?.address || '',
   })
 
-  // بيانات تغيير كلمة المرور
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmNewPassword: '',
-  })
-
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [profileError, setProfileError] = useState('')
-
-  const [savingPassword, setSavingPassword] = useState(false)
-  const [passwordSuccess, setPasswordSuccess] = useState(false)
-  const [passwordError, setPasswordError] = useState('')
 
   const governorateOptions = GOVERNORATES.map((g) => ({
     value: g.name,
@@ -70,42 +58,6 @@ export default function ProfilePage() {
       setProfileError(getFriendlyError(err, t))
     } finally {
       setSavingProfile(false)
-    }
-  }
-
-  // تغيير كلمة المرور
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault()
-    setPasswordError('')
-    setPasswordSuccess(false)
-
-    if (!passwordData.currentPassword) {
-      setPasswordError(t('info.passwordRequiredFields'))
-      return
-    }
-    if (!passwordData.newPassword || passwordData.newPassword.length < 8) {
-      setPasswordError(t('info.passwordTooShort'))
-      return
-    }
-    if (passwordData.newPassword !== passwordData.confirmNewPassword) {
-      setPasswordError(t('info.passwordMismatch'))
-      return
-    }
-
-    setSavingPassword(true)
-    try {
-      await authService.changePassword({
-        current: passwordData.currentPassword,
-        next: passwordData.newPassword,
-      })
-      await refreshUser()
-      setPasswordSuccess(true)
-      setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
-      setTimeout(() => setPasswordSuccess(false), 4000)
-    } catch (err) {
-      setPasswordError(getFriendlyError(err, t))
-    } finally {
-      setSavingPassword(false)
     }
   }
 
@@ -227,86 +179,8 @@ export default function ProfilePage() {
         </form>
       </Card>
 
-      {/* النموذج الثاني: تغيير كلمة المرور */}
-      <Card padding="lg">
-        <div className="flex items-center justify-between pb-4 border-b border-surface-border mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <KeyRound className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-heading font-black text-text-main">
-                {t('info.changePasswordTitle', 'تغيير كلمة المرور')}
-              </h2>
-              <p className="text-xs text-text-muted mt-0.5">
-                {t('info.changePasswordSubtitle', 'تحديث كلمة المرور لحماية حسابك')}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {passwordSuccess && (
-          <div className="mb-6 p-4 rounded-[16px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{t('info.passwordUpdateSuccess')}</span>
-          </div>
-        )}
-
-        {passwordError && (
-          <div className="mb-6 p-4 rounded-[16px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{passwordError}</span>
-          </div>
-        )}
-
-        <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-xl">
-          <PasswordInput
-            id="current-password"
-            label={t('info.currentPassword', 'كلمة المرور الحالية')}
-            value={passwordData.currentPassword}
-            onChange={(e) =>
-              setPasswordData({ ...passwordData, currentPassword: e.target.value })
-            }
-            placeholder="••••••••"
-            required
-          />
-
-          <PasswordInput
-            id="new-password"
-            label={t('info.newPassword', 'كلمة المرور الجديدة')}
-            showStrength
-            value={passwordData.newPassword}
-            onChange={(e) =>
-              setPasswordData({ ...passwordData, newPassword: e.target.value })
-            }
-            placeholder={t('info.passwordHelper')}
-            required
-          />
-
-          <PasswordInput
-            id="confirm-new-password"
-            label={t('info.confirmNewPassword', 'تأكيد كلمة المرور الجديدة')}
-            value={passwordData.confirmNewPassword}
-            onChange={(e) =>
-              setPasswordData({ ...passwordData, confirmNewPassword: e.target.value })
-            }
-            placeholder="••••••••"
-            required
-          />
-
-          <div className="pt-2 flex justify-end">
-            <Button
-              type="submit"
-              variant="outline"
-              size="md"
-              loading={savingPassword}
-              startIcon={<Lock className="w-4 h-4" />}
-            >
-              {t('info.updatePasswordBtn', 'تحديث كلمة المرور')}
-            </Button>
-          </div>
-        </form>
-      </Card>
+      {/* النموذج الثاني: تغيير كلمة المرور المشترك */}
+      <ChangePasswordCard />
     </div>
   )
 }

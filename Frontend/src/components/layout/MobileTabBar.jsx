@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
-import { cn } from '../../utils'
+import { cn, isInSection } from '../../utils'
 
 export function MobileTabBar() {
   const { t } = useTranslation('common')
@@ -29,7 +29,7 @@ export function MobileTabBar() {
 
   const isTabActive = (href) => {
     if (href === '/') return pathname === '/'
-    return pathname.startsWith(href)
+    return isInSection(pathname, href)
   }
 
   return (

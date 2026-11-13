@@ -10,12 +10,15 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { LocalizedText } from '../../components/ui/LocalizedText'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { ProductImage } from '../../components/ui/ProductImage'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { useLanguage } from '../../context/LanguageContext'
 import { useFormat } from '../../hooks/useFormat'
 import { orderService } from '../../services/orderService'
+import { pickLocaleText } from '../../utils'
 
 /**
  * صفحة نجاح تسجيل الطلب ورفع إيصال فودافون كاش
@@ -24,6 +27,7 @@ import { orderService } from '../../services/orderService'
 export default function OrderSuccessPage() {
   const { number } = useParams()
   const { t } = useTranslation(['checkout', 'common'])
+  const { language } = useLanguage()
   const { formatDate } = useFormat()
   const shouldReduceMotion = useReducedMotion()
 
@@ -158,10 +162,10 @@ export default function OrderSuccessPage() {
                   <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-10 h-10 rounded-[10px] overflow-hidden shrink-0 border border-surface-border">
-                        <ProductImage src={it.image} alt={it.name} aspectRatio="1/1" />
+                        <ProductImage src={it.image} alt={pickLocaleText(it.name, language)} aspectRatio="1/1" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-text-main truncate">{it.name}</p>
+                        <LocalizedText as="p" value={it.name} className="font-bold text-text-main truncate" />
                         <span className="text-[11px] text-text-muted">× {it.qty}</span>
                       </div>
                     </div>
@@ -172,7 +176,7 @@ export default function OrderSuccessPage() {
 
               {/* ملخص الإجمالي */}
               <div className="pt-3 border-t border-surface-border flex items-center justify-between text-xs sm:text-sm">
-                <span className="font-bold text-text-main">الإجمالي المدفوع:</span>
+                <span className="font-bold text-text-main">{t('checkout:orderSummary.total', { defaultValue: 'الإجمالي' })}:</span>
                 <PriceTag amount={order.total} size="md" />
               </div>
             </div>

@@ -21,7 +21,7 @@ import { useSettings } from '../../context/SettingsContext'
 import { useFormat } from '../../hooks/useFormat'
 import { orderService } from '../../services/orderService'
 import { userService } from '../../services/userService'
-import { cn, getFriendlyError } from '../../utils'
+import { cn, getFriendlyError, isInSection } from '../../utils'
 import { processAvatarImage } from '../../utils/avatar'
 
 /**
@@ -95,7 +95,7 @@ export default function AccountLayout() {
 
   const isTabActive = (tab) => {
     if (tab.exact) return pathname === tab.href
-    return pathname.startsWith(tab.href)
+    return isInSection(pathname, tab.href)
   }
 
   return (

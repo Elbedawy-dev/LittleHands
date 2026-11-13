@@ -200,6 +200,10 @@ export const ERROR_MESSAGES = {
     ar: 'هذا الطلب لم يعد متاحاً للاستلام',
     en: 'This custom request is no longer available',
   },
+  CUSTOM_REQUEST_LOCKED: {
+    ar: 'لا يمكن تغيير حالة طلب مكتمل',
+    en: 'Cannot change the status of a completed request',
+  },
   INTERNAL_SERVER_ERROR: {
     ar: 'حدث خطأ غير متوقع في الخادم. يرجى المحاولة لاحقاً',
     en: 'An unexpected internal server error occurred.',

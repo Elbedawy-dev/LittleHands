@@ -233,6 +233,69 @@ export const sellerService = {
 
     throw new AppError('CUSTOM_REQUEST_NOT_AVAILABLE', 409)
   },
+
+  /**
+   * Updates status of a custom request claimed by this seller.
+   * Atomic transition: { _id: id, claimedBy: me, status: { $ne: 'closed' } }
+   * Status can be: 'pending', 'contacted', 'closed'
+   * If request is already closed: returns 409 CUSTOM_REQUEST_LOCKED
+   * If claimed by another or not found: returns 404
+   * Suspended seller: returns 403 FORBIDDEN
+   */
+  async updateCustomRequestStatus(sellerUser, id, status) {
+    if (!sellerUser || sellerUser.role !== 'seller') {
+      throw new AppError('FORBIDDEN', 403, 'Forbidden')
+    }
+    if (sellerUser.status !== 'active') {
+      throw new AppError('FORBIDDEN', 403, 'Account is not active')
+    }
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      throw new AppError('NOT_FOUND', 404, 'Custom request not found')
+    }
+
+    const now = new Date()
+    const updateSet = {
+      status,
+      ...(status === 'closed' ? { closedAt: now } : {}),
+    }
+
+    const updated = await CustomRequest.findOneAndUpdate(
+      {
+        _id: id,
+        claimedBy: sellerUser._id,
+        status: { $ne: 'closed' },
+      },
+      {
+        $set: updateSet,
+      },
+      { new: true }
+    ).populate('claimedBy', 'name seller.displayName')
+
+    if (updated) {
+      return toSellerCustomRequestDTO(updated, sellerUser._id)
+    }
+
+    // Atomic update did not match; inspect reason
+    const existing = await CustomRequest.findById(id)
+    if (!existing) {
+      throw new AppError('NOT_FOUND', 404, 'Custom request not found')
+    }
+
+    const existingClaimedById = existing.claimedBy?.toString()
+    if (!existingClaimedById || existingClaimedById !== sellerUser._id.toString()) {
+      throw new AppError('NOT_FOUND', 404, 'Custom request not found')
+    }
+
+    if (existing.status === 'closed') {
+      throw new AppError('CUSTOM_REQUEST_LOCKED', 409, {
+        ar: 'لا يمكن تغيير حالة طلب مكتمل',
+        en: 'Cannot change the status of a completed request',
+      })
+    }
+
+    throw new AppError('NOT_FOUND', 404, 'Custom request not found')
+  },
 }
 
 export default sellerService

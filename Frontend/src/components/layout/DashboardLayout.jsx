@@ -25,7 +25,7 @@ import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
 import { NotificationsDropdown } from '../../features/notifications/NotificationsDropdown'
 import { paymentService } from '../../services/paymentService'
-import { cn, getDisplayName } from '../../utils'
+import { cn, getDisplayName, isInSection } from '../../utils'
 import { Avatar } from '../ui/Avatar'
 import { Logo } from '../ui/Logo'
 import { MobileTopBar } from './MobileTopBar'
@@ -90,7 +90,7 @@ export function DashboardLayout({ role: propRole }) {
 
   const isItemActive = (item) => {
     if (item.exact) return pathname === item.href
-    return pathname.startsWith(item.href)
+    return isInSection(pathname, item.href)
   }
 
   const displayName = user ? getDisplayName(user, language) : ''

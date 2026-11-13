@@ -63,7 +63,7 @@ export function ProductGallery({ images = [], name = 'وسيلة تعليمية'
               >
                 <ProductImage
                   src={img}
-                  alt={`${name} - ${idx + 1}`}
+                  alt={`${displayName} - ${idx + 1}`}
                   aspectRatio="1/1"
                   className="w-full h-full object-cover"
                 />
@@ -77,8 +77,10 @@ export function ProductGallery({ images = [], name = 'وسيلة تعليمية'
       <Lightbox
         isOpen={isLightboxOpen}
         onClose={() => setIsLightboxOpen(false)}
-        src={activeImage}
-        alt={name}
+        images={safeImages}
+        index={selectedIndex}
+        onIndexChange={(newIdx) => setSelectedIndex(newIdx)}
+        alt={displayName}
       />
     </div>
   )

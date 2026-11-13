@@ -1,3 +1,1 @@
-// مساحة ميزات الحساب والملف الشخصي
-export {}
-
+export { ChangePasswordCard } from './ChangePasswordCard'

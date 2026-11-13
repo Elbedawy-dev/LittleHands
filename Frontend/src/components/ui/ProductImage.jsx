@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { cn } from '../../utils'
+import { useState, useRef, useEffect } from 'react'
+import { cn, getImageUrl } from '../../utils'
 import { Logo } from './Logo'
 
 /**
@@ -16,6 +16,7 @@ export function ProductImage({
 }) {
   const [hasError, setHasError] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+  const imgRef = useRef(null)
 
   // نسبة الأبعاد
   const ratios = {
@@ -24,7 +25,26 @@ export function ProductImage({
     '16/9': 'aspect-[16/9]',
   }
 
-  const isValidUrl = src && !hasError && (src.startsWith('/') || src.startsWith('blob:') || src.startsWith('data:'))
+  const resolvedSrc = getImageUrl(src)
+  const isValidUrl =
+    Boolean(resolvedSrc) &&
+    !hasError &&
+    (resolvedSrc.startsWith('http://') ||
+      resolvedSrc.startsWith('https://') ||
+      resolvedSrc.startsWith('/') ||
+      resolvedSrc.startsWith('blob:') ||
+      resolvedSrc.startsWith('data:'))
+
+  useEffect(() => {
+    setHasError(false)
+    setIsLoaded(false)
+  }, [resolvedSrc])
+
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
+      setIsLoaded(true)
+    }
+  }, [resolvedSrc])
 
   return (
     <div
@@ -37,7 +57,8 @@ export function ProductImage({
       {isValidUrl ? (
         <>
           <img
-            src={src}
+            ref={imgRef}
+            src={resolvedSrc}
             alt={alt}
             loading="lazy"
             onLoad={() => setIsLoaded(true)}

@@ -177,6 +177,7 @@ registerRouteSchema('PATCH', '/users/me/notification-prefs', { body: usersSchema
 registerRouteSchema('PATCH', '/sellers/me/profile', { body: sellersSchemas.updateSellerProfileSchema })
 registerRouteSchema('GET', '/sellers/me/custom-requests')
 registerRouteSchema('POST', '/sellers/me/custom-requests/:id/claim')
+registerRouteSchema('PATCH', '/sellers/me/custom-requests/:id/status', { body: sellersSchemas.updateSellerCustomRequestStatusSchema })
 registerRouteSchema('GET', '/sellers')
 registerRouteSchema('GET', '/sellers/:id')
 registerRouteSchema('GET', '/sellers/:id/products')
@@ -484,6 +485,7 @@ async function runServiceScenarios() {
   }).catch(() => {})
   await sellerService.getCustomRequests({ page: 1 }).catch(() => {})
   await sellerService.claimCustomRequest('507f1f77bcf86cd799439019').catch(() => {})
+  await sellerService.updateCustomRequestStatus('507f1f77bcf86cd799439019', 'contacted').catch(() => {})
 
   // 11. settingsService
   await settingsService.getSettings().catch(() => {})

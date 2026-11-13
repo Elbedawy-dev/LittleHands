@@ -14,6 +14,11 @@ export const sellerController = {
     return ok(res, claimed)
   }),
 
+  updateCustomRequestStatus: asyncHandler(async (req, res) => {
+    const updated = await sellerService.updateCustomRequestStatus(req.user, req.params.id, req.body.status)
+    return ok(res, updated)
+  }),
+
   getSellers: asyncHandler(async (req, res) => {
     const sellers = await sellerService.getSellers()
     return ok(res, sellers)

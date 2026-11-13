@@ -23,6 +23,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Select } from '../../components/ui/Select'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Textarea } from '../../components/ui/Textarea'
+import { ChangePasswordCard } from '../../features/profile'
 import { GOVERNORATES } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
@@ -620,6 +621,9 @@ export default function SellerProfilePage() {
                 </Button>
               </div>
             </Card>
+
+            {/* بطاقة تغيير كلمة المرور للبائعة */}
+            <ChangePasswordCard />
 
             {/* نافذة منبثقة لتعديل رقم المحفظة */}
             <Modal

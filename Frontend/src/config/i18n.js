@@ -104,6 +104,7 @@ i18n
     ],
     interpolation: {
       escapeValue: false,
+      missingInterpolationHandler: () => '',
     },
     parseMissingKeyHandler: (key) => {
       // In production, avoid leaking raw dotted translation keys to the user

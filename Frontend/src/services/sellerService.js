@@ -77,6 +77,15 @@ export const sellerService = {
     const res = await apiClient.post(`/sellers/me/custom-requests/${id}/claim`)
     return res?.data || res
   },
+
+  /**
+   * تحديث حالة طلب وسيلة مخصصة تم استلامه
+   * PATCH /sellers/me/custom-requests/:id/status
+   */
+  async updateCustomRequestStatus(id, status) {
+    const res = await apiClient.patch(`/sellers/me/custom-requests/${id}/status`, { status })
+    return res?.data || res
+  },
 }
 
 export default sellerService

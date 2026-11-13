@@ -26,3 +26,9 @@ export const createSellerSchema = z.object({
   payoutWallet: z.string().optional(),
 })
 
+export const updateSellerCustomRequestStatusSchema = z
+  .object({
+    status: z.enum(['pending', 'contacted', 'closed']),
+  })
+  .strict()
+

@@ -9,6 +9,7 @@ import { Stepper } from '../../components/ui/Stepper'
 import { GOVERNORATES } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
+import { CheckoutErrorBoundary } from '../../features/checkout/CheckoutErrorBoundary'
 import { CheckoutSummaryCard } from '../../features/checkout/CheckoutSummaryCard'
 import { DeliveryStep } from '../../features/checkout/DeliveryStep'
 import { PaymentStep } from '../../features/checkout/PaymentStep'
@@ -266,42 +267,44 @@ export default function CheckoutPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* منطقة الخطوة الحالية (7 أعمدة في الديسكتوب) */}
         <div className="lg:col-span-7">
-          {step === 0 && (
-            <DeliveryStep
-              initialData={deliveryData}
-              onComplete={handleDeliveryComplete}
-            />
-          )}
+          <CheckoutErrorBoundary onReset={() => setStep(0)}>
+            {step === 0 && (
+              <DeliveryStep
+                initialData={deliveryData}
+                onComplete={handleDeliveryComplete}
+              />
+            )}
 
-          {step === 1 && (
-            <PaymentStep
-              grandTotal={grandTotal}
-              initialData={paymentData}
-              onComplete={handlePaymentComplete}
-              onBack={() => {
-                setStep(0)
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-            />
-          )}
+            {step === 1 && (
+              <PaymentStep
+                grandTotal={grandTotal}
+                initialData={paymentData}
+                onComplete={handlePaymentComplete}
+                onBack={() => {
+                  setStep(0)
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+              />
+            )}
 
-          {step === 2 && (
-            <ReviewStep
-              deliveryData={deliveryData}
-              paymentData={paymentData}
-              items={items}
-              subtotal={subtotal}
-              shippingRate={shippingRate}
-              grandTotal={grandTotal}
-              onSubmitOrder={handleFinalSubmit}
-              onBack={() => {
-                setStep(1)
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-              isSubmitting={isSubmitting}
-              error={submitError}
-            />
-          )}
+            {step === 2 && (
+              <ReviewStep
+                deliveryData={deliveryData}
+                paymentData={paymentData}
+                items={items}
+                subtotal={subtotal}
+                shippingRate={shippingRate}
+                grandTotal={grandTotal}
+                onSubmitOrder={handleFinalSubmit}
+                onBack={() => {
+                  setStep(1)
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+                isSubmitting={isSubmitting}
+                error={submitError}
+              />
+            )}
+          </CheckoutErrorBoundary>
         </div>
 
         {/* بطاقة ملخص الوسائل والشحن الثابتة جانبياً (5 أعمدة في الديسكتوب) */}

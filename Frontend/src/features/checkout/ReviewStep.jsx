@@ -11,10 +11,12 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { LocalizedText } from '../../components/ui/LocalizedText'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { ProductImage } from '../../components/ui/ProductImage'
 import { Spinner } from '../../components/ui/Spinner'
 import { useLanguage } from '../../context/LanguageContext'
+import { pickLocaleText } from '../../utils'
 
 /**
  * الخطوة 3: مراجعة وتأكيد الطلب
@@ -33,7 +35,7 @@ export function ReviewStep({
   error = '',
 }) {
   const { t } = useTranslation(['checkout', 'common'])
-  const { isRtl } = useLanguage()
+  const { isRtl, language } = useLanguage()
 
   return (
     <Card padding="lg" className="shadow-soft space-y-6">
@@ -189,11 +191,11 @@ export function ReviewStep({
             <div key={it.productId} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs sm:text-sm">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-[10px] overflow-hidden shrink-0 border border-surface-border">
-                  <ProductImage src={it.image} alt={it.name} aspectRatio="1/1" />
+                  <ProductImage src={it.image} alt={pickLocaleText(it.name, language)} aspectRatio="1/1" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-bold text-text-main truncate">{it.name}</p>
-                  <span className="text-[11px] text-text-muted">الكمية: {it.qty}</span>
+                  <LocalizedText as="p" value={it.name} className="font-bold text-text-main truncate" />
+                  <span className="text-[11px] text-text-muted">{t('checkout:review.qty', { defaultValue: 'الكمية' })}: {it.qty}</span>
                 </div>
               </div>
 

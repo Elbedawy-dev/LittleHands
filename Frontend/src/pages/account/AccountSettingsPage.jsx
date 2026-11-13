@@ -16,6 +16,7 @@ import { Switch } from '../../components/ui/Switch'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
+import { ChangePasswordCard } from '../../features/profile'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -243,6 +244,9 @@ export default function AccountSettingsPage() {
           />
         </div>
       </Card>
+
+      {/* بطاقة تغيير كلمة المرور */}
+      <ChangePasswordCard />
 
       {/* منطقة الخطر - حذف الحساب للعميلات */}
       {user?.role === 'customer' && (

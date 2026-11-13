@@ -82,9 +82,19 @@ export const contactService = {
       throw new AppError('NOT_FOUND', 404)
     }
 
+    if (request.status === 'closed') {
+      throw new AppError('CUSTOM_REQUEST_LOCKED', 409, {
+        ar: 'لا يمكن تغيير حالة طلب مكتمل',
+        en: 'Cannot change the status of a completed request',
+      })
+    }
+
     if (status === 'new') {
       request.claimedBy = null
       request.claimedAt = null
+    }
+    if (status === 'closed' && !request.closedAt) {
+      request.closedAt = new Date()
     }
     request.status = status
     await request.save()

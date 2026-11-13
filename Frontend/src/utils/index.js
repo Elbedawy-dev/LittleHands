@@ -172,6 +172,39 @@ export function getDisplayName(entity, language = 'ar') {
 }
 
 /**
+ * استخراج رابط الصورة بأمان سواء كانت نصاً مباشراً أو كائناً { url, key }
+ * Safely extract image URL from either a string or an object { url, key }
+ *
+ * @param {string|{ url?: string, key?: string }|null|undefined} img
+ * @returns {string}
+ */
+export function getImageUrl(img) {
+  if (!img) return ''
+  if (typeof img === 'string') return img.trim()
+  if (typeof img === 'object') {
+    if (typeof img.url === 'string') return img.url.trim()
+    if (typeof img.src === 'string') return img.src.trim()
+  }
+  return ''
+}
+
+/**
+ * التحقق مما إذا كان المسار يطابق قسماً معيناً كمقطع كامل
+ * Checks if a pathname matches a root section exactly or as a sub-path segment (e.g. '/seller' or '/seller/*')
+ * Prevents false-positive prefix matches like '/sellers' matching '/seller'.
+ *
+ * @param {string} pathname
+ * @param {string} section
+ * @returns {boolean}
+ */
+export function isInSection(pathname, section) {
+  if (!pathname || !section) return false
+  const cleanPath = pathname.split('?')[0].split('#')[0]
+  const cleanSection = section.replace(/\/+$/, '')
+  return cleanPath === cleanSection || cleanPath.startsWith(`${cleanSection}/`)
+}
+
+/**
  * محاكاة تأخير زمني لمعاملات Mock API
  */
 export function delay(ms = 400) {

@@ -15,7 +15,7 @@ import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
 import { MiniCartDrawer } from '../../features/cart/MiniCartDrawer'
 import { NotificationsDropdown } from '../../features/notifications/NotificationsDropdown'
-import { cn, getDisplayName } from '../../utils'
+import { cn, getDisplayName, isInSection } from '../../utils'
 import { Avatar } from '../ui/Avatar'
 import { Logo } from '../ui/Logo'
 
@@ -50,7 +50,7 @@ export function Navbar() {
 
   const isLinkActive = (href) => {
     if (href === '/') return pathname === '/'
-    return pathname.startsWith(href)
+    return isInSection(pathname, href)
   }
 
   const displayName = user ? getDisplayName(user, language) : ''

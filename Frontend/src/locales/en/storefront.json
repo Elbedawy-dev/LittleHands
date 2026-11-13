@@ -42,6 +42,8 @@
       "classroom-decor": "Classroom Decor",
       "activity-kits": "Activity Kits"
     },
+    "latestTitle": "Latest Educational Aids",
+    "latestSubtitle": "Browse the latest handcrafted educational aids published for nurseries",
     "featuredTitle": "Featured Teaching Aids",
     "featuredSubtitle": "Curated selection from our artisans' latest nursery creations",
     "viewAllAids": "View All Aids",
@@ -126,7 +128,7 @@
     "remove": "Remove from favorites"
   },
   "productDetails": {
-    "madeBy": "Crafted by: {{name}}",
+    "madeBy": "Crafted by {{name}}",
     "notFoundTitle": "Teaching aid not found",
     "notFoundDesc": "It may have been removed or moved",
     "backToProducts": "Back to Teaching Aids",

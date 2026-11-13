@@ -129,16 +129,18 @@ export function ProductCard({
         </Link>
 
         {/* السعر وزر الإضافة للسلة */}
-        <div className="mt-4 pt-3 border-t border-surface-border flex items-center justify-between gap-2">
-          <PriceTag amount={product.price} size="md" />
+        <div className="mt-4 pt-3 border-t border-surface-border flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0 whitespace-nowrap">
+            <PriceTag amount={product.price} size="md" />
+          </div>
 
           <button
             type="button"
             onClick={handleAddToCart}
-            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-full bg-brand-orange text-white text-xs font-bold shadow-soft hover:bg-[#e07528] active:scale-95 transition-all select-none cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-full bg-brand-orange text-white text-xs font-bold shadow-soft hover:bg-[#e07528] active:scale-95 transition-all select-none cursor-pointer flex-1 sm:flex-initial min-w-[120px] whitespace-nowrap"
             aria-label={t('common:actions.addToCart')}
           >
-            <ShoppingBag className="w-3.5 h-3.5" />
+            <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
             <span>{t('common:actions.addToCart')}</span>
           </button>
         </div>

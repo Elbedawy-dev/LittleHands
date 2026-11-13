@@ -20,6 +20,7 @@ import { Button } from '../../../components/ui/Button'
 import { Drawer } from '../../../components/ui/Drawer'
 import { Input } from '../../../components/ui/Input'
 import { Lightbox } from '../../../components/ui/Lightbox'
+import { LocalizedText } from '../../../components/ui/LocalizedText'
 import { Modal } from '../../../components/ui/Modal'
 import { PriceTag } from '../../../components/ui/PriceTag'
 import { ProductImage } from '../../../components/ui/ProductImage'
@@ -30,7 +31,7 @@ import { ORDER_STATUS } from '../../../config/constants'
 import { useFormat } from '../../../hooks/useFormat'
 import { usePrivateReceipt } from '../../../hooks/usePrivateReceipt'
 import { orderService } from '../../../services/orderService'
-import { calcCommission, getDisplayName, getFriendlyError } from '../../../utils'
+import { calcCommission, getDisplayName, getFriendlyError, pickLocaleText } from '../../../utils'
 
 const ADMIN_DELETABLE_STATUSES = ['pending_payment', 'payment_rejected', 'cancelled']
 
@@ -312,15 +313,17 @@ export function AdminOrderDrawer({
                       <div className="w-14 h-14 shrink-0">
                         <ProductImage
                           src={it.image}
-                          alt={it.name}
+                          alt={pickLocaleText(it.name, i18n.language)}
                           aspectRatio="1/1"
                           containerClassName="rounded-xl"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h5 className="font-bold text-xs sm:text-sm text-text-main truncate">
-                          {it.name}
-                        </h5>
+                        <LocalizedText
+                          as="h5"
+                          value={it.name}
+                          className="font-bold text-xs sm:text-sm text-text-main truncate"
+                        />
                         <p className="text-xs text-text-muted mt-0.5">
                           {it.qty} × <PriceTag amount={it.unitPrice} size="sm" />
                         </p>

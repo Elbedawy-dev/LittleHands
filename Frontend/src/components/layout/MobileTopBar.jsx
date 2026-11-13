@@ -19,7 +19,7 @@ import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
 import { NotificationsDropdown } from '../../features/notifications/NotificationsDropdown'
 import { useScrollLock } from '../../hooks/useScrollLock'
-import { cn, getDisplayName } from '../../utils'
+import { cn, getDisplayName, isInSection } from '../../utils'
 import { Avatar } from '../ui/Avatar'
 import { Logo } from '../ui/Logo'
 
@@ -99,7 +99,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
 
     const currentRole = user?.role
 
-    if (pathname.startsWith('/admin') || currentRole === 'admin') {
+    if (isInSection(pathname, '/admin') || currentRole === 'admin') {
       return [
         { href: '/admin', label: t('nav:admin.dashboard', 'لوحة التحكم'), exact: true },
         { href: '/admin/payments', label: t('nav:admin.payments', 'مدفوعات فودافون كاش') },
@@ -114,7 +114,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
       ]
     }
 
-    if (pathname.startsWith('/seller') || currentRole === 'seller') {
+    if (isInSection(pathname, '/seller') || currentRole === 'seller') {
       return [
         { href: '/seller', label: t('nav:seller.dashboard', 'لوحة التحكم'), exact: true },
         { href: '/seller/products', label: t('nav:seller.products', 'منتجاتي') },
@@ -139,7 +139,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
 
   const isLinkActive = (href, exact) => {
     if (exact || href === '/') return pathname === href
-    return pathname.startsWith(href)
+    return isInSection(pathname, href)
   }
 
   // Animation strictly from physical LEFT (x: -100% to 0) in both languages

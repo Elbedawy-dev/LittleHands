@@ -17,7 +17,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useScrollLock } from '../../hooks/useScrollLock'
-import { cn } from '../../utils'
+import { cn, isInSection } from '../../utils'
 import { Logo } from '../ui/Logo'
 
 export function MobileDrawer({ isOpen, onClose }) {
@@ -83,7 +83,7 @@ export function MobileDrawer({ isOpen, onClose }) {
 
   const isLinkActive = (href) => {
     if (href === '/') return location.pathname === '/'
-    return location.pathname.startsWith(href)
+    return isInSection(location.pathname, href)
   }
 
   // Animation strictly from the physical LEFT in both languages

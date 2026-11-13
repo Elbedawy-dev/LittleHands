@@ -2,8 +2,6 @@ import {
   AlertCircle,
   Camera,
   CheckCircle2,
-  KeyRound,
-  Lock,
   Save,
   ShieldCheck,
 } from 'lucide-react'
@@ -16,9 +14,8 @@ import { Card } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { LogoutCard } from '../../components/ui/LogoutCard'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { PasswordInput } from '../../components/ui/PasswordInput'
+import { ChangePasswordCard } from '../../features/profile'
 import { useAuth } from '../../context/AuthContext'
-import { authService } from '../../services/authService'
 import { userService } from '../../services/userService'
 import { getFriendlyError } from '../../utils'
 import { processAvatarImage } from '../../utils/avatar'
@@ -36,19 +33,9 @@ export default function AdminAccountPage() {
     phone: user?.phone || '',
   })
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmNewPassword: '',
-  })
-
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [profileError, setProfileError] = useState('')
-
-  const [savingPassword, setSavingPassword] = useState(false)
-  const [passwordSuccess, setPasswordSuccess] = useState(false)
-  const [passwordError, setPasswordError] = useState('')
 
   // معالجة رفع الصورة الشخصية عبر مسار الرفع الرسمي وعدم إرسال data URL لأي مسار
   const handleAvatarFile = async (e) => {
@@ -104,48 +91,6 @@ export default function AdminAccountPage() {
       setProfileError(getFriendlyError(err, t) || t('profile:info.saveError'))
     } finally {
       setSavingProfile(false)
-    }
-  }
-
-  // تغيير كلمة المرور
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault()
-    setPasswordError('')
-    setPasswordSuccess(false)
-
-    if (!passwordData.currentPassword) {
-      setPasswordError(t('profile:info.passwordRequiredFields'))
-      return
-    }
-
-    if (!passwordData.newPassword || passwordData.newPassword.length < 8) {
-      setPasswordError(t('profile:info.passwordTooShort'))
-      return
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmNewPassword) {
-      setPasswordError(t('profile:info.passwordMismatch'))
-      return
-    }
-
-    setSavingPassword(true)
-    try {
-      await authService.changePassword({
-        current: passwordData.currentPassword,
-        next: passwordData.newPassword,
-      })
-      await refreshUser()
-      setPasswordSuccess(true)
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmNewPassword: '',
-      })
-      setTimeout(() => setPasswordSuccess(false), 4000)
-    } catch (err) {
-      setPasswordError(getFriendlyError(err, t) || t('profile:info.passwordUpdateError'))
-    } finally {
-      setSavingPassword(false)
     }
   }
 
@@ -271,68 +216,8 @@ export default function AdminAccountPage() {
         </form>
       </Card>
 
-      {/* قسم تغيير كلمة المرور */}
-      <Card padding="lg" className="space-y-6">
-        <div className="pb-4 border-b border-surface-border">
-          <h3 className="text-base font-heading font-black text-text-main flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-brand-orange" />
-            <span>{t('profile:info.changePasswordTitle')}</span>
-          </h3>
-          <p className="text-xs text-text-muted mt-0.5">
-            {t('profile:info.changePasswordSubtitle')}
-          </p>
-        </div>
-
-        {passwordSuccess && (
-          <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{t('profile:info.passwordUpdateSuccess')}</span>
-          </div>
-        )}
-
-        {passwordError && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{passwordError}</span>
-          </div>
-        )}
-
-        <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-lg">
-          <PasswordInput
-            label={t('profile:info.currentPassword')}
-            value={passwordData.currentPassword}
-            onChange={(e) => setPasswordData((prev) => ({ ...prev, currentPassword: e.target.value }))}
-            required
-          />
-
-          <PasswordInput
-            label={t('profile:info.newPassword')}
-            value={passwordData.newPassword}
-            onChange={(e) => setPasswordData((prev) => ({ ...prev, newPassword: e.target.value }))}
-            required
-            helperText={t('profile:info.passwordHelper')}
-          />
-
-          <PasswordInput
-            label={t('profile:info.confirmNewPassword')}
-            value={passwordData.confirmNewPassword}
-            onChange={(e) => setPasswordData((prev) => ({ ...prev, confirmNewPassword: e.target.value }))}
-            required
-          />
-
-          <div className="flex justify-end pt-2">
-            <Button
-              type="submit"
-              variant="secondary"
-              size="md"
-              loading={savingPassword}
-              startIcon={<Lock className="w-4 h-4" />}
-            >
-              {t('profile:info.updatePasswordBtn')}
-            </Button>
-          </div>
-        </form>
-      </Card>
+      {/* قسم تغيير كلمة المرور المشترك */}
+      <ChangePasswordCard />
 
       {/* بطاقة تسجيل الخروج المشتركة */}
       <LogoutCard onLogout={handleLogout} />

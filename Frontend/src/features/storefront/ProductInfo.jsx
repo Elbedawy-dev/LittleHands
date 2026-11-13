@@ -28,6 +28,17 @@ export function ProductInfo({ product }) {
   const [isFavorite, setIsFavorite] = useState(false)
   const [isFavLoading, setIsFavLoading] = useState(false)
 
+  const sellerDisplayName =
+    getDisplayName(
+      {
+        id: product.sellerId,
+        sellerId: product.sellerId,
+        name: product.sellerName,
+        nameEn: product.sellerNameEn,
+      },
+      language
+    ) || t('common:roles.seller')
+
   // إضافة للسلة
   const handleAddToCart = () => {
     addItem(product, quantity)
@@ -70,23 +81,20 @@ export function ProductInfo({ product }) {
       <div className="flex items-center justify-between gap-3">
         <Link
           to={`/sellers/${product.sellerId || ''}`}
-          className="inline-flex items-center gap-2 p-1.5 pe-3 rounded-full bg-surface-subtle border border-surface-border hover:border-brand-orange/50 transition-colors group"
+          className="inline-flex items-center gap-2 p-1.5 pe-3.5 rounded-full bg-surface-subtle border border-surface-border hover:border-brand-orange/50 transition-colors group"
         >
           <Avatar
             src={product.sellerAvatar}
-            name={getDisplayName({ id: product.sellerId, sellerId: product.sellerId, name: product.sellerName, nameEn: product.sellerNameEn }, language) || t('common:roles.seller')}
+            name={sellerDisplayName}
             role="seller"
             size="sm"
           />
           <div className="text-start">
-            <span className="text-[11px] font-bold text-text-muted block">
-              {t('storefront:productDetails.madeBy', { defaultValue: 'صنع بأيدي' })}
-            </span>
             <span
-              className="text-xs font-black text-text-main group-hover:text-brand-orange-text transition-colors"
+              className="text-xs font-bold text-text-main group-hover:text-brand-orange-text transition-colors"
               data-user-content="true"
             >
-              {getDisplayName({ id: product.sellerId, sellerId: product.sellerId, name: product.sellerName, nameEn: product.sellerNameEn }, language) || t('common:roles.seller')}
+              {t('storefront:productDetails.madeBy', { name: sellerDisplayName })}
             </span>
           </div>
         </Link>

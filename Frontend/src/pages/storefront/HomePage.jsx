@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ArtisansSection } from '../../features/storefront/ArtisansSection'
 import { CategoriesSection } from '../../features/storefront/CategoriesSection'
-import { FeaturedProductsSection } from '../../features/storefront/FeaturedProductsSection'
 import { HeroSection } from '../../features/storefront/HeroSection'
 import { HowOrderingWorksSection } from '../../features/storefront/HowOrderingWorksSection'
+import { LatestProductsSection } from '../../features/storefront/LatestProductsSection'
 import { NurseryBannerSection } from '../../features/storefront/NurseryBannerSection'
 import { NurseryOrderModal } from '../../features/storefront/NurseryOrderModal'
 import { TrustStrip } from '../../features/storefront/TrustStrip'
@@ -15,18 +15,18 @@ import { sellerService } from '../../services/sellerService'
  * تتبع ترتيب الأقسام المطلوب بدقة وتلتزم بمعجم المحتوى والكلمات المحظورة
  */
 export default function HomePage() {
-  const [featuredProducts, setFeaturedProducts] = useState([])
+  const [latestProducts, setLatestProducts] = useState([])
   const [sellers, setSellers] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [loadingSellers, setLoadingSellers] = useState(true)
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false)
 
   useEffect(() => {
-    // جلب الوسائل التعليمية المميزة
+    // جلب أحدث 12 وسيلة تعليمية منشورة
     catalogService
-      .getFeaturedProducts(8)
-      .then((items) => setFeaturedProducts(items))
-      .catch(() => setFeaturedProducts([]))
+      .getProducts({ sort: 'newest', pageSize: 12 })
+      .then((res) => setLatestProducts(res?.items || []))
+      .catch(() => setLatestProducts([]))
       .finally(() => setLoadingProducts(false))
 
     // جلب بيانات البائعتين الحرفيتين
@@ -41,21 +41,20 @@ export default function HomePage() {
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-12 sm:space-y-16">
       {/* 1. قسم البانر الرئيسي Hero */}
       <HeroSection
-        featuredProducts={featuredProducts}
         onOpenCustomModal={() => setIsCustomModalOpen(true)}
       />
 
-      {/* 2. شريط الثقة (صناعة يدوية، توصيل لكل المحافظات، دفع فودافون كاش، كميات للحضانات) */}
-      <TrustStrip />
-
-      {/* 3. تصنيفات المنصة الستة الأساسية (بدون أعداد) */}
-      <CategoriesSection />
-
-      {/* 4. شبكة الوسائل التعليمية المميزة (8 بطاقات وسائل) */}
-      <FeaturedProductsSection
-        products={featuredProducts}
+      {/* 2. قسم أحدث 12 وسيلة تعليمية (بعد الـ Hero وقبل باقي الأقسام) */}
+      <LatestProductsSection
+        products={latestProducts}
         loading={loadingProducts}
       />
+
+      {/* 3. شريط الثقة (صناعة يدوية، توصيل لكل المحافظات، دفع فودافون كاش، كميات للحضانات) */}
+      <TrustStrip />
+
+      {/* 4. تصنيفات المنصة الستة الأساسية (بدون أعداد) */}
+      <CategoriesSection />
 
       {/* 5. قسم "تعرفي على صانعتينا" (بطاقتي البائعتين دون تقييمات) */}
       <ArtisansSection

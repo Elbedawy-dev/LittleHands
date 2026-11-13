@@ -21,7 +21,13 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Input } from '../../components/ui/Input'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { Select } from '../../components/ui/Select'
 import { Tabs } from '../../components/ui/Tabs'
+import {
+  SELLER_STATUS_OPTIONS,
+  getCustomRequestStatusLabel,
+  getCustomRequestStatusVariant,
+} from '../../features/custom-requests/customRequestStatusConfig'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useFormat } from '../../hooks/useFormat'
 import { sellerService } from '../../services/sellerService'
@@ -60,6 +66,10 @@ export default function SellerCustomRequestsPage() {
   // Claim modal state
   const [claimTarget, setClaimTarget] = useState(null)
   const [claiming, setClaiming] = useState(false)
+
+  // Status update state
+  const [updatingStatusId, setUpdatingStatusId] = useState(null)
+  const [closeTarget, setCloseTarget] = useState(null)
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
@@ -138,6 +148,54 @@ export default function SellerCustomRequestsPage() {
       setClaimTarget(null)
     } finally {
       setClaiming(false)
+    }
+  }
+
+  const handleStatusChangeRequest = (request, newStatus) => {
+    if (newStatus === 'closed') {
+      setCloseTarget({ id: request.id, newStatus })
+      return
+    }
+    executeStatusUpdate(request.id, newStatus)
+  }
+
+  const executeStatusUpdate = async (id, newStatus) => {
+    setUpdatingStatusId(id)
+    try {
+      const res = await sellerService.updateCustomRequestStatus(id, newStatus)
+      toast.success(
+        isEn ? 'Request status updated successfully' : 'تم تحديث حالة الطلب بنجاح'
+      )
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                status: newStatus,
+                locked: Boolean(newStatus === 'closed' || res?.locked),
+                ...(newStatus === 'closed' ? { closedAt: new Date().toISOString() } : {}),
+              }
+            : r
+        )
+      )
+    } catch (err) {
+      console.error('Failed to update request status:', err)
+      const code = err.response?.data?.error?.code || err.code
+      if (code === 'CUSTOM_REQUEST_LOCKED') {
+        toast.error(
+          isEn
+            ? 'Cannot change the status of a completed request'
+            : 'لا يمكن تغيير حالة طلب مكتمل'
+        )
+        setRequests((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: 'closed', locked: true } : r))
+        )
+      } else {
+        toast.error(getFriendlyError(err, t))
+      }
+    } finally {
+      setUpdatingStatusId(null)
+      setCloseTarget(null)
     }
   }
 
@@ -381,6 +439,59 @@ export default function SellerCustomRequestsPage() {
                       {item.phone}
                     </span>
                   </div>
+
+                  {/* Status Control for Claimed Requests */}
+                  {isClaimedByMe && (
+                    <div className="pt-2">
+                      {item.locked || item.status === 'closed' ? (
+                        <div className="p-3 rounded-xl bg-surface-subtle/80 border border-surface-border space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-text-muted">
+                              {isEn ? 'Status' : 'حالة الطلب'}:
+                            </span>
+                            <Badge variant="success" size="sm" className="font-bold">
+                              {getCustomRequestStatusLabel('closed', isEn)}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-300 font-medium pt-1 border-t border-surface-border/60">
+                            <Lock className="w-3.5 h-3.5 shrink-0" />
+                            <span>
+                              {isEn
+                                ? 'This request is completed and locked'
+                                : 'هذا الطلب مكتمل ومقفل، ولا يمكن تغيير حالته'}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-surface-subtle/80 border border-surface-border space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-text-main">
+                              {isEn ? 'Update Status' : 'تحديث حالة الطلب'}:
+                            </span>
+                            <Badge
+                              variant={getCustomRequestStatusVariant(item.status)}
+                              size="sm"
+                            >
+                              {getCustomRequestStatusLabel(item.status, isEn)}
+                            </Badge>
+                          </div>
+                          <Select
+                            id={`seller-status-select-${item.id}`}
+                            value={item.status || 'contacted'}
+                            onChange={(e) => handleStatusChangeRequest(item, e.target.value)}
+                            disabled={updatingStatusId === item.id}
+                            className="text-xs py-1.5 h-9 w-full bg-surface"
+                          >
+                            {SELLER_STATUS_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {isEn ? opt.labelEn : opt.labelAr}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Actions Footer */}
@@ -443,6 +554,27 @@ export default function SellerCustomRequestsPage() {
         cancelText={t('seller:customRequests.confirm.cancelBtn', 'إلغاء')}
         variant="primary"
         loading={claiming}
+      />
+
+      {/* Confirmation Dialog for Completing / Closing Request */}
+      <ConfirmDialog
+        isOpen={Boolean(closeTarget)}
+        onClose={() => setCloseTarget(null)}
+        onConfirm={() => {
+          if (closeTarget) {
+            executeStatusUpdate(closeTarget.id, closeTarget.newStatus)
+          }
+        }}
+        title={isEn ? 'Confirm Request Completion' : 'تأكيد إكمال الطلب'}
+        message={
+          isEn
+            ? 'After marking this request as completed, you cannot change its status because dues will have been settled.'
+            : 'بعد تحديد الطلب كمكتمل لن تستطيعي تغيير حالته لأن المستحقات تكون قد دُفعت'
+        }
+        confirmText={isEn ? 'Yes, Mark Completed' : 'نعم، تحديد كمكتمل'}
+        cancelText={isEn ? 'Cancel' : 'تراجع'}
+        variant="warning"
+        loading={Boolean(updatingStatusId)}
       />
     </div>
   )

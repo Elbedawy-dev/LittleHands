@@ -20,7 +20,12 @@
     "activeMembership": "Active Member — Egypt Nurseries",
     "myProfile": "My Profile",
     "customerAccount": "Customer Account",
-    "avatarFormatsHint": "Allowed formats: JPG, PNG, WebP (Max 2MB)"
+    "avatarFormatsHint": "Allowed formats: JPG, PNG, WebP (Max 2MB)",
+    "sellerBadge": "Seller",
+    "adminBadge": "Admin",
+    "sellerPublishedAids": "Published Aids",
+    "sellerOrders": "Orders",
+    "sellerNetEarnings": "Net Earnings"
   },
   "nav": {
     "profile": "My Profile",
@@ -65,7 +70,11 @@
     "governorateSelectPlaceholder": "Select governorate",
     "cityPlaceholder": "e.g. Nasr City, Mohandessin...",
     "addressPlaceholder": "Street, building number, floor...",
-    "nurseryPlaceholder": "e.g. Little Sprouts Nursery"
+    "nurseryPlaceholder": "e.g. Little Sprouts Nursery",
+    "basicInfoTitle": "Personal Information",
+    "basicInfoSubtitle": "Update your display name and registered phone number",
+    "emailReadOnlyHelper": "Primary account email (read-only)",
+    "sellerInfoEmailHelper": "Primary email linked to your workshop account"
   },
   "orders": {
     "title": "Educational Aids Orders History",
@@ -251,6 +260,19 @@
     "currentPassword": "Current Password",
     "newPassword": "New Password",
     "confirmNewPassword": "Confirm New Password",
-    "updatePassword": "Update Password"
+    "updatePassword": "Update Password",
+    "quickLinksTitle": "Admin Quick Links",
+    "quickLinksDesc": "Quick access to key platform administration sections",
+    "platformSettingsLink": "Platform Settings",
+    "sellerAccountsLink": "Seller Accounts",
+    "notificationsLink": "Notifications"
+  },
+  "quickAccess": {
+    "title": "Quick Access to Professional Account & Dashboard",
+    "subtitle": "Jump directly to your specialized workspace and daily tools.",
+    "sellerProfileLink": "Professional Craft Profile",
+    "sellerDashboardLink": "Seller Dashboard",
+    "adminAccountLink": "Platform Admin Account",
+    "adminDashboardLink": "Admin Dashboard"
   }
 }

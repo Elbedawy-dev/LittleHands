@@ -58,7 +58,7 @@ export const productService = {
 
     const products = await Product.find(filter)
       .sort({ createdAt: -1 })
-      .populate('sellerId', '_id name seller avatar')
+      .populate('sellerId', '_id name seller.displayName avatar')
 
     return products.map((p) => toManageProductDTO(p, commissionRate))
   },

@@ -4,7 +4,7 @@
 export const EVENT_TYPES = {
   USER_REGISTERED: 'user.registered', // { user, code }
   AUTH_VERIFICATION_CODE_RESENT: 'auth.verificationCodeResent', // { user, code }
-  AUTH_PASSWORD_RESET_REQUESTED: 'auth.passwordResetRequested', // { user, token }
+  AUTH_PASSWORD_RESET_REQUESTED: 'auth.passwordResetRequested', // { user, code }
   SELLER_CREATED: 'seller.created', // { user, tempPassword }
   ORDER_CREATED: 'order.created', // { order, payment }
   PAYMENT_RESUBMITTED: 'payment.resubmitted', // { order, payment }

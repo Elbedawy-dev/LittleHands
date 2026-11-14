@@ -88,13 +88,25 @@ export const authService = {
   },
 
   /**
-   * طلب رابط استعادة كلمة المرور
+   * طلب رمز التحقق لاستعادة كلمة المرور
    * POST /auth/forgot-password
    */
   async forgotPassword(email) {
     const cleanEmail = typeof email === 'object' ? email.email : email
     const res = await apiClient.post('/auth/forgot-password', {
       email: (cleanEmail || '').trim().toLowerCase(),
+    })
+    return res
+  },
+
+  /**
+   * التحقق من رمز الاستعادة المكون من 6 أرقام وإصدار رمز تعيين مؤقت
+   * POST /auth/verify-reset-code
+   */
+  async verifyResetCode({ email, code }) {
+    const res = await apiClient.post('/auth/verify-reset-code', {
+      email: (email || '').trim().toLowerCase(),
+      code: String(code || '').trim(),
     })
     return res
   },

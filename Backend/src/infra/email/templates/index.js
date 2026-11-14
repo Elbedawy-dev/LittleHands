@@ -59,6 +59,7 @@ export function renderTemplate(templateKey, data = {}, { locale = 'ar' } = {}) {
   const context = {
     ...data,
     lang,
+    isEn,
     dir,
     align,
     oppositeAlign,

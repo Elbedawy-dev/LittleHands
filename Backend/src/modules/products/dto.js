@@ -1,4 +1,4 @@
-import { mapProductDTO } from '../../utils/dto.js'
+import { extractAvatarUrl, mapProductDTO } from '../../utils/dto.js'
 import { calcCommission } from '../../utils/money.js'
 import { DEFAULT_COMMISSION_RATE } from '../../config/constants.js'
 
@@ -16,7 +16,7 @@ export function toPublicProductDTO(product) {
     dto.seller = {
       id: s._id.toString(),
       displayName: s.seller?.displayName || { ar: s.name, en: 'Seller' },
-      avatar: s.avatar?.url || s.avatar || null,
+      avatar: extractAvatarUrl(s.avatar),
     }
   }
 

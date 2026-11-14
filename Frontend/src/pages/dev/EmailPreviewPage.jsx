@@ -19,6 +19,7 @@ import customerOrderReceivedRaw from '../../emails/customer-order-received.html?
 import customerPaymentConfirmedRaw from '../../emails/customer-payment-confirmed.html?raw'
 import customerPaymentRejectedRaw from '../../emails/customer-payment-rejected.html?raw'
 import customerShippedRaw from '../../emails/customer-shipped.html?raw'
+import passwordResetRaw from '../../emails/password-reset.html?raw'
 import sellerNewOrderRaw from '../../emails/seller-new-order.html?raw'
 
 const TEMPLATES = [
@@ -76,9 +77,19 @@ const TEMPLATES = [
     descAr: 'تنبيه للإدارة لتدقيق إيصال فودافون كاش ومطابقته بمحفظة المنصة.',
     descEn: 'Alert for admin to verify receipt against platform wallet.',
   },
+  {
+    id: 'password-reset',
+    labelAr: 'رمز استعادة كلمة المرور (OTP)',
+    labelEn: 'Password Reset Code (OTP)',
+    audience: 'customer',
+    raw: passwordResetRaw,
+    descAr: 'بريد إلكتروني يحتوي على رمز التحقق من 6 أرقام صالح لمدة 10 دقائق دون أي روابط.',
+    descEn: 'Verification email containing a 6-digit OTP code valid for 10 minutes with no link.',
+  },
 ]
 
 const DEFAULT_SAMPLE_DATA = {
+  otpCode: '482910',
   customerName: 'مثال: مديرة الحضانة',
   customerPhone: '01XXXXXXXXX',
   nurseryName: 'حضانة الأمل التجريبية',

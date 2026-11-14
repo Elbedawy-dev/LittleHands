@@ -35,7 +35,7 @@ export function MobileTabBar() {
   return (
     <nav
       aria-label={t('tabBar.ariaNav', 'شريط التنقل السفلي')}
-      className="md:hidden fixed bottom-0 start-0 end-0 z-40 bg-surface/95 backdrop-blur-lg border-t border-surface-border px-3 py-2 shadow-float select-none transition-colors"
+      className="md:hidden fixed bottom-0 start-0 end-0 z-40 min-h-[64px] bg-surface/95 backdrop-blur-lg border-t border-surface-border px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-float select-none transition-colors"
     >
       <div className="flex items-center justify-around">
         {tabs.map((tab) => {

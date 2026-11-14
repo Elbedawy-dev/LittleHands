@@ -120,10 +120,10 @@ export function PaymentRejectModal({
             type="submit"
             variant="danger"
             loading={loading}
+            endIcon={<Send className="w-4 h-4 rtl:-scale-x-100" />}
             className="flex-1 sm:flex-initial gap-1.5"
           >
-            <Send className="w-4 h-4 rtl:rotate-180" />
-            <span>{t('payments.rejectModal.rejectButton')}</span>
+            {t('payments.rejectModal.rejectButton')}
           </Button>
         </div>
       </form>

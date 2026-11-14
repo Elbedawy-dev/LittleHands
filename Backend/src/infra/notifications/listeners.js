@@ -711,18 +711,15 @@ export function registerNotificationListeners() {
   // 13. Password Reset Requested
   eventBus.on(EVENT_TYPES.AUTH_PASSWORD_RESET_REQUESTED, async (payload) => {
     try {
-      const { user, token } = payload || {}
-      if (!user?.email || !token) return
-
-      const resetLink = `${env.CLIENT_URL}/reset-password?token=${token}`
+      const { user, code } = payload || {}
+      if (!user?.email || !code) return
 
       await email.sendTemplate(
         'password-reset',
         user.email,
         {
           name: user.name || '',
-          resetLink,
-          token,
+          code,
         },
         { locale: user.locale || 'ar', user }
       )

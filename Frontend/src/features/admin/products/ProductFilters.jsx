@@ -25,11 +25,14 @@ export function ProductFilters({
 
   const sellerTabs = [
     { id: 'all', label: t('products.allSellers'), count: counts.all || 0 },
-    ...sellers.map((s) => ({
-      id: s.id || s._id,
-      label: getDisplayName(s, i18n.language),
-      count: counts[s.id || s._id] ?? (s.productsCount || 0),
-    })),
+    ...sellers.map((s) => {
+      const sid = String(s.id || s._id || s.sellerId || '')
+      return {
+        id: sid,
+        label: getDisplayName(s, i18n.language),
+        count: counts[sid] ?? 0,
+      }
+    }),
   ]
 
   return (

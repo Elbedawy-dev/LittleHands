@@ -108,6 +108,10 @@ export const ERROR_MESSAGES = {
     ar: 'رمز التحقق منتهي الصلاحية',
     en: 'Verification code has expired.',
   },
+  INVALID_OR_EXPIRED_CODE: {
+    ar: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
+    en: 'Verification code is invalid or expired.',
+  },
   CODE_MAX_ATTEMPTS: {
     ar: 'تم استنفاد الحد الأقصى لمحاولات إدخال الرمز',
     en: 'Maximum verification attempts exceeded. Please request a new code.',

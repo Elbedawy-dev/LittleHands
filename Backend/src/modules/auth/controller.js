@@ -77,6 +77,11 @@ export const authController = {
     return ok(res, result)
   }),
 
+  verifyResetCode: asyncHandler(async (req, res) => {
+    const result = await authService.verifyResetCode(req.body)
+    return ok(res, result)
+  }),
+
   resetPassword: asyncHandler(async (req, res) => {
     await authService.resetPassword(req.body)
     return ok(res, { message: 'Password has been reset successfully' })

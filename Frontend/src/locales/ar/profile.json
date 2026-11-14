@@ -20,7 +20,12 @@
     "activeMembership": "عضوية نشطة — حضانات مصر",
     "myProfile": "بياناتي وملفي",
     "customerAccount": "حساب العميلة",
-    "avatarFormatsHint": "صيغ مدعومة: JPG, PNG, WebP (حد أقصى 2MB)"
+    "avatarFormatsHint": "صيغ مدعومة: JPG, PNG, WebP (حد أقصى 2MB)",
+    "sellerBadge": "بائعة",
+    "adminBadge": "إدارة",
+    "sellerPublishedAids": "الوسائل المنشورة",
+    "sellerOrders": "الطلبات",
+    "sellerNetEarnings": "صافي الأرباح"
   },
   "nav": {
     "profile": "ملفي الشخصي",
@@ -65,7 +70,11 @@
     "governorateSelectPlaceholder": "اختر المحافظة",
     "cityPlaceholder": "مثال: مدينة نصر، المهندسين...",
     "addressPlaceholder": "الشارع، رقم المبنى، الدور...",
-    "nurseryPlaceholder": "مثال: حضانة براعم المستقبل"
+    "nurseryPlaceholder": "مثال: حضانة براعم المستقبل",
+    "basicInfoTitle": "البيانات الشخصية",
+    "basicInfoSubtitle": "تحديث الاسم ورقم الهاتف المسجل بالحساب",
+    "emailReadOnlyHelper": "البريد الإلكتروني الأساسي للحساب (للقراءة فقط)",
+    "sellerInfoEmailHelper": "البريد الإلكتروني الأساسي المرتبط بحساب الورشة"
   },
   "orders": {
     "title": "سجل طلبات الوسائل التعليمية",
@@ -251,6 +260,19 @@
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
     "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
-    "updatePassword": "تحديث كلمة المرور"
+    "updatePassword": "تحديث كلمة المرور",
+    "quickLinksTitle": "روابط الإدارة السريعة",
+    "quickLinksDesc": "وصول سريع لأهم أقسام إدارة المنصة",
+    "platformSettingsLink": "إعدادات المنصة",
+    "sellerAccountsLink": "حسابات البائعات",
+    "notificationsLink": "الإشعارات"
+  },
+  "quickAccess": {
+    "title": "الانتقال السريع للحساب المهني ولوحة التحكم",
+    "subtitle": "ادخلي مباشرة إلى مساحتكِ المتخصصة وإدارة مهامكِ اليومية.",
+    "sellerProfileLink": "الملف المهني والحساب الحرفي",
+    "sellerDashboardLink": "لوحة تحكم البائعة",
+    "adminAccountLink": "حساب إدارة المنصة",
+    "adminDashboardLink": "لوحة تحكم الإدارة"
   }
 }

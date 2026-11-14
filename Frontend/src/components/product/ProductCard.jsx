@@ -2,14 +2,33 @@ import { Heart, ShoppingBag } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { CATEGORIES } from '../../config/constants'
+import { CATEGORIES, STAGES } from '../../config/constants'
 import { useCart } from '../../context/CartContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { userService } from '../../services/userService'
-import { getDisplayName, pickLocale } from '../../utils'
+import { getDisplayName, getImageUrl, pickLocale } from '../../utils'
+import { getProductStockMeta } from '../../utils/productStock'
+import { Avatar } from '../ui/Avatar'
 import { Badge } from '../ui/Badge'
 import { PriceTag } from '../ui/PriceTag'
 import { ProductImage } from '../ui/ProductImage'
+
+function translateMaterial(materialId, t) {
+  switch (materialId) {
+    case 'felt':
+      return t('common:materials.felt')
+    case 'cardstock':
+      return t('common:materials.cardstock')
+    case 'fabric':
+      return t('common:materials.fabric')
+    case 'canson':
+      return t('common:materials.canson')
+    case 'nasbian':
+      return t('common:materials.nasbian')
+    default:
+      return materialId
+  }
+}
 
 export function ProductCard({
   product,
@@ -21,7 +40,6 @@ export function ProductCard({
   const { addItem } = useCart()
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite)
 
-  // العثور على معلومات التصنيف
   const category = CATEGORIES.find(
     (c) => c.id === product.categoryId || c.slug === product.categoryId
   )
@@ -32,6 +50,49 @@ export function ProductCard({
     : language === 'ar'
     ? 'وسيلة تعليمية'
     : 'Educational Aid'
+
+  const sellerId =
+    product.seller?.id ||
+    (typeof product.sellerId === 'string' && product.sellerId !== '[object Object]' ? product.sellerId : '')
+  const sellerName =
+    getDisplayName(
+      product.seller || {
+        id: sellerId,
+        sellerId,
+        name: product.sellerName,
+        nameEn: product.sellerNameEn,
+      },
+      language
+    ) || t('common:roles.seller')
+  const sellerAvatar = getImageUrl(
+    product.seller?.avatar || product.sellerAvatar || product.sellerId?.avatar
+  )
+
+  const productName = pickLocale(product.name, language).text
+  const productDescription = pickLocale(product.description, language).text
+
+  const stageIds = Array.isArray(product.stages) && product.stages.length > 0
+    ? product.stages
+    : product.stage
+      ? [product.stage]
+      : []
+  const visibleStages = stageIds.slice(0, 2).map((stageId) => {
+    const match = STAGES.find((st) => st.id === stageId)
+    return {
+      id: stageId,
+      label: match ? (language === 'ar' ? match.label : match.labelEn) : stageId,
+    }
+  })
+  const extraStages = Math.max(0, stageIds.length - visibleStages.length)
+
+  const materialIds = Array.isArray(product.materials) ? product.materials.filter(Boolean) : []
+  const visibleMaterials = materialIds.slice(0, 2).map((matId) => ({
+    id: matId,
+    label: translateMaterial(matId, t),
+  }))
+  const extraMaterials = Math.max(0, materialIds.length - visibleMaterials.length)
+
+  const { stockCount, isOutOfStock, status } = getProductStockMeta(product)
 
   const handleFavoriteClick = async (e) => {
     e.preventDefault()
@@ -49,13 +110,31 @@ export function ProductCard({
   const handleAddToCart = (e) => {
     e.preventDefault()
     e.stopPropagation()
+    if (isOutOfStock) return
     addItem(product, 1)
   }
 
-  const productName = pickLocale(product.name, language).text
+  const stockPillClass =
+    status === 'out'
+      ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60'
+      : status === 'low'
+        ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60'
+        : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60'
+
+  const stockDotClass =
+    status === 'out' ? 'bg-rose-500' : status === 'low' ? 'bg-amber-500' : 'bg-emerald-500'
+
+  const stockLabel =
+    status === 'out'
+      ? t('storefront:productDetails.stock.outOfStock')
+      : status === 'low'
+        ? t('storefront:productDetails.stock.lowStock', { count: stockCount })
+        : stockCount !== null
+          ? t('storefront:productDetails.stock.inStockCount', { count: stockCount })
+          : t('storefront:productDetails.stock.inStock')
 
   return (
-    <div className="group relative flex flex-col rounded-[24px] bg-surface border border-surface-border shadow-soft hover-lift overflow-hidden transition-all duration-300">
+    <div className="group relative h-full flex flex-col rounded-[24px] bg-surface border border-surface-border shadow-soft hover-lift overflow-hidden transition-all duration-300">
       {/* حاوية الصورة وعناصر التفاعل العلوية */}
       <div className="relative overflow-hidden p-3 pb-0">
         <Link to={`/products/${product.id}`} className="block overflow-hidden rounded-[20px]">
@@ -71,11 +150,11 @@ export function ProductCard({
         <button
           type="button"
           onClick={handleFavoriteClick}
-          className="absolute top-5 end-5 w-9 h-9 rounded-full bg-white/90 dark:bg-surface/90 shadow-md flex items-center justify-center text-text-muted hover:text-rose-500 transition-colors z-10"
+          className="absolute top-5 end-5 w-9 h-9 rounded-full bg-white/90 dark:bg-surface/90 shadow-md flex items-center justify-center text-text-muted hover:text-rose-500 transition-colors z-10 cursor-pointer"
           aria-label={
             isFavorite
-              ? t('storefront:favorites.remove', { defaultValue: 'إزالة من المفضلة' })
-              : t('storefront:favorites.add', { defaultValue: 'إضافة للمفضلة' })
+              ? t('storefront:favorites.remove')
+              : t('storefront:favorites.add')
           }
         >
           <Heart
@@ -98,24 +177,25 @@ export function ProductCard({
       </div>
 
       {/* تفاصيل الوسيلة التعليمية */}
-      <div className="flex flex-col flex-1 p-4">
-        {/* اسم البائعة الحرفية */}
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[11px] font-semibold text-text-muted" data-user-content="true">
-            {getDisplayName({ id: product.sellerId, sellerId: product.sellerId, name: product.sellerName, nameEn: product.sellerNameEn }, language) || t('common:roles.seller')}
+      <div className="flex flex-col flex-1 p-4 gap-2">
+        {/* صورة واسم البائعة الحرفية */}
+        <Link
+          to={sellerId ? `/sellers/${sellerId}` : '/sellers'}
+          className="inline-flex items-center gap-1.5 min-w-0 self-start hover:text-brand-orange-text transition-colors"
+        >
+          <Avatar
+            src={sellerAvatar}
+            name={sellerName}
+            role="seller"
+            size="sm"
+            className="w-6 h-6 text-[10px] shrink-0"
+          />
+          <span className="text-[11px] font-semibold text-text-muted truncate" data-user-content="true">
+            {sellerName}
           </span>
-          {product.inStock ? (
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-              {t('common:status.inStock')}
-            </span>
-          ) : (
-            <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">
-              {t('common:status.outOfStock')}
-            </span>
-          )}
-        </div>
+        </Link>
 
-        {/* اسم الوسيلة */}
+        {/* عنوان الوسيلة (سطران بحد أقصى) */}
         <Link
           to={`/products/${product.id}`}
           className="block group-hover:text-brand-orange-text transition-colors"
@@ -128,21 +208,96 @@ export function ProductCard({
           </h3>
         </Link>
 
-        {/* السعر وزر الإضافة للسلة */}
-        <div className="mt-4 pt-3 border-t border-surface-border flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0 whitespace-nowrap">
-            <PriceTag amount={product.price} size="md" />
+        {/* وصف مختصر (سطران بحد أقصى) */}
+        <p
+          className="text-xs text-text-muted leading-relaxed line-clamp-2 min-h-[38px]"
+          data-user-content="true"
+        >
+          {productDescription}
+        </p>
+
+        {/* شارات المراحل العمرية والخامات (حد أقصى 2 لكل نوع + عداد الإضافي) */}
+        {(visibleStages.length > 0 || visibleMaterials.length > 0) && (
+          <div className="space-y-1.5 pt-0.5">
+            {visibleStages.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1">
+                {visibleStages.map((stage) => (
+                  <span
+                    key={stage.id}
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200/80 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/50 max-w-full truncate"
+                  >
+                    {stage.label}
+                  </span>
+                ))}
+                {extraStages > 0 && (
+                  <span
+                    dir="ltr"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100/80 text-sky-900 dark:bg-sky-900/50 dark:text-sky-200"
+                  >
+                    +{extraStages}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {visibleMaterials.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1">
+                {visibleMaterials.map((mat) => (
+                  <span
+                    key={mat.id}
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-subtle text-text-muted border border-surface-border max-w-[140px] truncate"
+                  >
+                    {mat.label}
+                  </span>
+                ))}
+                {extraMaterials > 0 && (
+                  <span
+                    dir="ltr"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-surface-subtle text-text-main border border-surface-border"
+                  >
+                    +{extraMaterials}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ذيل الكارت المثبت للأسفل لتساوي ارتفاع كل الكروت في الصف */}
+        <div className="mt-auto pt-2.5 space-y-2.5">
+          {/* مؤشر التوفر الملون بالكمية */}
+          <div>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-bold ${stockPillClass}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stockDotClass}`} />
+              <span>{stockLabel}</span>
+            </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-full bg-brand-orange text-white text-xs font-bold shadow-soft hover:bg-[#e07528] active:scale-95 transition-all select-none cursor-pointer flex-1 sm:flex-initial min-w-[120px] whitespace-nowrap"
-            aria-label={t('common:actions.addToCart')}
-          >
-            <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
-            <span>{t('common:actions.addToCart')}</span>
-          </button>
+          {/* السعر وزر الإضافة للسلة */}
+          <div className="pt-2.5 border-t border-surface-border flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0 whitespace-nowrap">
+              <PriceTag amount={product.price} size="md" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-full bg-brand-orange text-white text-xs font-bold shadow-soft hover:bg-[#e07528] active:scale-95 transition-all select-none cursor-pointer flex-1 sm:flex-initial min-w-0 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-orange disabled:active:scale-100"
+              aria-label={
+                isOutOfStock
+                  ? t('storefront:productDetails.stock.outOfStock')
+                  : t('common:actions.addToCart')
+              }
+            >
+              <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                {isOutOfStock ? t('common:status.outOfStock') : t('common:actions.addToCart')}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

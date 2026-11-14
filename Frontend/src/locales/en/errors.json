@@ -25,6 +25,7 @@
   "INVALID_CODE": "Invalid verification code.",
   "ERR_INVALID_CODE": "Invalid verification code.",
   "EXPIRED_CODE": "Verification code has expired.",
+  "INVALID_OR_EXPIRED_CODE": "Verification code is invalid or expired.",
   "CODE_MAX_ATTEMPTS": "Maximum verification attempts exceeded. Please request a new code.",
   "CSRF_ERROR": "CSRF security verification failed.",
   "INVALID_FILE_TYPE": "Unsupported file type. Only JPEG, PNG, and WEBP are allowed.",

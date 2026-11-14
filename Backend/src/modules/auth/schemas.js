@@ -29,6 +29,13 @@ export const forgotPasswordSchema = z
   })
   .strict()
 
+export const verifyResetCodeSchema = z
+  .object({
+    email: z.string().trim().email(),
+    code: z.string().trim().regex(/^\d{6}$/),
+  })
+  .strict()
+
 export const resetPasswordSchema = z
   .object({
     token: z.string().trim().min(1),

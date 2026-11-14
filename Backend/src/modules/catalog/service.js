@@ -228,7 +228,7 @@ export const catalogService = {
       .sort(sortObj)
       .skip(skip)
       .limit(limitNum)
-      .populate('sellerId', '_id name seller avatar')
+      .populate('sellerId', '_id name seller.displayName avatar')
 
     const items = products.map(toCatalogProductDTO)
 
@@ -261,7 +261,7 @@ export const catalogService = {
           deletedAt: null,
         }
 
-    const product = await Product.findOne(query).populate('sellerId', '_id name seller avatar status')
+    const product = await Product.findOne(query).populate('sellerId', '_id name seller.displayName avatar status')
 
     if (!product || !product.sellerId) {
       throw new AppError('ERR_PRODUCT_NOT_FOUND', 404)
@@ -303,7 +303,7 @@ export const catalogService = {
     })
       .sort({ createdAt: -1 })
       .limit(numLimit)
-      .populate('sellerId', '_id name seller avatar')
+      .populate('sellerId', '_id name seller.displayName avatar')
 
     return products.map(toCatalogProductDTO)
   },
@@ -335,7 +335,7 @@ export const catalogService = {
     })
       .sort({ createdAt: -1 })
       .limit(numLimit)
-      .populate('sellerId', '_id name seller avatar')
+      .populate('sellerId', '_id name seller.displayName avatar')
 
     if (related.length < numLimit) {
       const needed = numLimit - related.length
@@ -348,7 +348,7 @@ export const catalogService = {
       })
         .sort({ createdAt: -1 })
         .limit(needed)
-        .populate('sellerId', '_id name seller avatar')
+        .populate('sellerId', '_id name seller.displayName avatar')
 
       return [...related, ...others].map(toCatalogProductDTO)
     }

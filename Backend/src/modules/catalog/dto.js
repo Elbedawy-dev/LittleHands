@@ -1,4 +1,4 @@
-import { mapProductDTO } from '../../utils/dto.js'
+import { extractAvatarUrl, mapProductDTO } from '../../utils/dto.js'
 
 export function toCategoryDTO(category) {
   if (!category) return null
@@ -33,7 +33,7 @@ export function toCatalogProductDTO(product) {
     dto.seller = {
       id: s._id.toString(),
       displayName: s.seller?.displayName || { ar: s.name, en: 'Seller' },
-      avatar: s.avatar?.url || s.avatar || null,
+      avatar: extractAvatarUrl(s.avatar),
     }
   }
 

@@ -129,14 +129,15 @@ export function getDisplayName(entity, language = 'ar') {
     return entity
   }
 
-  // Check localized displayName { ar, en }
-  if (entity.displayName) {
-    if (typeof entity.displayName === 'object') {
+  // Check localized displayName { ar, en } (top-level or nested under seller profile)
+  const displayNameField = entity.displayName || entity.seller?.displayName
+  if (displayNameField) {
+    if (typeof displayNameField === 'object') {
       return isEn
-        ? (entity.displayName.en || entity.displayName.ar || entity.name || '')
-        : (entity.displayName.ar || entity.displayName.en || entity.name || '')
+        ? (displayNameField.en || displayNameField.ar || entity.name || '')
+        : (displayNameField.ar || displayNameField.en || entity.name || '')
     }
-    return entity.displayName
+    return displayNameField
   }
 
   // If language is 'en' and entity has nameEn
@@ -216,6 +217,11 @@ export function delay(ms = 400) {
  */
 export { getFriendlyError, formatErrorMessage } from './errors'
 export { processAvatarImage } from './avatar'
+export {
+  getProductSellerId,
+  countProductsBySeller,
+  filterProductsBySeller,
+} from './productHelpers'
 
 export const storage = {
   get(key, fallback = null) {

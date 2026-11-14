@@ -16,7 +16,8 @@ import { useLanguage } from '../../context/LanguageContext'
 import { useNotifications } from '../../context/NotificationContext'
 import { useFormat } from '../../hooks/useFormat'
 import { useScrollLock } from '../../hooks/useScrollLock'
-import { cn, pickLocaleText } from '../../utils'
+import toast from 'react-hot-toast'
+import { cn, pickLocaleText, getFriendlyError } from '../../utils'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { getNotificationBadge } from './NotificationsList'
 
@@ -83,7 +84,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
     if (!open) return
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !confirmDialog) onClose()
     }
     window.addEventListener('keydown', handleKeyDown)
 
@@ -96,7 +97,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('popstate', handlePopState)
     }
-  }, [open, onClose])
+  }, [open, onClose, confirmDialog])
 
   // Full page URL by role
   const fullPageUrl = useMemo(() => {
@@ -178,8 +179,10 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
     e.stopPropagation()
     try {
       await deleteNotification(id)
+      toast.success(t('notifications:deleteSuccess'))
     } catch (err) {
       console.error('Failed to delete notification:', err)
+      toast.error(getFriendlyError(err, t))
     }
   }
 
@@ -192,9 +195,11 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
       } else if (confirmDialog === 'clearAll') {
         await deleteNotifications(false)
       }
+      toast.success(t('notifications:clearSuccess'))
       setConfirmDialog(null)
     } catch (err) {
       console.error('Failed to clear notifications:', err)
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsDeleting(false)
     }
@@ -383,11 +388,33 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
     </div>
   )
 
+  const confirmDialogElement = (
+    <ConfirmDialog
+      isOpen={Boolean(confirmDialog)}
+      onClose={() => setConfirmDialog(null)}
+      onConfirm={handleConfirmClear}
+      loading={isDeleting}
+      title={
+        confirmDialog === 'clearRead'
+          ? t('confirmClearReadTitle', 'مسح الإشعارات المقروءة')
+          : t('confirmClearAllTitle', 'مسح جميع الإشعارات')
+      }
+      message={
+        confirmDialog === 'clearRead'
+          ? t('confirmClearReadMessage', 'هل أنتِ متأكدة من رغبتكِ في حذف جميع الإشعارات المقروءة؟')
+          : t('confirmClearAllMessage', 'هل أنتِ متأكدة من حذف كافة الإشعارات نهائياً؟')
+      }
+      confirmText={t('common:actions.delete', 'حذف')}
+      cancelText={t('common:actions.cancel', 'إلغاء')}
+    />
+  )
+
   // MOBILE FULL SCREEN SHEET (100dvh, completely opaque bg-surface, z-50 above everything)
   if (isMobile) {
     return createPortal(
-      <AnimatePresence>
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <>
+        <AnimatePresence>
+          <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -447,8 +474,10 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
               </Link>
             </div>
           </motion.div>
-        </div>
-      </AnimatePresence>,
+          </div>
+        </AnimatePresence>
+        {confirmDialogElement}
+      </>,
       document.body
     )
   }
@@ -512,24 +541,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
         </div>
       </div>
 
-      <ConfirmDialog
-        isOpen={Boolean(confirmDialog)}
-        onClose={() => setConfirmDialog(null)}
-        onConfirm={handleConfirmClear}
-        loading={isDeleting}
-        title={
-          confirmDialog === 'clearRead'
-            ? t('confirmClearReadTitle', 'مسح الإشعارات المقروءة')
-            : t('confirmClearAllTitle', 'مسح جميع الإشعارات')
-        }
-        message={
-          confirmDialog === 'clearRead'
-            ? t('confirmClearReadMessage', 'هل أنتِ متأكدة من رغبتكِ في حذف جميع الإشعارات المقروءة؟')
-            : t('confirmClearAllMessage', 'هل أنتِ متأكدة من حذف كافة الإشعارات نهائياً؟')
-        }
-        confirmText={t('common:actions.delete', 'حذف')}
-        cancelText={t('common:actions.cancel', 'إلغاء')}
-      />
+      {confirmDialogElement}
     </>,
     document.body
   )

@@ -12,7 +12,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { userService } from '../../services/userService'
-import { getDisplayName, getFriendlyError, pickLocale } from '../../utils'
+import { getDisplayName, getFriendlyError, getImageUrl, pickLocale } from '../../utils'
+import { getProductStockMeta } from '../../utils/productStock'
 
 /**
  * قسم معلومات الوسيلة التعليمية وإجراءات الشراء والمفضلة
@@ -28,20 +29,29 @@ export function ProductInfo({ product }) {
   const [isFavorite, setIsFavorite] = useState(false)
   const [isFavLoading, setIsFavLoading] = useState(false)
 
+  const sellerId =
+    product.seller?.id ||
+    (typeof product.sellerId === 'string' && product.sellerId !== '[object Object]' ? product.sellerId : '')
+  const sellerAvatar = getImageUrl(
+    product.seller?.avatar || product.sellerAvatar || product.sellerId?.avatar
+  )
   const sellerDisplayName =
     getDisplayName(
-      {
-        id: product.sellerId,
-        sellerId: product.sellerId,
+      product.seller || {
+        id: sellerId,
+        sellerId,
         name: product.sellerName,
         nameEn: product.sellerNameEn,
       },
       language
     ) || t('common:roles.seller')
 
+  const { stockCount, isOutOfStock, isLowStock, maxOrderQty, status } = getProductStockMeta(product)
+
   // إضافة للسلة
   const handleAddToCart = () => {
-    addItem(product, quantity)
+    if (isOutOfStock) return
+    addItem(product, Math.min(quantity, maxOrderQty))
     toast.success(t('storefront:productDetails.addedToCart'), {
       position: 'top-center',
     })
@@ -49,7 +59,8 @@ export function ProductInfo({ product }) {
 
   // اطلب الآن: إضافة للسلة ثم التوجه الفوري لصفحة إتمام الطلب / السلة
   const handleOrderNow = () => {
-    addItem(product, quantity)
+    if (isOutOfStock) return
+    addItem(product, Math.min(quantity, maxOrderQty))
     navigate('/cart')
   }
 
@@ -80,11 +91,11 @@ export function ProductInfo({ product }) {
       {/* شريحة البائعة الحرفية وشارة التوفر والمفضلة */}
       <div className="flex items-center justify-between gap-3">
         <Link
-          to={`/sellers/${product.sellerId || ''}`}
+          to={sellerId ? `/sellers/${sellerId}` : '/sellers'}
           className="inline-flex items-center gap-2 p-1.5 pe-3.5 rounded-full bg-surface-subtle border border-surface-border hover:border-brand-orange/50 transition-colors group"
         >
           <Avatar
-            src={product.sellerAvatar}
+            src={sellerAvatar}
             name={sellerDisplayName}
             role="seller"
             size="sm"
@@ -122,12 +133,12 @@ export function ProductInfo({ product }) {
       {/* عنوان الوسيلة وشارة المرحلة */}
       <div>
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          <Badge variant="warning" size="sm">
-            {product.inStock !== false
+          <Badge variant={isOutOfStock ? 'red' : isLowStock ? 'yellow' : 'mint'} size="sm">
+            {!isOutOfStock
               ? t('storefront:productDetails.inStock')
               : t('storefront:productDetails.outOfStock')}
           </Badge>
-          <Badge variant="outline" size="sm">
+          <Badge variant="orange" size="sm">
             {t('storefront:productDetails.handmadeBadge')}
           </Badge>
         </div>
@@ -145,51 +156,76 @@ export function ProductInfo({ product }) {
         <PriceTag amount={product.price} size="lg" />
       </div>
 
-      {/* الوصف المختصر */}
-      <p
-        className="text-sm text-text-muted leading-relaxed"
-        data-user-content="true"
-      >
-        {pickLocale(product.description, language).text}
-      </p>
-
-      {/* تحديد الكمية وملاحظة توريد الحضانات */}
+      {/* تحديد الكمية وحالة المخزون وملاحظة توريد الحضانات */}
       <div className="space-y-3 pt-4 border-t border-surface-border">
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="text-sm font-bold text-text-main">
-            {t('storefront:productDetails.quantityLabel')}
-          </label>
-          <QuantityStepper
-            value={quantity}
-            onChange={setQuantity}
-            min={1}
-            max={50}
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm font-bold text-text-main">
+              {t('storefront:productDetails.quantityLabel')}
+            </label>
+            <QuantityStepper
+              value={Math.min(quantity, maxOrderQty)}
+              onChange={(val) => setQuantity(Math.min(Math.max(1, val), maxOrderQty))}
+              min={1}
+              max={maxOrderQty}
+              disabled={isOutOfStock}
+            />
+          </div>
+
+          <span
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${
+              status === 'out'
+                ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60'
+                : status === 'low'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                status === 'out' ? 'bg-rose-500' : status === 'low' ? 'bg-amber-500' : 'bg-emerald-500'
+              }`}
+            />
+            <span>
+              {status === 'out'
+                ? t('storefront:productDetails.stock.outOfStock')
+                : status === 'low'
+                  ? t('storefront:productDetails.stock.lowStock', { count: stockCount })
+                  : stockCount !== null
+                    ? t('storefront:productDetails.stock.inStockCount', { count: stockCount })
+                    : t('storefront:productDetails.stock.inStock')}
+            </span>
+          </span>
         </div>
+
         <p className="text-xs font-semibold text-brand-orange-text dark:text-brand-orange">
           {t('storefront:productDetails.nurseryNote')}
         </p>
       </div>
 
       {/* أزرار الإجراءات والشراء المباشر */}
-      <div className="flex flex-col sm:flex-row gap-3 pt-2">
+      <div className="flex flex-col sm:flex-row gap-3 pt-2 items-stretch">
         {/* زر إضافة للسلة */}
         <Button
           onClick={handleAddToCart}
+          disabled={isOutOfStock}
           size="lg"
-          className="flex-1 font-bold whitespace-nowrap"
-          startIcon={<ShoppingBag className="w-4 h-4" />}
+          className="flex-1 min-h-[52px] h-auto py-2.5 px-5 text-base gap-3 font-bold leading-snug text-center whitespace-normal"
+          startIcon={<ShoppingBag className="w-5 h-5" />}
         >
-          {t('storefront:productDetails.addToCart')}
+          {isOutOfStock
+            ? t('storefront:productDetails.stock.outOfStock')
+            : t('storefront:productDetails.addToCart')}
         </Button>
 
         {/* زر اطلب الآن مع الدفع السريع بفودافون كاش */}
         <Button
           onClick={handleOrderNow}
+          disabled={isOutOfStock}
           variant="secondary"
           size="lg"
-          className="flex-1 font-bold whitespace-nowrap bg-surface hover:bg-surface-subtle border-surface-border text-text-main"
-          startIcon={<PhoneCall className="w-4 h-4 text-[#e60000]" />}
+          className="flex-1 min-h-[52px] h-auto py-2.5 px-5 text-base gap-3 font-bold leading-snug text-center whitespace-normal bg-surface hover:bg-surface-subtle border-surface-border text-text-main"
+          startIcon={<PhoneCall className="w-5 h-5 text-[#e60000]" />}
         >
           {t('storefront:productDetails.orderNow')}
         </Button>

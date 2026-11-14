@@ -186,10 +186,10 @@ export function AdminSellerCard({
           variant="primary"
           onClick={() => onRecordPayout(seller)}
           disabled={pendingBalance <= 0}
-          className="gap-2 text-xs"
+          endIcon={<Send className="w-3.5 h-3.5 rtl:-scale-x-100" />}
+          className="inline-flex flex-row items-center justify-center gap-2 text-xs"
         >
-          <Send className="w-3.5 h-3.5 rtl:rotate-180" />
-          <span>{t('sellers.cards.recordPayoutAction')}</span>
+          {t('sellers.cards.recordPayoutAction')}
         </Button>
       </div>
     </Card>

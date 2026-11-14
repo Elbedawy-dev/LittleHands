@@ -5,7 +5,7 @@ import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { CATEGORIES } from '../../config/constants'
-import { getDisplayName, pickLocaleText } from '../../utils'
+import { getDisplayName, getImageUrl, pickLocaleText } from '../../utils'
 
 /**
  * بطاقة البائعة الحرفية (SellerCard)
@@ -16,7 +16,10 @@ export function SellerCard({ seller }) {
   const lang = i18n.language === 'en' ? 'en' : 'ar'
 
   const sellerName = getDisplayName(seller, lang) || (lang === 'en' ? 'Seller' : 'بائعة')
-  const sellerCity = pickLocaleText(seller.city || seller.governorate, lang) || ''
+  const sellerAvatar = getImageUrl(seller.avatar || seller.seller?.avatar)
+  const sellerCity =
+    pickLocaleText(seller.city || seller.seller?.city || seller.governorate || seller.seller?.governorate, lang) || ''
+  const sellerBio = pickLocaleText(seller.bio || seller.seller?.bio, lang)
   const productsCount = seller.productsCount || 0
   const completedOrdersCount = seller.completedOrdersCount || 0
 
@@ -35,7 +38,7 @@ export function SellerCard({ seller }) {
       <div>
         {/* ترويسة البطاقة والصورة الرمزية والبيانات الواقعية فقط */}
         <div className="flex items-center gap-4 mb-4">
-          <Avatar src={seller.avatar} name={sellerName} role="seller" size="xl" />
+          <Avatar src={sellerAvatar} name={sellerName} role="seller" size="xl" />
           <div>
             <h3 className="font-heading font-black text-xl text-text-main">
               {sellerName}
@@ -51,9 +54,9 @@ export function SellerCard({ seller }) {
         </div>
 
         {/* النبذة التعريفية إن وجدت بدون ألقاب أو مبالغات */}
-        {seller.bio && (
+        {sellerBio && (
           <p className="text-xs sm:text-sm text-text-muted leading-relaxed mb-6">
-            {pickLocaleText(seller.bio, lang)}
+            {sellerBio}
           </p>
         )}
 

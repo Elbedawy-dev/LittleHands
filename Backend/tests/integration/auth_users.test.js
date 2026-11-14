@@ -6,6 +6,8 @@ import { createUser, createProduct } from '../helpers/factories.js'
 import { User } from '../../src/db/models/User.js'
 import { OtpCode } from '../../src/db/models/OtpCode.js'
 import { Product } from '../../src/db/models/Product.js'
+import { RefreshToken } from '../../src/db/models/RefreshToken.js'
+import { renderTemplate } from '../../src/infra/email/templates/index.js'
 import { sha256 } from '../../src/utils/crypto.js'
 
 describe('Auth & Users Module Integration Tests (Prompt B1)', () => {
@@ -184,57 +186,179 @@ describe('Auth & Users Module Integration Tests (Prompt B1)', () => {
     expect(expRes.body.error.code).toBe('EXPIRED_CODE')
   })
 
-  it('ensures password reset token is single-use and updates password', async () => {
-    const email = 'reset_user@test.eg'
-    const oldPassword = 'OldPassword123!'
-    const user = await createUser({ email, password: oldPassword })
+  it('supports 6-digit OTP password reset across customer, seller, and admin roles, revokes sessions, and clears mustChangePassword', async () => {
+    for (const role of ['customer', 'seller', 'admin']) {
+      const email = `reset_${role}@test.eg`
+      const oldPassword = 'TestPass123!'
+      const user = await createUser({
+        email,
+        role,
+        mustChangePassword: role === 'seller',
+      })
 
-    // Request reset
-    const forgotRes = await request(app)
+      // Issue an active refresh token to verify it gets revoked on password reset
+      const sessionLogin = await request(app)
+        .post('/api/v1/auth/login')
+        .set('X-Requested-With', 'lh-web')
+        .send({ identifier: email, password: oldPassword })
+      expect(sessionLogin.status).toBe(200)
+
+      // 1. Request OTP
+      const forgotRes = await request(app)
+        .post('/api/v1/auth/forgot-password')
+        .set('X-Requested-With', 'lh-web')
+        .send({ email })
+      expect(forgotRes.status).toBe(200)
+      expect(forgotRes.body.data.success).toBe(true)
+
+      const resetCodeDoc = await OtpCode.findOne({
+        userId: user._id,
+        purpose: 'reset_code',
+        usedAt: null,
+      })
+      expect(resetCodeDoc).toBeTruthy()
+
+      const otpCode = '739204'
+      resetCodeDoc.codeHash = sha256(otpCode)
+      await resetCodeDoc.save()
+
+      // 2. Verify OTP and exchange for single-use resetToken
+      const verifyRes = await request(app)
+        .post('/api/v1/auth/verify-reset-code')
+        .set('X-Requested-With', 'lh-web')
+        .send({ email, code: otpCode })
+      expect(verifyRes.status).toBe(200)
+      expect(verifyRes.body.data.resetToken).toBeTruthy()
+      const { resetToken } = verifyRes.body.data
+
+      // Re-verifying the same OTP code MUST fail
+      const reuseCodeRes = await request(app)
+        .post('/api/v1/auth/verify-reset-code')
+        .set('X-Requested-With', 'lh-web')
+        .send({ email, code: otpCode })
+      expect(reuseCodeRes.status).toBe(400)
+      expect(reuseCodeRes.body.error.code).toBe('INVALID_OR_EXPIRED_CODE')
+
+      // 3. Complete password reset
+      const newPassword = `NewSecret_${role}_123!`
+      const resetRes = await request(app)
+        .post('/api/v1/auth/reset-password')
+        .set('X-Requested-With', 'lh-web')
+        .send({
+          token: resetToken,
+          password: newPassword,
+        })
+      expect(resetRes.status).toBe(200)
+
+      // Second use of same resetToken MUST fail
+      const reuseTokenRes = await request(app)
+        .post('/api/v1/auth/reset-password')
+        .set('X-Requested-With', 'lh-web')
+        .send({
+          token: resetToken,
+          password: 'AnotherPassword123!',
+        })
+      expect(reuseTokenRes.status).toBe(400)
+
+      // mustChangePassword cleared + refresh tokens revoked
+      const updatedUser = await User.findById(user._id)
+      expect(updatedUser.mustChangePassword).toBe(false)
+      const activeTokens = await RefreshToken.countDocuments({ userId: user._id, revokedAt: null })
+      expect(activeTokens).toBe(0)
+
+      // Login with new password succeeds
+      const newLoginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .set('X-Requested-With', 'lh-web')
+        .send({ identifier: email, password: newPassword })
+      expect(newLoginRes.status).toBe(200)
+    }
+  })
+
+  it('enforces wrong code rejection, max 5 attempts, expiry, and old code invalidation on resend for reset OTP', async () => {
+    const email = 'reset_edge_cases@test.eg'
+    const user = await createUser({ email, role: 'customer' })
+
+    await request(app)
       .post('/api/v1/auth/forgot-password')
       .set('X-Requested-With', 'lh-web')
       .send({ email })
 
-    expect(forgotRes.status).toBe(200)
+    const firstOtp = await OtpCode.findOne({ userId: user._id, purpose: 'reset_code', usedAt: null })
+    expect(firstOtp).toBeTruthy()
+    const firstCode = '112233'
+    firstOtp.codeHash = sha256(firstCode)
+    await firstOtp.save()
 
-    // Fetch token from DB
-    const resetOtp = await OtpCode.findOne({ userId: user._id, purpose: 'reset_password', usedAt: null })
-    expect(resetOtp).toBeTruthy()
-
-    // Inject known plain token
-    const testToken = 'a'.repeat(64)
-    resetOtp.codeHash = sha256(testToken)
-    await resetOtp.save()
-
-    // Reset password
-    const newPassword = 'NewSecretPassword123!'
-    const resetRes = await request(app)
-      .post('/api/v1/auth/reset-password')
+    // Request a new OTP -> first code MUST be invalidated
+    await request(app)
+      .post('/api/v1/auth/forgot-password')
       .set('X-Requested-With', 'lh-web')
-      .send({
-        token: testToken,
-        password: newPassword,
-      })
+      .send({ email })
 
-    expect(resetRes.status).toBe(200)
-
-    // Second use of same token MUST fail
-    const reuseRes = await request(app)
-      .post('/api/v1/auth/reset-password')
+    const staleRes = await request(app)
+      .post('/api/v1/auth/verify-reset-code')
       .set('X-Requested-With', 'lh-web')
-      .send({
-        token: testToken,
-        password: 'AnotherPassword123!',
-      })
+      .send({ email, code: firstCode })
+    expect(staleRes.status).toBe(400)
+    expect(staleRes.body.error.code).toBe('INVALID_OR_EXPIRED_CODE')
 
-    expect(reuseRes.status).toBe(400)
-
-    // Login with new password works
-    const newLoginRes = await request(app)
-      .post('/api/v1/auth/login')
+    // Request a fresh OTP so attempt counter starts cleanly at 0
+    await request(app)
+      .post('/api/v1/auth/forgot-password')
       .set('X-Requested-With', 'lh-web')
-      .send({ identifier: email, password: newPassword })
-    expect(newLoginRes.status).toBe(200)
+      .send({ email })
+
+    const activeOtp = await OtpCode.findOne({ userId: user._id, purpose: 'reset_code', usedAt: null }).sort({ createdAt: -1 })
+    expect(activeOtp).toBeTruthy()
+    activeOtp.codeHash = sha256('445566')
+    await activeOtp.save()
+
+    for (let i = 0; i < 5; i += 1) {
+      const wrongRes = await request(app)
+        .post('/api/v1/auth/verify-reset-code')
+        .set('X-Requested-With', 'lh-web')
+        .send({ email, code: '999999' })
+      expect(wrongRes.status).toBe(400)
+      expect(wrongRes.body.error.code).toBe('INVALID_OR_EXPIRED_CODE')
+    }
+
+    const lockedRes = await request(app)
+      .post('/api/v1/auth/verify-reset-code')
+      .set('X-Requested-With', 'lh-web')
+      .send({ email, code: '445566' })
+    expect(lockedRes.status).toBe(400)
+    expect(lockedRes.body.error.code).toBe('CODE_MAX_ATTEMPTS')
+
+    // Expired OTP
+    await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .set('X-Requested-With', 'lh-web')
+      .send({ email })
+    const expiredOtp = await OtpCode.findOne({ userId: user._id, purpose: 'reset_code', usedAt: null }).sort({ createdAt: -1 })
+    expiredOtp.codeHash = sha256('778899')
+    expiredOtp.expiresAt = new Date(Date.now() - 60 * 1000)
+    await expiredOtp.save()
+
+    const expiredRes = await request(app)
+      .post('/api/v1/auth/verify-reset-code')
+      .set('X-Requested-With', 'lh-web')
+      .send({ email, code: '778899' })
+    expect(expiredRes.status).toBe(400)
+    expect(expiredRes.body.error.code).toBe('INVALID_OR_EXPIRED_CODE')
+
+    // Email template renders 6-digit OTP & 10-minute expiry in AR and EN with no reset link
+    const arMail = renderTemplate('password-reset', { name: 'سارة', code: '739204' }, { locale: 'ar' })
+    expect(arMail.html).toContain('739204')
+    expect(arMail.html).toContain('10 دقائق')
+    expect(arMail.html).not.toContain('reset-password?token=')
+    expect(arMail.text).toContain('739204')
+
+    const enMail = renderTemplate('password-reset', { name: 'Sara', code: '739204' }, { locale: 'en' })
+    expect(enMail.html).toContain('739204')
+    expect(enMail.html).toContain('10 minutes')
+    expect(enMail.html).not.toContain('reset-password?token=')
+    expect(enMail.text).toContain('739204')
   })
 
   it('prevents IDOR on addresses (returns 404 for resources caller does not own)', async () => {

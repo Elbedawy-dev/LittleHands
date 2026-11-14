@@ -1,7 +1,6 @@
 import {
   AlertCircle,
   Building,
-  Camera,
   Check,
   CheckCircle2,
   FileText,
@@ -11,56 +10,57 @@ import {
   User,
   Wallet,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Avatar } from '../../components/ui/Avatar'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { LocalizedText } from '../../components/ui/LocalizedText'
+import { LogoutCard } from '../../components/ui/LogoutCard'
 import { Modal } from '../../components/ui/Modal'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Select } from '../../components/ui/Select'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Textarea } from '../../components/ui/Textarea'
-import { ChangePasswordCard } from '../../features/profile'
 import { GOVERNORATES } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { useSettings } from '../../context/SettingsContext'
+import { ChangePasswordCard, PersonalInfoForm, ProfileHeaderCard } from '../../features/profile'
 import { sellerService } from '../../services/sellerService'
-import { userService } from '../../services/userService'
 import { cn, getFriendlyError } from '../../utils'
-import { processAvatarImage } from '../../utils/avatar'
+
+const STAGE_OPTIONS = [
+  { id: 'nursery', labelKey: 'seller.stageToddler' },
+  { id: 'kg1', labelKey: 'seller.stageKg' },
+  { id: 'primary', labelKey: 'seller.stageFoundation' },
+]
+
+const MATERIAL_OPTIONS = [
+  { id: 'felt', labelKey: 'seller.matFelt' },
+  { id: 'cardstock', labelKey: 'seller.matCardstock' },
+  { id: 'fabric', labelKey: 'seller.matFabric' },
+  { id: 'canson', labelKey: 'seller.matCanson' },
+  { id: 'nasbian', labelKey: 'seller.matNasbian' },
+]
 
 export default function SellerProfilePage() {
   const { t } = useTranslation('profile')
   const { language } = useLanguage()
   const isEn = language === 'en'
-  const { user, updateProfile, refreshUser } = useAuth()
+  const navigate = useNavigate()
+  const { user, isLoading, refreshUser, logout } = useAuth()
   const { settings } = useSettings()
-  const sellerId = user?.id || ''
-  const fileInputRef = useRef(null)
 
   const [activeTab, setActiveTab] = useState('info') // 'info' | 'bio' | 'wallet'
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [savingBio, setSavingBio] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
-  // بيانات البائعة
-  const [formData, setFormData] = useState({
-    name: user?.name || 'البائعة',
-    email: user?.email || '',
-    phone: '',
-    walletNumber: '',
-    governorate: '',
-    workshopAddress: '',
-    bio: { ar: '', en: '' },
-    avatar: '',
-    stages: [],
-    materials: [],
-  })
+  // النبذة والتخصص والمحفظة (متزامنة من AuthContext user)
+  const [bio, setBio] = useState({ ar: '', en: '' })
+  const [stages, setStages] = useState(['nursery', 'kg1'])
+  const [materials, setMaterials] = useState(['felt'])
 
   // حالة نافذة تحديث المحفظة
   const [walletModalOpen, setWalletModalOpen] = useState(false)
@@ -68,98 +68,51 @@ export default function SellerProfilePage() {
   const [walletError, setWalletError] = useState('')
   const [updatingWallet, setUpdatingWallet] = useState(false)
 
-  const governorateOptions = GOVERNORATES.map((g) => ({
-    value: g.name,
-    label: isEn ? (g.nameEn || g.name) : g.name,
-  }))
-
-  const govObj = GOVERNORATES.find((g) => g.name === formData.governorate)
-  const govDisplay = isEn ? (govObj?.nameEn || formData.governorate) : formData.governorate
-
   useEffect(() => {
-    let mounted = true
-    sellerService
-      .getSeller(sellerId)
-      .then((data) => {
-        if (mounted && data) {
-          setFormData((prev) => ({
-            ...prev,
-            name: data.name || prev.name,
-            email: data.email || prev.email,
-            phone: data.phone || prev.phone,
-            walletNumber: data.walletNumber || data.phone || prev.walletNumber,
-            governorate: data.governorate || prev.governorate,
-            workshopAddress: data.workshopAddress || data.address || prev.workshopAddress,
-            bio:
-              typeof data.bio === 'object' && data.bio !== null
-                ? { ar: data.bio.ar || '', en: data.bio.en || '' }
-                : { ar: data.bio || '', en: '' },
-            avatar: data.avatar || prev.avatar,
-          }))
-        }
-      })
-      .catch((err) => console.warn('Could not load seller:', err))
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
-
-    return () => {
-      mounted = false
+    if (!user) return
+    const sellerMeta = user.seller || {}
+    const rawBio = sellerMeta.bio
+    setBio(
+      typeof rawBio === 'object' && rawBio !== null
+        ? { ar: rawBio.ar || '', en: rawBio.en || '' }
+        : { ar: rawBio || '', en: '' }
+    )
+    if (Array.isArray(sellerMeta.stages) && sellerMeta.stages.length > 0) {
+      setStages(sellerMeta.stages)
     }
-  }, [sellerId])
+    if (Array.isArray(sellerMeta.materials) && sellerMeta.materials.length > 0) {
+      setMaterials(sellerMeta.materials)
+    }
+  }, [user])
 
-  // حفظ التعديلات العامة
-  const handleSave = async (e) => {
-    if (e) e.preventDefault()
-    setSaving(true)
+  const governorate = user?.governorate || user?.seller?.governorate || ''
+  const govObj = GOVERNORATES.find((g) => g.name === governorate)
+  const govDisplay = isEn ? (govObj?.nameEn || governorate) : governorate
+  const walletNumber = user?.seller?.payoutWallet || user?.phone || ''
+
+  const toggleItem = (list, setList, value) => {
+    setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value])
+  }
+
+  // حفظ النبذة والتخصص التربوي
+  const handleSaveBio = async (e) => {
+    e.preventDefault()
+    setSavingBio(true)
     setErrorMsg('')
     setSuccessMsg('')
     try {
-      await sellerService.updateSellerProfile(sellerId, {
-        displayName: formData.name,
-        bio: formData.bio,
-        stages: formData.stages,
-        materials: formData.materials,
-        payoutWallet: formData.walletNumber,
+      await sellerService.updateSellerProfile({
+        bio,
+        stages,
+        materials,
       })
-      if (updateProfile) {
-        await updateProfile({
-          name: formData.name,
-          phone: formData.phone,
-          governorate: formData.governorate,
-          address: formData.workshopAddress,
-        })
-      }
+      await refreshUser()
       setSuccessMsg(t('seller.saveSuccess'))
       setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
-      setErrorMsg(getFriendlyError(err, t))
+      setErrorMsg(getFriendlyError(err, t) || t('seller.saveError'))
     } finally {
-      setSaving(false)
-    }
-  }
-
-  // رفع وتحديث صورة الورشة عبر مسار رفع الصورة الرسمي دون إرسال data URL
-  const handleAvatarChange = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      const dataUrl = await processAvatarImage(file)
-      const blob = await fetch(dataUrl).then((r) => r.blob())
-      const avatarFile = new File([blob], file.name || 'avatar.webp', {
-        type: blob.type || 'image/webp',
-      })
-      await userService.uploadAvatar(avatarFile)
-      const refreshed = await refreshUser()
-      if (refreshed?.avatar) {
-        setFormData((prev) => ({ ...prev, avatar: refreshed.avatar }))
-      }
-      setSuccessMsg(t('seller.avatarSuccess'))
-      setTimeout(() => setSuccessMsg(''), 4000)
-    } catch (err) {
-      setErrorMsg(getFriendlyError(err, t) || t('seller.avatarError'))
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      setSavingBio(false)
     }
   }
 
@@ -180,20 +133,20 @@ export default function SellerProfilePage() {
 
     setUpdatingWallet(true)
     try {
-      await sellerService.updateSellerProfile(sellerId, { walletNumber: cleanNum })
-      setFormData((prev) => ({ ...prev, walletNumber: cleanNum }))
+      await sellerService.updateSellerProfile({ payoutWallet: cleanNum })
+      await refreshUser()
       setWalletModalOpen(false)
       setNewWalletNumber('')
       setSuccessMsg(t('seller.walletSuccess'))
       setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
-      setWalletError(getFriendlyError(err, t))
+      setWalletError(getFriendlyError(err, t) || t('seller.walletErrorFailed'))
     } finally {
       setUpdatingWallet(false)
     }
   }
 
-  if (loading) {
+  if (isLoading && !user) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48 rounded-full" />
@@ -217,91 +170,48 @@ export default function SellerProfilePage() {
         description={t('seller.pageSubtitle')}
       />
 
-      {/* بطاقة هوية البائعة العلوية */}
-      <div className="relative overflow-hidden rounded-[28px] bg-surface border border-surface-border p-6 sm:p-8 shadow-card">
-        <div className="absolute -top-24 -start-24 w-72 h-72 rounded-full bg-brand-orange/10 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -end-24 w-72 h-72 rounded-full bg-brand-yellow/10 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            {/* الصورة الشخصية أو شعار الورشة */}
-            <div className="relative group shrink-0">
-              <Avatar
-                name={formData.name}
-                src={formData.avatar}
-                role="seller"
-                size="xl"
-                className="w-20 h-20 sm:w-24 sm:h-24 shadow-md text-2xl"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 end-0 w-8 h-8 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-soft hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-                title={t('seller.updateAvatar')}
-                aria-label={t('seller.updateAvatar')}
-              >
-                <Camera className="w-4 h-4" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
-            </div>
-
-            <div className="flex flex-col items-start gap-1 text-start flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="font-heading font-black text-xl sm:text-2xl text-text-main">
-                  <LocalizedText value={formData.displayName || formData.name} />
-                </h2>
-                <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>{t('seller.badgeProfessional')}</span>
-                </span>
-              </div>
-
-              {(user?.email || formData.email) && (
-                <p className="text-xs text-text-muted font-mono" dir="ltr">
-                  {user?.email || formData.email}
-                </p>
-              )}
-
-              <p className="text-[11px] text-text-muted">
-                {t('header.avatarFormatsHint')}
-              </p>
-
-              <p
-                className="text-xs text-text-muted leading-relaxed max-w-xl"
-                data-user-content="true"
-              >
-                <LocalizedText value={formData.bio} />
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 text-xs text-text-muted pt-1">
-                <span className="flex items-center gap-1 font-semibold text-text-main">
-                  <Building className="w-3.5 h-3.5 text-brand-orange" />
-                  <span>{govDisplay ? `${govDisplay} — ` : ''}{t('seller.handicraftWorkshop')}</span>
-                </span>
-                <span>•</span>
-                <span className="font-mono" dir="ltr">{formData.phone}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* محفظة فودافون كاش الحالية */}
+      {/* بطاقة هوية البائعة العلوية المشتركة */}
+      <ProfileHeaderCard
+        displayName={user?.name || (isEn ? 'Seller' : 'البائعة')}
+        avatarRole="seller"
+        avatarUploadTitle={t('seller.updateAvatar')}
+        avatarSuccessMessage={t('seller.avatarSuccess')}
+        avatarErrorMessage={t('seller.avatarError')}
+        blobEndClass="bg-brand-yellow/10"
+        roleBadge={
+          <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>{t('seller.badgeProfessional')}</span>
+          </span>
+        }
+        bioContent={
+          (bio.ar || bio.en) ? (
+            <p className="text-xs text-text-muted leading-relaxed max-w-xl" data-user-content="true">
+              <LocalizedText value={bio} />
+            </p>
+          ) : null
+        }
+        metaContent={
+          <span className="flex items-center gap-1 font-semibold text-text-main">
+            <Building className="w-3.5 h-3.5 text-brand-orange" />
+            <span>{govDisplay ? `${govDisplay} — ` : ''}{t('seller.handicraftWorkshop')}</span>
+          </span>
+        }
+        showPhoneInMeta={true}
+        endContent={
           <div className="flex flex-wrap md:flex-col items-start md:items-end justify-between w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-surface-border text-xs gap-1.5">
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-brand-orange/15 text-brand-orange-text dark:text-brand-orange font-bold">
               <Wallet className="w-3.5 h-3.5" />
               <span>{t('seller.walletActiveBadge')}</span>
             </span>
-            <span className="font-mono text-sm font-extrabold text-text-main" dir="ltr">
-              {formData.walletNumber}
-            </span>
+            {walletNumber && (
+              <span className="font-mono text-sm font-extrabold text-text-main" dir="ltr">
+                {walletNumber}
+              </span>
+            )}
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* رسائل التنبيهات */}
       {successMsg && (
@@ -312,7 +222,7 @@ export default function SellerProfilePage() {
       )}
 
       {errorMsg && (
-        <div className="p-4 rounded-[18px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+        <div className="p-4 rounded-[18px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMsg}</span>
         </div>
@@ -345,83 +255,23 @@ export default function SellerProfilePage() {
 
       {/* المحتوى حسب التبويب النشط */}
       <div>
-        {/* التبويب الأول: بياناتي وورشتي */}
+        {/* التبويب الأول: بياناتي وورشتي باستخدام PersonalInfoForm المشترك */}
         {activeTab === 'info' && (
-          <Card padding="lg" className="space-y-6">
-            <div className="pb-4 border-b border-surface-border">
-              <h3 className="text-base font-heading font-black text-text-main">
-                {t('seller.infoSectionTitle')}
-              </h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                {t('seller.infoSectionDesc')}
-              </p>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4 max-w-2xl">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  id="seller-name"
-                  label={t('seller.nameLabel')}
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-
-                <Input
-                  id="seller-email"
-                  type="email"
-                  label={t('seller.emailLabel')}
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  dir="ltr"
-                  className="[unicode-bidi:isolate] text-start"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  id="seller-phone"
-                  type="tel"
-                  label={t('seller.phoneLabel')}
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  dir="ltr"
-                  className="[unicode-bidi:isolate] text-start"
-                  required
-                />
-
-                <Select
-                  id="seller-gov"
-                  label={t('seller.govLabel')}
-                  value={formData.governorate}
-                  onChange={(e) => setFormData({ ...formData, governorate: e.target.value })}
-                  options={governorateOptions}
-                  required
-                />
-              </div>
-
-              <Textarea
-                id="seller-address"
-                label={t('seller.addressLabel')}
-                value={formData.workshopAddress}
-                onChange={(e) => setFormData({ ...formData, workshopAddress: e.target.value })}
-                rows={3}
-                placeholder={t('seller.addressPlaceholder')}
-              />
-
-              <div className="pt-2 flex justify-end">
-                <Button
-                  type="submit"
-                  size="md"
-                  loading={saving}
-                  startIcon={<Save className="w-4 h-4" />}
-                >
-                  {t('seller.saveInfoBtn')}
-                </Button>
-              </div>
-            </form>
-          </Card>
+          <PersonalInfoForm
+            variant="sellerWorkshop"
+            formClassName="space-y-4 max-w-2xl"
+            onExtraSave={async ({ name }) => {
+              if (user?.role === 'seller') {
+                const existingEn =
+                  typeof user?.seller?.displayName === 'object'
+                    ? user.seller.displayName?.en || ''
+                    : ''
+                await sellerService.updateSellerProfile({
+                  displayName: { ar: name, en: existingEn },
+                })
+              }
+            }}
+          />
         )}
 
         {/* التبويب الثاني: نبذة عني وتخصصي التربوي */}
@@ -436,20 +286,12 @@ export default function SellerProfilePage() {
               </p>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-5 max-w-2xl">
+            <form onSubmit={handleSaveBio} className="space-y-5 max-w-2xl">
               <Textarea
                 id="seller-bio-ar"
                 label={t('seller.bioArLabel')}
-                value={typeof formData.bio === 'object' ? formData.bio.ar || '' : formData.bio}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    bio: {
-                      ...(typeof formData.bio === 'object' ? formData.bio : { ar: formData.bio || '', en: '' }),
-                      ar: e.target.value,
-                    },
-                  })
-                }
+                value={bio.ar}
+                onChange={(e) => setBio((prev) => ({ ...prev, ar: e.target.value }))}
                 rows={3}
                 required
               />
@@ -457,16 +299,8 @@ export default function SellerProfilePage() {
               <Textarea
                 id="seller-bio-en"
                 label={t('seller.bioEnLabel')}
-                value={typeof formData.bio === 'object' ? formData.bio.en || '' : ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    bio: {
-                      ...(typeof formData.bio === 'object' ? formData.bio : { ar: formData.bio || '', en: '' }),
-                      en: e.target.value,
-                    },
-                  })
-                }
+                value={bio.en}
+                onChange={(e) => setBio((prev) => ({ ...prev, en: e.target.value }))}
                 rows={3}
                 dir="ltr"
                 className="text-start"
@@ -479,18 +313,17 @@ export default function SellerProfilePage() {
                   <span className="text-xs font-bold text-text-main block">
                     {t('seller.ageStagesTitle')}
                   </span>
-                  <label className="flex items-center gap-2 text-xs text-text-main cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-brand-orange rounded" />
-                    <span>{t('seller.stageToddler')}</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-text-main cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-brand-orange rounded" />
-                    <span>{t('seller.stageKg')}</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-text-main cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-brand-orange rounded" />
-                    <span>{t('seller.stageFoundation')}</span>
-                  </label>
+                  {STAGE_OPTIONS.map((stage) => (
+                    <label key={stage.id} className="flex items-center gap-2 text-xs text-text-main cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={stages.includes(stage.id)}
+                        onChange={() => toggleItem(stages, setStages, stage.id)}
+                        className="w-4 h-4 text-brand-orange rounded"
+                      />
+                      <span>{t(stage.labelKey)}</span>
+                    </label>
+                  ))}
                 </div>
 
                 {/* الخامات المخصصة */}
@@ -498,18 +331,17 @@ export default function SellerProfilePage() {
                   <span className="text-xs font-bold text-text-main block">
                     {t('seller.materialsTitle')}
                   </span>
-                  <label className="flex items-center gap-2 text-xs text-text-main cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-brand-orange rounded" />
-                    <span>{t('seller.matFelt')}</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-text-main cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-brand-orange rounded" />
-                    <span>{t('seller.matCardstock')}</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-text-main cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-brand-orange rounded" />
-                    <span>{t('seller.matFabric')}</span>
-                  </label>
+                  {MATERIAL_OPTIONS.map((mat) => (
+                    <label key={mat.id} className="flex items-center gap-2 text-xs text-text-main cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={materials.includes(mat.id)}
+                        onChange={() => toggleItem(materials, setMaterials, mat.id)}
+                        className="w-4 h-4 text-brand-orange rounded"
+                      />
+                      <span>{t(mat.labelKey)}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -517,7 +349,7 @@ export default function SellerProfilePage() {
                 <Button
                   type="submit"
                   size="md"
-                  loading={saving}
+                  loading={savingBio}
                   startIcon={<Save className="w-4 h-4" />}
                 >
                   {t('seller.saveBioBtn')}
@@ -552,7 +384,7 @@ export default function SellerProfilePage() {
                 </span>
               </div>
 
-              {/* تنبيه احتساب العمولة والشفافية المالية (مسموح به حصراً للبائعة والإدارة) */}
+              {/* تنبيه احتساب العمولة والشفافية المالية */}
               <div className="p-4 rounded-[20px] bg-brand-orange/10 border border-brand-orange/20 text-text-main text-xs flex items-start gap-3 leading-relaxed">
                 <Info className="w-5 h-5 text-brand-orange shrink-0 mt-0.5" />
                 <div>
@@ -574,10 +406,10 @@ export default function SellerProfilePage() {
                     <span className="text-xs text-text-muted block font-semibold">
                       {t('seller.currentWalletLabel')}
                     </span>
-                    {formData.walletNumber ? (
+                    {walletNumber ? (
                       <>
                         <span className="font-mono text-2xl font-black text-text-main [unicode-bidi:isolate] tracking-wider" dir="ltr">
-                          {formData.walletNumber}
+                          {walletNumber}
                         </span>
                         <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -611,7 +443,7 @@ export default function SellerProfilePage() {
                   variant="outline"
                   size="md"
                   onClick={() => {
-                    setNewWalletNumber(formData.walletNumber)
+                    setNewWalletNumber(walletNumber)
                     setWalletError('')
                     setWalletModalOpen(true)
                   }}
@@ -621,9 +453,6 @@ export default function SellerProfilePage() {
                 </Button>
               </div>
             </Card>
-
-            {/* بطاقة تغيير كلمة المرور للبائعة */}
-            <ChangePasswordCard />
 
             {/* نافذة منبثقة لتعديل رقم المحفظة */}
             <Modal
@@ -677,6 +506,16 @@ export default function SellerProfilePage() {
           </div>
         )}
       </div>
+
+      {/* الأقسام المشتركة: تغيير كلمة المرور وتسجيل الخروج */}
+      <ChangePasswordCard />
+
+      <LogoutCard
+        onLogout={async () => {
+          await logout()
+          navigate('/login')
+        }}
+      />
     </div>
   )
 }

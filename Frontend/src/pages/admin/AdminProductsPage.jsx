@@ -11,7 +11,7 @@ import { ProductFilters, ProductListTable, ProductStats } from '../../features/a
 import { orderService } from '../../services/orderService'
 import { productService } from '../../services/productService'
 import { adminService } from '../../services/adminService'
-import { getFriendlyError } from '../../utils'
+import { countProductsBySeller, getFriendlyError, getProductSellerId, pickLocaleText } from '../../utils'
 
 /**
  * صفحة إدارة كتالوج الوسائل التعليمية لكلا البائعتين الحرفيتين
@@ -66,21 +66,13 @@ export default function AdminProductsPage() {
   }, [loadData])
 
   // حساب أعداد الوسائل لكل بائعة لألسنة التصفية
-  const sellerCounts = useMemo(() => {
-    const counts = { all: products.length }
-    products.forEach((p) => {
-      if (p.sellerId) {
-        counts[p.sellerId] = (counts[p.sellerId] || 0) + 1
-      }
-    })
-    return counts
-  }, [products])
+  const sellerCounts = useMemo(() => countProductsBySeller(products), [products])
 
   // تصفية الوسائل حسب الشروط المحددة
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       // تصفية البائعة
-      if (selectedSeller !== 'all' && p.sellerId !== selectedSeller) {
+      if (selectedSeller !== 'all' && getProductSellerId(p) !== String(selectedSeller)) {
         return false
       }
 
@@ -100,11 +92,23 @@ export default function AdminProductsPage() {
       // تصفية البحث النصي
       if (searchQuery.trim()) {
         const query = searchQuery.trim().toLowerCase()
-        const matchesName = p.name?.toLowerCase().includes(query)
-        const matchesEn = p.nameEn?.toLowerCase().includes(query)
-        const matchesDesc = p.description?.toLowerCase().includes(query)
-        const matchesSeller = p.sellerName?.toLowerCase().includes(query)
-        if (!matchesName && !matchesEn && !matchesDesc && !matchesSeller) {
+        const nameAr = pickLocaleText(p.name, 'ar').toLowerCase()
+        const nameEn = (p.nameEn || pickLocaleText(p.name, 'en')).toLowerCase()
+        const descText = pickLocaleText(p.description, 'ar').toLowerCase()
+        const descEn = pickLocaleText(p.description, 'en').toLowerCase()
+        const sellerText = (
+          p.sellerName ||
+          p.seller?.displayName?.ar ||
+          p.seller?.displayName?.en ||
+          ''
+        ).toLowerCase()
+        if (
+          !nameAr.includes(query) &&
+          !nameEn.includes(query) &&
+          !descText.includes(query) &&
+          !descEn.includes(query) &&
+          !sellerText.includes(query)
+        ) {
           return false
         }
       }

@@ -19,9 +19,9 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
+import toast from 'react-hot-toast'
 import { useFormat } from '../../hooks/useFormat'
-import { notificationService } from '../../services/notificationService'
-import { cn, pickLocaleText } from '../../utils'
+import { cn, pickLocaleText, getFriendlyError } from '../../utils'
 
 /**
  * دالة مساعدة لتحديد أيقونة ولون الإشعار حسب نوعه ومحتواه
@@ -94,6 +94,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
   const { user } = useAuth()
   const {
     notifications,
+    fetchNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -104,34 +105,17 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
   const currentRole = propRole || (user ? user.role : 'customer')
   const [activeTab, setActiveTab] = useState('all') // 'all' | 'unread'
   const [categoryFilter, setCategoryFilter] = useState('all') // 'all' | 'orders' | 'payments' | 'shipping' | 'payouts'
-  const [localNotifications, setLocalNotifications] = useState([])
   const [confirmDialog, setConfirmDialog] = useState(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // جلب الإشعارات الخاصة بالدور المحدد لتحقيق الموثوقية
+  // جلب الإشعارات عبر السياق المشترك لضمان التزامن عند الحذف أو المسح
   useEffect(() => {
-    let mounted = true
-    async function load() {
-      try {
-        const data = await notificationService.getNotifications()
-        if (mounted) setLocalNotifications(Array.isArray(data) ? data : (data?.items || []))
-      } catch (err) {
-        console.warn('Failed to load notifications:', err)
-      }
-    }
-    load()
-    return () => {
-      mounted = false
-    }
-  }, [currentRole, user])
-
-  // استخدام القائمة المحلية مع دمج الإشعارات العامة
-  const safeLocal = Array.isArray(localNotifications) ? localNotifications : []
-  const safeGlobal = Array.isArray(notifications) ? notifications : []
-  const sourceList = safeLocal.length > 0 ? safeLocal : safeGlobal
+    fetchNotifications({ pageSize: 50 })
+  }, [currentRole, user, fetchNotifications])
 
   // تصفية الإشعارات الخاصة بالدور الحالي
   const roleFiltered = useMemo(() => {
+    const sourceList = Array.isArray(notifications) ? notifications : []
     return sourceList.filter((n) => {
       // إشعارات الدور
       if (n.role && n.role !== currentRole) return false
@@ -139,7 +123,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
       if (n.userId && user && n.userId !== user.id) return false
       return true
     })
-  }, [sourceList, currentRole, user])
+  }, [notifications, currentRole, user])
 
   const currentUnreadCount = useMemo(() => {
     return roleFiltered.filter((n) => !n.read).length
@@ -147,22 +131,19 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
 
   const handleMarkItemRead = (id) => {
     markAsRead(id)
-    setLocalNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
   }
 
   const handleMarkAll = () => {
     markAllAsRead(currentRole)
-    setLocalNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
   }
 
   const handleDeleteItem = async (id) => {
     try {
       await deleteNotification(id)
-      setLocalNotifications((prev) => prev.filter((n) => n.id !== id))
+      toast.success(t('notifications:deleteSuccess'))
     } catch (err) {
       console.error('Failed to delete notification:', err)
+      toast.error(getFriendlyError(err, t))
     }
   }
 
@@ -172,14 +153,14 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
     try {
       if (confirmDialog === 'clearRead') {
         await deleteNotifications(true)
-        setLocalNotifications((prev) => prev.filter((n) => !n.read))
       } else if (confirmDialog === 'clearAll') {
         await deleteNotifications(false)
-        setLocalNotifications([])
       }
+      toast.success(t('notifications:clearSuccess'))
       setConfirmDialog(null)
     } catch (err) {
       console.error('Failed to clear notifications:', err)
+      toast.error(getFriendlyError(err, t))
     } finally {
       setIsDeleting(false)
     }

@@ -36,14 +36,14 @@ export function NotificationProvider({ children }) {
   }, [isAuthenticated])
 
   // جلب قائمة الإشعارات الكاملة
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (params) => {
     if (!isAuthenticated) {
       setNotifications([])
       return
     }
     setIsLoading(true)
     try {
-      const res = await notificationService.getNotifications()
+      const res = await notificationService.getNotifications(params)
       const items = Array.isArray(res) ? res : (res?.items || [])
       setNotifications(items)
       if (res?.unreadCount !== undefined) {
@@ -123,13 +123,10 @@ export function NotificationProvider({ children }) {
   const deleteNotifications = async (readOnly = false) => {
     try {
       await notificationService.deleteNotifications(readOnly)
-      setNotifications((prev) => {
-        if (readOnly) {
-          return prev.filter((n) => !n.read)
-        }
+      if (!readOnly) {
         setUnreadCount(0)
-        return []
-      })
+      }
+      setNotifications((prev) => (readOnly ? prev.filter((n) => !n.read) : []))
     } catch (err) {
       console.error('Failed to clear notifications:', err)
       throw err

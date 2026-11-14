@@ -4,6 +4,7 @@ import {
   registerSchema,
   loginSchema,
   forgotPasswordSchema,
+  verifyResetCodeSchema,
   resetPasswordSchema,
   verifyEmailSchema,
   resendCodeSchema,
@@ -31,6 +32,7 @@ router.post('/logout', csrfGuard, authController.logout)
 router.post('/refresh', csrfGuard, authController.refresh)
 router.get('/me', authenticate, authController.me)
 router.post('/forgot-password', passwordResetLimiter, csrfGuard, validate(forgotPasswordSchema), authController.forgotPassword)
+router.post('/verify-reset-code', otpLimiter, csrfGuard, validate(verifyResetCodeSchema), authController.verifyResetCode)
 router.post('/reset-password', passwordResetLimiter, csrfGuard, validate(resetPasswordSchema), authController.resetPassword)
 router.post('/verify-email', otpLimiter, authenticateOrEmail, csrfGuard, validate(verifyEmailSchema), authController.verifyEmail)
 router.post('/resend-code', otpLimiter, authenticateOrEmail, csrfGuard, validate(resendCodeSchema), authController.resendCode)

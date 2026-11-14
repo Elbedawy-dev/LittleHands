@@ -1,91 +1,129 @@
 import {
-  Camera,
   Heart,
   MapPin,
   Package,
-  Phone,
   School,
   Settings,
+  ShieldCheck,
   Sparkles,
   User,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import toast from 'react-hot-toast'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Avatar } from '../../components/ui/Avatar'
+import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LogoutCard } from '../../components/ui/LogoutCard'
 import { getGovernorateName } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
 import { useSettings } from '../../context/SettingsContext'
+import { ProfileHeaderCard } from '../../features/profile'
 import { useFormat } from '../../hooks/useFormat'
+import { earningsService } from '../../services/earningsService'
 import { orderService } from '../../services/orderService'
+import { productService } from '../../services/productService'
 import { userService } from '../../services/userService'
-import { cn, getFriendlyError, isInSection } from '../../utils'
-import { processAvatarImage } from '../../utils/avatar'
+import { cn, isInSection } from '../../utils'
 
 /**
- * التخطيط العام لحساب العميلة (معلمة / مشرفة روضة / ولي أمر)
- * يضم بطاقة الهوية العلوية (Bento Header) وشريط التبويبات المتشعبة
+ * التخطيط العام لحساب المستخدم (/account)
+ * - للعميل (customer): التخطيط الكامل بتبويبات الطلبات والمفضلة والعناوين والإعدادات وبيانات الدفع
+ * - للبائعة (seller) والأدمن (admin): إخفاء عناصر العميل وعرض الهيدر والتبويبات المسموحة، وإحصائيات البائعة إن توفرت
  */
 export default function AccountLayout() {
   const { i18n, t } = useTranslation(['profile', 'common', 'nav'])
   const isEn = i18n.language === 'en'
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { user, refreshUser, logout } = useAuth()
+  const { user, logout } = useAuth()
   const { settings } = useSettings()
-  const { formatNumber } = useFormat()
-  const fileInputRef = useRef(null)
+  const { formatMoney, formatNumber } = useFormat()
+
+  const role = user?.role || 'customer'
+  const isCustomer = role === 'customer'
+  const isSeller = role === 'seller'
+  const isAdmin = role === 'admin'
 
   const [ordersCount, setOrdersCount] = useState(0)
   const [favoritesCount, setFavoritesCount] = useState(0)
   const [addressesCount, setAddressesCount] = useState(0)
-  const [updatingAvatar, setUpdatingAvatar] = useState(false)
+  const [sellerStats, setSellerStats] = useState({
+    publishedCount: null,
+    ordersCount: null,
+    netEarnings: null,
+  })
 
-  // جلب إحصائيات الحساب السريعة للترويسة
+  // جلب إحصائيات الحساب السريعة حسب الدور من الـ APIs الموجودة
   useEffect(() => {
-    orderService
-      .getMyOrders()
-      .then((orders) => setOrdersCount(orders.length))
-      .catch(() => {})
+    let active = true
 
-    userService
-      .getFavorites()
-      .then((favs) => setFavoritesCount(favs.length))
-      .catch(() => {})
+    if (isCustomer) {
+      orderService
+        .getMyOrders()
+        .then((orders) => {
+          if (active) setOrdersCount(Array.isArray(orders) ? orders.length : 0)
+        })
+        .catch(() => {})
 
-    userService
-      .getAddresses()
-      .then((addrs) => setAddressesCount(addrs.length))
-      .catch(() => {})
-  }, [pathname])
+      userService
+        .getFavorites()
+        .then((favs) => {
+          if (active) setFavoritesCount(Array.isArray(favs) ? favs.length : 0)
+        })
+        .catch(() => {})
 
-  // معالجة رفع وتحديث صورة الحساب
-  const handleAvatarUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+      userService
+        .getAddresses()
+        .then((addrs) => {
+          if (active) setAddressesCount(Array.isArray(addrs) ? addrs.length : 0)
+        })
+        .catch(() => {})
+    } else if (isSeller && user?.id) {
+      Promise.allSettled([
+        productService.getManageableProducts(),
+        orderService.getSellerOrders(),
+        earningsService.getSellerOverview(user.id),
+      ]).then(([productsRes, ordersRes, overviewRes]) => {
+        if (!active) return
+        const publishedCount =
+          productsRes.status === 'fulfilled' && Array.isArray(productsRes.value)
+            ? productsRes.value.filter((p) => p.published || p.isPublished).length
+            : null
+        const overviewData = overviewRes.status === 'fulfilled' ? overviewRes.value : null
+        const ordersCountVal =
+          overviewData?.ordersCount !== undefined
+            ? overviewData.ordersCount
+            : ordersRes.status === 'fulfilled' && Array.isArray(ordersRes.value)
+              ? ordersRes.value.length
+              : null
+        const netEarningsVal =
+          overviewData && (overviewData.net !== undefined || overviewData.netEarnings !== undefined)
+            ? overviewData.net ?? overviewData.netEarnings
+            : null
 
-    setUpdatingAvatar(true)
-    try {
-      const dataUrl = await processAvatarImage(file)
-      const blob = await fetch(dataUrl).then((r) => r.blob())
-      const avatarFile = new File([blob], file.name || 'avatar.webp', {
-        type: blob.type || 'image/webp',
+        setSellerStats({
+          publishedCount,
+          ordersCount: ordersCountVal,
+          netEarnings: netEarningsVal,
+        })
       })
-      await userService.uploadAvatar(avatarFile)
-      await refreshUser()
-      toast.success(t('profile:info.avatarSuccess'))
-    } catch (err) {
-      toast.error(getFriendlyError(err, t) || t('profile:info.avatarError'))
-    } finally {
-      setUpdatingAvatar(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
+
+    return () => {
+      active = false
+    }
+  }, [pathname, isCustomer, isSeller, user?.id])
+
+  // منع البائعة والأدمن من دخول مسارات تبويبات العميل الفرعية عبر الرابط المباشر
+  if (
+    !isCustomer &&
+    ['/account/orders', '/account/favorites', '/account/addresses'].some((p) =>
+      isInSection(pathname, p)
+    )
+  ) {
+    return <Navigate to="/account" replace />
   }
 
   // تبويبات الحساب المتشعبة
-  const tabs = [
+  const customerTabs = [
     { href: '/account', label: t('profile:nav.profile', 'بياناتي وملفي'), icon: <User className="w-4 h-4" />, exact: true },
     { href: '/account/orders', label: `${t('profile:nav.orders', 'طلباتي')} (${formatNumber(ordersCount)})`, icon: <Package className="w-4 h-4" /> },
     { href: '/account/favorites', label: `${t('profile:nav.favorites', 'المفضلة')} (${formatNumber(favoritesCount)})`, icon: <Heart className="w-4 h-4" /> },
@@ -93,154 +131,168 @@ export default function AccountLayout() {
     { href: '/account/settings', label: t('profile:nav.settings', 'إعدادات الحساب'), icon: <Settings className="w-4 h-4" /> },
   ]
 
+  const staffTabs = [
+    { href: '/account', label: t('profile:nav.profile', 'بياناتي وملفي'), icon: <User className="w-4 h-4" />, exact: true },
+    { href: '/account/settings', label: t('profile:nav.settings', 'إعدادات الحساب'), icon: <Settings className="w-4 h-4" /> },
+  ]
+
+  const tabs = isCustomer ? customerTabs : staffTabs
+
   const isTabActive = (tab) => {
     if (tab.exact) return pathname === tab.href
     return isInSection(pathname, tab.href)
   }
 
+  const roleBadge = isCustomer ? (
+    <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-brand-mint/15 text-brand-mint-text dark:text-brand-mint text-[11px] font-bold">
+      <Sparkles className="w-3 h-3" />
+      <span>{t('profile:header.activeMembership')}</span>
+    </span>
+  ) : isSeller ? (
+    <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-brand-orange/15 text-brand-orange-text dark:text-brand-orange text-[11px] font-bold">
+      <ShieldCheck className="w-3.5 h-3.5" />
+      <span>{t('profile:header.sellerBadge')}</span>
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
+      <ShieldCheck className="w-3.5 h-3.5" />
+      <span>{t('profile:header.adminBadge')}</span>
+    </span>
+  )
+
+  const customerMeta = isCustomer ? (
+    <>
+      {user?.nurseryName && (
+        <span className="flex items-center gap-1.5 font-semibold text-text-main">
+          <School className="w-3.5 h-3.5 text-brand-orange" />
+          <span>{user.nurseryName}</span>
+        </span>
+      )}
+      {user?.governorate && (
+        <span>• {getGovernorateName(user.governorate, i18n.language) || user.governorate}</span>
+      )}
+    </>
+  ) : null
+
+  const customerEndContent = isCustomer ? (
+    <div className="flex flex-wrap md:flex-col items-start md:items-end justify-between w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-surface-border text-xs gap-3">
+      <div className="flex flex-col items-start md:items-end gap-1">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 font-bold">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>{t('profile:header.vodafonePaymentOnly', 'الدفع: فودافون كاش فقط')}</span>
+        </span>
+        <span className="text-[11px] text-text-muted">
+          {t('profile:header.officialWallet', 'رقم المحفظة الرسمي')}:{' '}
+          {settings?.platformWallet ? (
+            <strong className="font-mono text-text-main" dir="ltr">{settings.platformWallet}</strong>
+          ) : (
+            <span className="text-amber-700 dark:text-amber-400 font-semibold">{t('profile:header.notConfigured', 'غير مُعدّ بعد')}</span>
+          )}
+        </span>
+      </div>
+    </div>
+  ) : null
+
+  const hasSellerStats =
+    isSeller &&
+    (sellerStats.publishedCount !== null ||
+      sellerStats.ordersCount !== null ||
+      sellerStats.netEarnings !== null)
+
+  const statsContent = isCustomer ? (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-surface-border">
+      <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
+        <span className="text-[11px] text-text-muted block font-semibold">
+          {t('profile:header.totalOrders', 'إجمالي الطلبات')}
+        </span>
+        <span className="text-lg sm:text-xl font-heading font-black text-text-main">
+          {formatNumber(ordersCount)} {t('profile:header.ordersUnit', 'طلبات')}
+        </span>
+      </div>
+
+      <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
+        <span className="text-[11px] text-text-muted block font-semibold">
+          {t('profile:header.favoriteAids', 'الوسائل المفضلة')}
+        </span>
+        <span className="text-lg sm:text-xl font-heading font-black text-brand-orange">
+          {formatNumber(favoritesCount)} {t('profile:header.aidsUnit', 'وسائل')}
+        </span>
+      </div>
+
+      <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
+        <span className="text-[11px] text-text-muted block font-semibold">
+          {t('profile:header.deliveryAddresses', 'عناوين التوصيل')}
+        </span>
+        <span className="text-lg sm:text-xl font-heading font-black text-text-main">
+          {formatNumber(addressesCount)} {t('profile:header.locationsUnit', 'مقار')}
+        </span>
+      </div>
+
+      <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
+        <span className="text-[11px] text-text-muted block font-semibold">
+          {t('profile:header.registeredGov', 'المحافظة المسجلة')}
+        </span>
+        <span className="text-lg sm:text-xl font-heading font-black text-text-main truncate">
+          {getGovernorateName(user?.governorate, i18n.language) || (isEn ? 'Cairo' : 'القاهرة')}
+        </span>
+      </div>
+    </div>
+  ) : hasSellerStats ? (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 pt-6 border-t border-surface-border">
+      {sellerStats.publishedCount !== null && (
+        <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
+          <span className="text-[11px] text-text-muted block font-semibold">
+            {t('profile:header.sellerPublishedAids')}
+          </span>
+          <span className="text-lg sm:text-xl font-heading font-black text-brand-orange">
+            {formatNumber(sellerStats.publishedCount)} {t('profile:header.aidsUnit')}
+          </span>
+        </div>
+      )}
+
+      {sellerStats.ordersCount !== null && (
+        <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
+          <span className="text-[11px] text-text-muted block font-semibold">
+            {t('profile:header.sellerOrders')}
+          </span>
+          <span className="text-lg sm:text-xl font-heading font-black text-text-main">
+            {formatNumber(sellerStats.ordersCount)} {t('profile:header.ordersUnit')}
+          </span>
+        </div>
+      )}
+
+      {sellerStats.netEarnings !== null && (
+        <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
+          <span className="text-[11px] text-text-muted block font-semibold">
+            {t('profile:header.sellerNetEarnings')}
+          </span>
+          <span className="text-lg sm:text-xl font-heading font-black text-emerald-600 dark:text-emerald-400">
+            {formatMoney(sellerStats.netEarnings)}
+          </span>
+        </div>
+      )}
+    </div>
+  ) : null
+
   return (
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8 text-start">
-      {/* بطاقة الهوية والبيانات العلوية (Header Bento Card) */}
-      <div className="relative overflow-hidden rounded-[28px] bg-surface border border-surface-border p-6 sm:p-8 shadow-card">
-        {/* خلفيات هلامية ملونة ناعمة */}
-        <div className="absolute -top-24 -start-24 w-72 h-72 rounded-full bg-brand-orange/10 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -end-24 w-72 h-72 rounded-full bg-brand-mint/10 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          {/* الصورة والبيانات الشخصية */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            {/* الصورة مع زر الكاميرا للرفع */}
-            <div className="relative group shrink-0">
-              <Avatar
-                name={user?.name || (isEn ? 'Customer Account' : 'حساب العميلة')}
-                src={user?.avatar}
-                role="customer"
-                size="xl"
-                className="w-20 h-20 sm:w-24 sm:h-24 shadow-md text-2xl"
-              />
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={updatingAvatar}
-                className="absolute bottom-0 end-0 w-8 h-8 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-soft hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-                title={t('profile:header.updateAvatar', 'تحديث الصورة الشخصية')}
-                aria-label={t('profile:header.updateAvatar', 'تحديث الصورة الشخصية')}
-              >
-                <Camera className="w-4 h-4" />
-              </button>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-              />
-            </div>
-
-            {/* تفاصيل الاسم والروضة والتواصل */}
-            <div className="flex flex-col items-start gap-1 text-start flex-1 min-w-0" data-user-content="true">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-heading font-black text-xl sm:text-2xl text-text-main">
-                  {user?.name || t('profile:header.customerAccount')}
-                </h1>
-                <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-brand-mint/15 text-brand-mint-text dark:text-brand-mint text-[11px] font-bold">
-                  <Sparkles className="w-3 h-3" />
-                  <span>{t('profile:header.activeMembership')}</span>
-                </span>
-              </div>
-
-              {user?.email && (
-                <p className="text-xs text-text-muted font-mono" dir="ltr">
-                  {user.email}
-                </p>
-              )}
-
-              <p className="text-[11px] text-text-muted">
-                {t('profile:header.avatarFormatsHint')}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted pt-0.5">
-                {user?.nurseryName && (
-                  <span className="flex items-center gap-1.5 font-semibold text-text-main">
-                    <School className="w-3.5 h-3.5 text-brand-orange" />
-                    <span>{user.nurseryName}</span>
-                  </span>
-                )}
-
-                {user?.phone && (
-                  <span className="flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-text-muted" />
-                    <span className="font-mono" dir="ltr">{user.phone}</span>
-                  </span>
-                )}
-
-                {user?.governorate && (
-                  <span>• {getGovernorateName(user.governorate, i18n.language) || user.governorate}</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* وسيلة الدفع الحصرية */}
-          <div className="flex flex-wrap md:flex-col items-start md:items-end justify-between w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-surface-border text-xs gap-3">
-            <div className="flex flex-col items-start md:items-end gap-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{t('profile:header.vodafonePaymentOnly', 'الدفع: فودافون كاش فقط')}</span>
-              </span>
-              <span className="text-[11px] text-text-muted">
-                {t('profile:header.officialWallet', 'رقم المحفظة الرسمي')}:{' '}
-                {settings?.platformWallet ? (
-                  <strong className="font-mono text-text-main" dir="ltr">{settings.platformWallet}</strong>
-                ) : (
-                  <span className="text-amber-700 dark:text-amber-400 font-semibold">{t('profile:header.notConfigured', 'غير مُعدّ بعد')}</span>
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* شريط الإحصائيات السريعة */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-surface-border">
-          <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
-            <span className="text-[11px] text-text-muted block font-semibold">
-              {t('profile:header.totalOrders', 'إجمالي الطلبات')}
-            </span>
-            <span className="text-lg sm:text-xl font-heading font-black text-text-main">
-              {formatNumber(ordersCount)} {t('profile:header.ordersUnit', 'طلبات')}
-            </span>
-          </div>
-
-          <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
-            <span className="text-[11px] text-text-muted block font-semibold">
-              {t('profile:header.favoriteAids', 'الوسائل المفضلة')}
-            </span>
-            <span className="text-lg sm:text-xl font-heading font-black text-brand-orange">
-              {formatNumber(favoritesCount)} {t('profile:header.aidsUnit', 'وسائل')}
-            </span>
-          </div>
-
-          <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
-            <span className="text-[11px] text-text-muted block font-semibold">
-              {t('profile:header.deliveryAddresses', 'عناوين التوصيل')}
-            </span>
-            <span className="text-lg sm:text-xl font-heading font-black text-text-main">
-              {formatNumber(addressesCount)} {t('profile:header.locationsUnit', 'مقار')}
-            </span>
-          </div>
-
-          <div className="p-3 sm:p-4 rounded-[18px] bg-surface-subtle/70">
-            <span className="text-[11px] text-text-muted block font-semibold">
-              {t('profile:header.registeredGov', 'المحافظة المسجلة')}
-            </span>
-            <span className="text-lg sm:text-xl font-heading font-black text-text-main truncate">
-              {getGovernorateName(user?.governorate, i18n.language) || (isEn ? 'Cairo' : 'القاهرة')}
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* بطاقة الهوية والبيانات العلوية المشتركة */}
+      <ProfileHeaderCard
+        displayName={
+          user?.name ||
+          (isAdmin
+            ? t('common:roles.admin')
+            : isSeller
+              ? t('common:roles.seller')
+              : t('profile:header.customerAccount'))
+        }
+        avatarRole={role}
+        roleBadge={roleBadge}
+        metaContent={customerMeta}
+        showPhoneInMeta={true}
+        endContent={customerEndContent}
+        statsContent={statsContent}
+      />
 
       {/* شريط التبويبات المتشعبة (Navigation Tabs Bar) */}
       <div className="border-b border-surface-border pb-1">
@@ -274,13 +326,13 @@ export default function AccountLayout() {
         <Outlet />
       </div>
 
-      {/* بطاقة تسجيل الخروج المشتركة في نهاية المحتوى قبل التذييل مباشرة (تختفي على الموبايل لوجودها في القائمة الجانبية) */}
+      {/* بطاقة تسجيل الخروج المشتركة (للعميل مخفية على الموبايل كالسابق، وللبائعة والأدمن ظاهرة دائماً) */}
       <LogoutCard
         onLogout={async () => {
           await logout()
           navigate('/login')
         }}
-        className="hidden md:flex mt-8"
+        className={isCustomer ? 'hidden md:flex mt-8' : 'mt-8'}
       />
     </div>
   )

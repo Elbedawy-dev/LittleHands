@@ -136,6 +136,12 @@
     "handmadeBadge": "Hand Embroidery",
     "inStock": "In Workshop Stock",
     "outOfStock": "Out of Stock Currently",
+    "stock": {
+      "outOfStock": "Out of Stock",
+      "lowStock": "Only {{count}} left in stock",
+      "inStockCount": "In Stock ({{count}} left)",
+      "inStock": "In Stock"
+    },
     "quantityLabel": "Required Quantity:",
     "nurseryNote": "Bulk quantity orders available for nurseries with wholesale discounts",
     "addToCart": "Add to Cart",

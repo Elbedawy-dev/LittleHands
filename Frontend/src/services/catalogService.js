@@ -1,5 +1,15 @@
 import apiClient from './api.js'
 
+function extractSafeImageUrl(val) {
+  if (!val) return ''
+  if (typeof val === 'string') return val.trim()
+  if (typeof val === 'object') {
+    if (typeof val.url === 'string') return val.url.trim()
+    if (typeof val.src === 'string') return val.src.trim()
+  }
+  return ''
+}
+
 export function normalizeProduct(p) {
   if (!p) return null
   const id = p.id || p._id
@@ -10,10 +20,46 @@ export function normalizeProduct(p) {
     ? p.images.map((img) => (typeof img === 'string' ? { url: img, key: img.split('/').pop() } : img))
     : []
 
+  const populatedSellerObj =
+    p.seller && typeof p.seller === 'object'
+      ? p.seller
+      : p.sellerId && typeof p.sellerId === 'object'
+        ? p.sellerId
+        : null
+  const sellerId =
+    populatedSellerObj?.id ||
+    populatedSellerObj?._id?.toString?.() ||
+    (typeof p.sellerId === 'string' && p.sellerId !== '[object Object]' ? p.sellerId : '')
+  const sellerAvatar =
+    extractSafeImageUrl(p.seller?.avatar) ||
+    extractSafeImageUrl(p.sellerAvatar) ||
+    extractSafeImageUrl(populatedSellerObj?.avatar) ||
+    null
+
+  const normalizedSeller = p.seller && typeof p.seller === 'object'
+    ? {
+        ...p.seller,
+        id: p.seller.id || sellerId,
+        avatar: sellerAvatar,
+      }
+    : populatedSellerObj
+      ? {
+          id: sellerId,
+          displayName: populatedSellerObj.seller?.displayName || {
+            ar: populatedSellerObj.name || p.sellerName || '',
+            en: populatedSellerObj.nameEn || 'Seller',
+          },
+          avatar: sellerAvatar,
+        }
+      : undefined
+
   return {
     ...p,
     id,
     _id: id,
+    sellerId,
+    seller: normalizedSeller,
+    sellerAvatar,
     images,
     rawImages,
     inStock: p.stock !== undefined ? p.stock > 0 : p.inStock !== false,

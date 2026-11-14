@@ -1,23 +1,38 @@
-import { AlertCircle, ArrowRight, CheckCircle2, KeyRound, Lock } from 'lucide-react'
+import { AlertCircle, ArrowRight, CheckCircle2, KeyRound } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
+import { PasswordInput } from '../../components/ui/PasswordInput'
 import { authService } from '../../services/authService'
 import { getFriendlyError } from '../../utils'
 
+const RESET_EMAIL_STORAGE_KEY = 'lh_reset_email'
+const RESET_TOKEN_STORAGE_KEY = 'lh_reset_token'
+
+function getResetToken(state) {
+  if (state?.resetToken) return state.resetToken
+  try {
+    return sessionStorage.getItem(RESET_TOKEN_STORAGE_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
 export default function ResetPasswordPage() {
-  const { t, i18n } = useTranslation(['auth', 'common'])
-  const isEn = i18n.language === 'en'
-  const [searchParams] = useSearchParams()
-  const token = searchParams.get('token') || ''
+  const { t } = useTranslation(['auth', 'common'])
+  const location = useLocation()
+  const [token] = useState(() => getResetToken(location.state))
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  if (!token && !success) {
+    return <Navigate to="/forgot-password" replace />
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -41,6 +56,12 @@ export default function ResetPasswordPage() {
     setLoading(true)
     try {
       await authService.resetPassword({ token, password })
+      try {
+        sessionStorage.removeItem(RESET_TOKEN_STORAGE_KEY)
+        sessionStorage.removeItem(RESET_EMAIL_STORAGE_KEY)
+      } catch {
+        // Session storage unavailable
+      }
       setSuccess(true)
     } catch (err) {
       setError(getFriendlyError(err, t))
@@ -56,21 +77,19 @@ export default function ResetPasswordPage() {
         className="inline-flex items-center gap-1.5 text-xs font-bold text-text-muted hover:text-brand-orange-text dark:hover:text-brand-orange mb-6 transition-colors"
       >
         <ArrowRight className="w-4 h-4 rtl:rotate-0 rotate-180" />
-        <span>{t('backToLogin', 'العودة لصفحة تسجيل الدخول')}</span>
+        <span>{t('backToLogin')}</span>
       </Link>
 
       <div className="mb-6">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 text-xs font-bold mb-2">
           <KeyRound className="w-3.5 h-3.5" />
-          <span>{isEn ? 'Reset Password' : 'إعادة تعيين كلمة المرور'}</span>
+          <span>{t('resetPage.badge')}</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-black font-heading text-text-main mb-2">
-          {isEn ? 'Set New Password' : 'تعيين كلمة مرور جديدة'}
+          {t('resetPage.title')}
         </h1>
         <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
-          {isEn
-            ? 'Enter your new password below to secure your account.'
-            : 'أدخلي كلمة المرور الجديدة لتأمين حسابك والتمكن من الدخول مجدداً.'}
+          {t('resetPage.subtitle')}
         </p>
       </div>
 
@@ -85,48 +104,53 @@ export default function ResetPasswordPage() {
         <div className="p-6 rounded-[24px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center">
           <CheckCircle2 className="w-12 h-12 text-emerald-600 dark:text-emerald-400 mx-auto mb-3" />
           <h2 className="text-lg font-bold text-emerald-900 dark:text-emerald-200 mb-1">
-            {isEn ? 'Password Reset Successfully' : 'تم تغيير كلمة المرور بنجاح!'}
+            {t('resetPage.successTitle')}
           </h2>
           <p className="text-xs text-emerald-800 dark:text-emerald-300 mb-6">
-            {isEn
-              ? 'You can now sign in using your new password.'
-              : 'يمكنك الآن تسجيل الدخول إلى حسابك باستخدام كلمة المرور الجديدة.'}
+            {t('resetPage.successDesc')}
           </p>
           <Link to="/login">
             <Button variant="primary" className="w-full">
-              {t('backToLogin', 'تسجيل الدخول')}
+              {t('resetPage.loginButton')}
             </Button>
           </Link>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
+          <PasswordInput
             id="new-password"
-            type="password"
+            name="password"
             label={t('resetPage.newPasswordLabel')}
             placeholder={t('common:ui.passwordMaskPlaceholder')}
-            icon={<Lock className="w-4 h-4" />}
+            showStrength
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              if (error) setError('')
+            }}
             disabled={loading}
             required
             minLength={8}
+            containerClassName="mb-0"
           />
 
-          <Input
+          <PasswordInput
             id="confirm-new-password"
-            type="password"
+            name="confirmPassword"
             label={t('resetPage.confirmPasswordLabel')}
             placeholder={t('common:ui.passwordMaskPlaceholder')}
-            icon={<Lock className="w-4 h-4" />}
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value)
+              if (error) setError('')
+            }}
             disabled={loading}
             required
             minLength={8}
+            containerClassName="mb-0"
           />
 
-          <Button type="submit" variant="primary" className="w-full mt-2" loading={loading}>
+          <Button type="submit" variant="primary" size="lg" className="w-full mt-2" loading={loading}>
             {t('resetPage.submitButton')}
           </Button>
         </form>
@@ -134,4 +158,3 @@ export default function ResetPasswordPage() {
     </div>
   )
 }
-

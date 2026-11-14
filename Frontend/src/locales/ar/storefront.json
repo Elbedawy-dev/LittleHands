@@ -136,6 +136,12 @@
     "handmadeBadge": "تطريز يدوي متقن",
     "inStock": "متوفر بالورشة",
     "outOfStock": "غير متوفر حالياً",
+    "stock": {
+      "outOfStock": "نفدت الكمية حالياً",
+      "lowStock": "متبقي {{count}} فقط بالورشة",
+      "inStockCount": "متوفر ({{count}} قطعة)",
+      "inStock": "متوفر بالورشة"
+    },
     "quantityLabel": "الكمية المطلوبة:",
     "nurseryNote": "متاح طلب كميات مخصصة للحضانات مع خصم التوريد",
     "addToCart": "أضف للسلة",

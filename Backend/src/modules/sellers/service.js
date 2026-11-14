@@ -14,7 +14,9 @@ export const sellerService = {
    * Retrieves all active sellers with product counts and categories (Public).
    */
   async getSellers() {
-    const sellers = await User.find({ role: 'seller', status: 'active' }).sort({ createdAt: 1 })
+    const sellers = await User.find({ role: 'seller', status: 'active' })
+      .select('_id name avatar seller.displayName seller.bio seller.stages seller.materials city governorate createdAt')
+      .sort({ createdAt: 1 })
 
     const result = []
     for (const seller of sellers) {
@@ -59,6 +61,7 @@ export const sellerService = {
     }
 
     const seller = await User.findOne({ _id: id, role: 'seller', status: 'active' })
+      .select('_id name avatar seller.displayName seller.bio seller.stages seller.materials city governorate createdAt')
     if (!seller) {
       throw new AppError('ERR_SELLER_NOT_FOUND', 404)
     }
@@ -99,6 +102,7 @@ export const sellerService = {
     }
 
     const seller = await User.findOne({ _id: id, role: 'seller', status: 'active' })
+      .select('_id name avatar seller.displayName seller.bio seller.stages seller.materials city governorate createdAt')
     if (!seller) {
       throw new AppError('ERR_SELLER_NOT_FOUND', 404)
     }
@@ -109,7 +113,7 @@ export const sellerService = {
       deletedAt: null,
     })
       .sort({ createdAt: -1 })
-      .populate('sellerId', '_id name seller avatar')
+      .populate('sellerId', '_id name seller.displayName avatar')
 
     return products.map(toCatalogProductDTO)
   },

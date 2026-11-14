@@ -126,14 +126,16 @@ export function PaymentsTable({
       key: 'screenshotUrl',
       render: (p) =>
         p.screenshotUrl || p.id || p.orderId ? (
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="sm"
             onClick={() => setActiveReceiptTarget(p.id || p.orderId)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-subtle hover:bg-surface-border text-xs font-bold text-brand-orange-text dark:text-brand-orange transition-colors cursor-zoom-in"
+            startIcon={<Eye className="w-3.5 h-3.5" />}
+            className="cursor-zoom-in"
           >
-            <Eye className="w-3.5 h-3.5" />
-            <span>{t('payments.table.viewReceipt')}</span>
-          </button>
+            {t('payments.table.viewReceipt')}
+          </Button>
         ) : (
           <span className="text-text-muted text-xs">{t('payments.table.noReceipt')}</span>
         ),
@@ -277,13 +279,13 @@ export function PaymentsTable({
           <div className="pt-2">
             <Button
               type="button"
-              variant="outline"
+              variant="primary"
               size="sm"
               onClick={() => setActiveReceiptTarget(p.id || p.orderId)}
-              className="w-full gap-2 text-xs"
+              startIcon={<Eye className="w-3.5 h-3.5" />}
+              className="w-full cursor-zoom-in"
             >
-              <Eye className="w-3.5 h-3.5" />
-              <span>{t('payments.table.viewReceipt')}</span>
+              {t('payments.table.viewReceipt')}
             </Button>
           </div>
         )}
@@ -295,10 +297,10 @@ export function PaymentsTable({
               variant="primary"
               size="sm"
               onClick={() => onApprove(p)}
+              startIcon={<Check className="w-3.5 h-3.5" />}
               className="flex-1 gap-1 text-xs"
             >
-              <Check className="w-3.5 h-3.5" />
-              <span>{t('payments.table.approve')}</span>
+              {t('payments.table.approve')}
             </Button>
 
             <Button
@@ -306,10 +308,10 @@ export function PaymentsTable({
               variant="danger"
               size="sm"
               onClick={() => onReject(p)}
+              startIcon={<X className="w-3.5 h-3.5" />}
               className="flex-1 gap-1 text-xs"
             >
-              <X className="w-3.5 h-3.5" />
-              <span>{t('payments.table.reject')}</span>
+              {t('payments.table.reject')}
             </Button>
           </div>
         )}

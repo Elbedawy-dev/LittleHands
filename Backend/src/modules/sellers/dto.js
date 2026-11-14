@@ -1,4 +1,5 @@
 import { toCategoryDTO } from '../catalog/dto.js'
+import { extractAvatarUrl } from '../../utils/dto.js'
 
 /**
  * Public Seller Profile DTO.
@@ -11,7 +12,7 @@ export function toSellerPublicDTO(seller, { productsCount = 0, categoryIds = [],
   return {
     id: s.id || s._id?.toString(),
     name: s.name,
-    avatar: s.avatar?.url || s.avatar || null,
+    avatar: extractAvatarUrl(s.avatar),
     seller: {
       displayName: s.seller?.displayName || { ar: s.name, en: 'Seller' },
       bio: s.seller?.bio || { ar: '', en: '' },

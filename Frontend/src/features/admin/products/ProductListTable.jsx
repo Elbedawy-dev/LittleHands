@@ -8,7 +8,7 @@ import { Switch } from '../../../components/ui/Switch'
 import { CATEGORIES } from '../../../config/constants'
 import { useLanguage } from '../../../context/LanguageContext'
 import { useFormat } from '../../../hooks/useFormat'
-import { calcCommission, cn, getDisplayName, pickLocale } from '../../../utils'
+import { calcCommission, cn, getDisplayName, getProductSellerId, pickLocale } from '../../../utils'
 
 /**
  * جدول وبطاقات عرض الوسائل التعليمية للإدارة
@@ -115,7 +115,15 @@ export function ProductListTable({
                   {/* البائعة المسؤولة */}
                   <td className="py-3 px-2.5 whitespace-nowrap">
                     <span className="text-xs font-semibold text-text-main">
-                      {getDisplayName({ id: product.sellerId, sellerId: product.sellerId, name: product.sellerName, nameEn: product.sellerNameEn }, i18n.language)}
+                      {getDisplayName(
+                        product.seller || {
+                          id: getProductSellerId(product),
+                          sellerId: getProductSellerId(product),
+                          name: product.sellerName,
+                          nameEn: product.sellerNameEn,
+                        },
+                        i18n.language
+                      )}
                     </span>
                   </td>
 
@@ -231,7 +239,15 @@ export function ProductListTable({
                   )}
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     <span className="text-[11px] font-semibold text-text-muted">
-                      {getDisplayName({ id: product.sellerId, sellerId: product.sellerId, name: product.sellerName, nameEn: product.sellerNameEn }, i18n.language)}
+                      {getDisplayName(
+                        product.seller || {
+                          id: getProductSellerId(product),
+                          sellerId: getProductSellerId(product),
+                          name: product.sellerName,
+                          nameEn: product.sellerNameEn,
+                        },
+                        i18n.language
+                      )}
                     </span>
                     <span className="text-text-muted text-[10px]">•</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-subtle text-text-main border border-surface-border/40">

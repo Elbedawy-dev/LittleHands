@@ -390,60 +390,133 @@ export const authService = {
   },
 
   /**
-   * Forgot password request (generic 200, 30 min token, single use)
+   * Forgot password request (generic 200, 6-digit OTP code, 10 min expiry, all active roles)
    */
   async forgotPassword(email) {
     const cleanEmail = (email || '').trim().toLowerCase()
     const user = await User.findOne({ email: cleanEmail })
 
-    if (user && user.status !== 'suspended') {
+    if (user && user.status !== 'suspended' && user.status !== 'deleted') {
       await OtpCode.updateMany(
-        { userId: user._id, purpose: 'reset_password', usedAt: null },
+        {
+          userId: user._id,
+          purpose: { $in: ['reset_code', 'reset_password'] },
+          usedAt: null,
+        },
         { usedAt: new Date() }
       )
 
-      const plainToken = randomToken(32)
+      const plainCode = randomCode()
       await OtpCode.create({
         userId: user._id,
-        purpose: 'reset_password',
-        codeHash: sha256(plainToken),
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        purpose: 'reset_code',
+        codeHash: sha256(plainCode),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
         attempts: 0,
       })
 
       eventBus.emit(EVENT_TYPES.AUTH_PASSWORD_RESET_REQUESTED, {
         user,
-        token: plainToken,
+        code: plainCode,
       })
     }
 
     return {
       success: true,
-      message: 'If the email is registered, password reset instructions have been sent.',
+      message: 'If the email is registered, a password reset code has been sent.',
     }
   },
 
   /**
-   * Reset password via token (single-use token)
+   * Verify 6-digit password reset OTP and issue a short-lived single-use reset token
    */
-  async resetPassword({ token, password }) {
-    const tokenHash = sha256(token)
+  async verifyResetCode({ email, code }) {
+    const cleanEmail = (email || '').trim().toLowerCase()
+    const cleanCode = String(code || '').trim()
+    const user = await User.findOne({ email: cleanEmail })
+    const candidateHash = sha256(cleanCode)
+
+    const rejectInvalidWithConstantTime = () => {
+      const dummyHash = sha256('000000')
+      crypto.timingSafeEqual(Buffer.from(candidateHash, 'hex'), Buffer.from(dummyHash, 'hex'))
+      throw new AppError('INVALID_OR_EXPIRED_CODE', 400)
+    }
+
+    if (!user || user.status === 'suspended' || user.status === 'deleted') {
+      rejectInvalidWithConstantTime()
+    }
+
     const otp = await OtpCode.findOne({
-      purpose: 'reset_password',
-      codeHash: tokenHash,
+      userId: user._id,
+      purpose: 'reset_code',
       usedAt: null,
-      expiresAt: { $gt: new Date() },
-    })
+    }).sort({ createdAt: -1 })
 
     if (!otp) {
-      throw new AppError('INVALID_CODE', 400, 'Invalid or expired password reset token')
+      rejectInvalidWithConstantTime()
+    }
+
+    if (otp.expiresAt < new Date()) {
+      throw new AppError('INVALID_OR_EXPIRED_CODE', 400)
+    }
+
+    if (otp.attempts >= 5) {
+      throw new AppError('CODE_MAX_ATTEMPTS', 400)
+    }
+
+    const hashA = Buffer.from(candidateHash, 'hex')
+    const hashB = Buffer.from(otp.codeHash, 'hex')
+    const isMatch = hashA.length === hashB.length && crypto.timingSafeEqual(hashA, hashB)
+
+    if (!isMatch) {
+      otp.attempts += 1
+      await otp.save()
+      throw new AppError('INVALID_OR_EXPIRED_CODE', 400)
     }
 
     otp.usedAt = new Date()
     await otp.save()
 
+    // Invalidate any earlier unconsumed reset tokens for this user
+    await OtpCode.updateMany(
+      { userId: user._id, purpose: 'reset_password', usedAt: null },
+      { usedAt: new Date() }
+    )
+
+    const resetToken = randomToken(32)
+    await OtpCode.create({
+      userId: user._id,
+      purpose: 'reset_password',
+      codeHash: sha256(resetToken),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      attempts: 0,
+    })
+
+    return { resetToken }
+  },
+
+  /**
+   * Reset password via single-use verified reset token
+   */
+  async resetPassword({ token, password }) {
+    const tokenHash = sha256(token)
+    const otp = await OtpCode.findOneAndUpdate(
+      {
+        purpose: 'reset_password',
+        codeHash: tokenHash,
+        usedAt: null,
+        expiresAt: { $gt: new Date() },
+      },
+      { $set: { usedAt: new Date() } },
+      { new: false }
+    )
+
+    if (!otp) {
+      throw new AppError('INVALID_OR_EXPIRED_CODE', 400, 'Invalid or expired password reset token')
+    }
+
     const user = await User.findById(otp.userId)
-    if (!user) {
+    if (!user || user.status === 'suspended' || user.status === 'deleted') {
       throw new AppError('NOT_FOUND', 404)
     }
 
@@ -454,10 +527,10 @@ export const authService = {
     user.mustChangePassword = false
     await user.save()
 
-    // Revoke all refresh tokens
+    // Revoke all refresh tokens across all active sessions
     await RefreshToken.updateMany(
-      { userId: user._id },
-      { revokedAt: new Date() }
+      { userId: user._id, revokedAt: null },
+      { $set: { revokedAt: new Date() } }
     )
 
     return { success: true }

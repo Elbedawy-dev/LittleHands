@@ -86,7 +86,7 @@ export default function ProductDetailsPage() {
   }
 
   return (
-    <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-10 sm:space-y-12 pb-24 md:pb-12">
+    <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-10 sm:space-y-12 pb-36 md:pb-12">
       {/* رابط العودة إلى قائمة الوسائل */}
       <nav aria-label={t('common:actions.back')}>
         <Link
@@ -171,6 +171,7 @@ export default function ProductDetailsPage() {
       <StickyMobileBar
         product={product}
         onAddToCart={() => {
+          if (product.inStock === false || product.stockCount === 0) return
           addItem(product, 1)
           toast.success(t('storefront:productDetails.addedToCart'), {
             position: 'top-center',

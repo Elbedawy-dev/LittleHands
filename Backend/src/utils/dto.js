@@ -8,6 +8,19 @@
  * - Public: Strips all internal, financial, and personal details.
  */
 
+export function extractAvatarUrl(avatar) {
+  if (!avatar) return null
+  if (typeof avatar === 'string') {
+    const trimmed = avatar.trim()
+    return trimmed || null
+  }
+  if (typeof avatar === 'object' && typeof avatar.url === 'string') {
+    const trimmed = avatar.url.trim()
+    return trimmed || null
+  }
+  return null
+}
+
 export function mapUserDTO(user, viewerRole = 'public', viewerId = null) {
   if (!user) return null
   const u = user.toObject ? user.toObject() : { ...user }
@@ -17,7 +30,7 @@ export function mapUserDTO(user, viewerRole = 'public', viewerId = null) {
     id: u.id || u._id?.toString(),
     name: u.name,
     role: u.role,
-    avatar: u.avatar?.url || u.avatar || null,
+    avatar: extractAvatarUrl(u.avatar),
     nurseryName: u.nurseryName || '',
     createdAt: u.createdAt,
   }
@@ -70,14 +83,23 @@ export function mapProductDTO(product, _viewerRole = 'public', _viewerSellerId =
   if (!product) return null
   const p = product.toObject ? product.toObject() : { ...product }
 
+  const populatedSeller =
+    p.sellerId && typeof p.sellerId === 'object' && (p.sellerId._id || p.sellerId.id) && !p.sellerId._bsontype
+      ? p.sellerId
+      : null
+  const rawSellerId = populatedSeller
+    ? (populatedSeller._id || populatedSeller.id)
+    : p.sellerId
+  const normalizedSellerId = rawSellerId?.toString ? rawSellerId.toString() : rawSellerId ? String(rawSellerId) : undefined
+
   const dto = {
     id: p.id || p._id?.toString(),
     name: p.name,
     nameEn: typeof p.name === 'object' ? p.name?.en : p.nameEn || '',
     slug: p.slug,
     categoryId: p.categorySlug || p.categoryId,
-    sellerId: p.sellerId?.toString(),
-    sellerName: p.sellerName || '',
+    sellerId: normalizedSellerId,
+    sellerName: p.sellerName || populatedSeller?.seller?.displayName?.ar || populatedSeller?.name || '',
     price: p.price,
     description: p.description,
     details: p.details,
@@ -91,6 +113,17 @@ export function mapProductDTO(product, _viewerRole = 'public', _viewerSellerId =
     isFeatured: !!p.isFeatured,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
+  }
+
+  if (populatedSeller && normalizedSellerId) {
+    dto.seller = {
+      id: normalizedSellerId,
+      displayName: populatedSeller.seller?.displayName || {
+        ar: populatedSeller.name || p.sellerName || '',
+        en: 'Seller',
+      },
+      avatar: extractAvatarUrl(populatedSeller.avatar),
+    }
   }
 
   return dto

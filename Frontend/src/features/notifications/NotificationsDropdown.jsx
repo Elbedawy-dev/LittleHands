@@ -17,7 +17,7 @@ import { useNotifications } from '../../context/NotificationContext'
 import { useFormat } from '../../hooks/useFormat'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import toast from 'react-hot-toast'
-import { cn, pickLocaleText, getFriendlyError } from '../../utils'
+import { cn, pickLocaleText, getFriendlyError, resolveNotificationLink } from '../../utils'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { getNotificationBadge } from './NotificationsList'
 
@@ -217,7 +217,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
           markAsRead(item.id)
           onClose()
           if (item.link) {
-            navigate(item.link)
+            navigate(resolveNotificationLink(item, currentRole))
           }
         }
 

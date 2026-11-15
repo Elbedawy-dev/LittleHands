@@ -4,9 +4,10 @@ import {
   ShoppingBag,
   Trash2,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -37,6 +38,9 @@ export default function SellerOrdersPage() {
   const { t } = useTranslation(['seller', 'common'])
   const { user } = useAuth()
   const sellerId = user?.id || ''
+  const [searchParams, setSearchParams] = useSearchParams()
+  const orderQueryId = searchParams.get('order')
+  const handledOrderParamRef = useRef(null)
   const { formatMoney, formatDate, formatNumber } = useFormat()
 
   const [orders, setOrders] = useState([])
@@ -80,6 +84,49 @@ export default function SellerOrdersPage() {
   useEffect(() => {
     fetchOrders()
   }, [fetchOrders])
+
+  // Auto-open order details drawer when navigated with ?order=<id|number>
+  useEffect(() => {
+    if (!orderQueryId) {
+      handledOrderParamRef.current = null
+      return
+    }
+    if (loading || handledOrderParamRef.current === orderQueryId) return
+
+    const found = orders.find(
+      (o) => o.id === orderQueryId || o._id === orderQueryId || o.number === orderQueryId
+    )
+    if (found) {
+      handledOrderParamRef.current = orderQueryId
+      setSelectedOrder(found)
+      return
+    }
+
+    handledOrderParamRef.current = orderQueryId
+    let active = true
+    orderService
+      .getOrder(orderQueryId)
+      .then((fetched) => {
+        if (active && fetched && (fetched.id || fetched._id || fetched.number)) {
+          setSelectedOrder(fetched)
+        }
+      })
+      .catch(() => {
+        // Ignore invalid or inaccessible order ID silently
+      })
+    return () => {
+      active = false
+    }
+  }, [orderQueryId, loading, orders])
+
+  const handleCloseDrawer = () => {
+    setSelectedOrder(null)
+    if (searchParams.has('order')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('order')
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   // التصفية الفورية بالبحث السريع
   const filteredOrders = useMemo(() => {
@@ -477,7 +524,7 @@ export default function SellerOrdersPage() {
       {/* درج التفاصيل الكامل للطلب */}
       <OrderDetailsDrawer
         isOpen={Boolean(selectedOrder)}
-        onClose={() => setSelectedOrder(null)}
+        onClose={handleCloseDrawer}
         order={selectedOrder}
         sellerId={sellerId}
         onStatusUpdate={handleStatusUpdate}

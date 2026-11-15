@@ -37,10 +37,32 @@ describe('Notifications & Email Subsystem', () => {
         const customerNotifs = await Notification.find({ userId: customer._id })
         expect(customerNotifs.length).toBe(1)
         expect(customerNotifs[0].type).toBe('order')
+        expect(customerNotifs[0].link).toBe(`/account/orders/${order._id}`)
 
         const adminNotifs = await Notification.find({ userId: admin._id })
         expect(adminNotifs.length).toBe(1)
         expect(adminNotifs[0].type).toBe('payment')
+        expect(adminNotifs[0].link).toBe(`/admin/orders?order=${order._id}`)
+      }, { timeout: 2000, interval: 50 })
+    })
+
+    it('creates valid route links on payment.confirmed for customer and seller', async () => {
+      const customer = await createUser({ role: 'customer', email: 'cust_link@test.eg' })
+      const seller = await createUser({ role: 'seller', email: 'seller_link@test.eg' })
+      const order = await createOrder({ customerId: customer._id, sellerId: seller._id })
+
+      eventBus.emit(EVENT_TYPES.PAYMENT_CONFIRMED, {
+        order,
+        payment: { senderPhone: '01011112222', reference: 'VF999' },
+      })
+
+      await vi.waitFor(async () => {
+        const customerNotifs = await Notification.find({ userId: customer._id })
+        const sellerNotifs = await Notification.find({ userId: seller._id })
+        expect(customerNotifs.length).toBe(1)
+        expect(sellerNotifs.length).toBe(1)
+        expect(customerNotifs[0].link).toBe(`/account/orders/${order._id}`)
+        expect(sellerNotifs[0].link).toBe(`/seller/orders?order=${order._id}`)
       }, { timeout: 2000, interval: 50 })
     })
 

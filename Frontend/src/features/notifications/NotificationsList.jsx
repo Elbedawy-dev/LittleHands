@@ -21,7 +21,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import toast from 'react-hot-toast'
 import { useFormat } from '../../hooks/useFormat'
-import { cn, pickLocaleText, getFriendlyError } from '../../utils'
+import { cn, pickLocaleText, getFriendlyError, resolveNotificationLink } from '../../utils'
 
 /**
  * دالة مساعدة لتحديد أيقونة ولون الإشعار حسب نوعه ومحتواه
@@ -338,6 +338,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
                   <NotificationItem
                     key={n.id}
                     notification={n}
+                    role={currentRole}
                     onMarkRead={handleMarkItemRead}
                     onDelete={handleDeleteItem}
                     formatRelativeTime={formatRelativeTime}
@@ -365,6 +366,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
                   <NotificationItem
                     key={n.id}
                     notification={n}
+                    role={currentRole}
                     onMarkRead={handleMarkItemRead}
                     onDelete={handleDeleteItem}
                     formatRelativeTime={formatRelativeTime}
@@ -407,6 +409,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
  */
 function NotificationItem({
   notification,
+  role,
   onMarkRead,
   onDelete,
   formatRelativeTime,
@@ -524,7 +527,7 @@ function NotificationItem({
 
         {notification.link && (
           <Link
-            to={notification.link}
+            to={resolveNotificationLink(notification, role)}
             onClick={(e) => {
               e.stopPropagation()
               onMarkRead(notification.id)

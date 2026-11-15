@@ -872,9 +872,12 @@ export const orderService = {
         { 'params.orderId': orderIdStr },
         { 'params.orderId': orderDoc._id },
         { 'params.orderNumber': orderNum },
+        { link: `/orders/${orderIdStr}` },
         { link: `/account/orders/${orderIdStr}` },
         { link: `/seller/orders?order=${orderNum}` },
+        { link: `/seller/orders?order=${orderIdStr}` },
         { link: `/admin/orders?order=${orderNum}` },
+        { link: `/admin/orders?order=${orderIdStr}` },
         { link: `/admin/payments?order=${orderNum}` },
       ],
     }).catch(() => {})

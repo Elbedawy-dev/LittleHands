@@ -272,6 +272,7 @@ describe('Storage Subsystem', () => {
       expect(uploadStreamCalled).toBe(true)
       expect(uploadStreamOpts.type).toBe('authenticated')
       expect(uploadStreamOpts.folder).toBe('little_hands/payment')
+      expect(uploadStreamOpts.public_id).toBe(saved.key.replace(/\.webp$/, ''))
       // Client gets internal route, NEVER a direct Cloudinary URL
       expect(saved.url).toBe(`/api/v1/files/${saved.key}`)
 

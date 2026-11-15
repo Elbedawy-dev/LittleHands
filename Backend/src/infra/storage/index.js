@@ -100,8 +100,9 @@ export const storage = {
     }
 
     const isPrivate = kind === 'payment'
+    const timestamp = Date.now()
     const randomSuffix = crypto.randomBytes(8).toString('hex')
-    const key = `${kind}_${Date.now()}_${randomSuffix}.webp`
+    const key = `${kind}_${timestamp}_${randomSuffix}.webp`
 
     const isTest = env.NODE_ENV === 'test' || process.env.NODE_ENV === 'test'
     const driver = env.STORAGE_DRIVER || (isTest ? 'memory' : 'cloudinary')
@@ -164,7 +165,7 @@ export const storage = {
       const stream = cloudinary.uploader.upload_stream(
         {
           folder: `little_hands/${kind}`,
-          public_id: `${kind}_${Date.now()}_${randomSuffix}`,
+          public_id: `${kind}_${timestamp}_${randomSuffix}`,
           type: isPrivate ? 'authenticated' : 'upload',
           format: 'webp',
           resource_type: 'image',

@@ -8,6 +8,7 @@ export const productListQuerySchema = z.object({
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
   stage: z.string().optional(),
+  material: z.string().optional(),
   inStock: z
     .union([z.boolean(), z.string()])
     .transform((val) => {

@@ -25,6 +25,8 @@ function translateMaterial(materialId, t) {
       return t('common:materials.canson')
     case 'nasbian':
       return t('common:materials.nasbian')
+    case 'foam':
+      return t('common:materials.foam')
     default:
       return materialId
   }

@@ -8,7 +8,7 @@ import { Product } from '../../src/db/models/Product.js'
 import { Category } from '../../src/db/models/Category.js'
 import { CustomRequest } from '../../src/db/models/CustomRequest.js'
 import { Upload } from '../../src/db/models/Upload.js'
-import { CATEGORIES } from '../../src/config/constants.js'
+import { CATEGORIES, MATERIAL_TYPES } from '../../src/config/constants.js'
 
 describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', () => {
   const app = createApp()
@@ -571,6 +571,53 @@ describe('Prompt B2: Catalog, Products, Sellers, Contact & Admin Categories', ()
         }
       }
       expect(hitRateLimit).toBe(true)
+    })
+  })
+
+  describe('6. D1: Foam Material Support & Filtering', () => {
+    it('supports foam material in constants, product creation, and catalog filtering without affecting existing products', async () => {
+      expect(MATERIAL_TYPES).toContain('foam')
+
+      const { agent, user: seller } = await authedAgent(app, 'seller')
+
+      // Pre-existing felt/cardstock product
+      const existing = await createProduct({
+        sellerId: seller._id,
+        name: { ar: 'بطاقات أرقام من الجوخ', en: 'Felt Number Cards' },
+        materials: ['felt', 'cardstock'],
+        published: true,
+      })
+
+      // Create new product using foam sheets
+      const createRes = await agent
+        .post('/api/v1/products/manage/products')
+        .send({
+          name: { ar: 'أشكال هندسية من ورق الفوم', en: 'Foam Geometric Shapes' },
+          categoryId: 'activity-kits',
+          price: 150,
+          description: {
+            ar: 'أشكال هندسية ملونة وآمنة للأطفال من ورق الفوم المتين',
+            en: 'Colorful safe geometric shapes for kids made from durable foam sheets',
+          },
+          materials: ['foam', 'felt'],
+          isPublished: true,
+          images: [{ key: 'foam-img', url: 'https://example.com/foam.webp' }],
+        })
+      expect(createRes.status).toBe(201)
+      expect(createRes.body.data.materials).toEqual(['foam', 'felt'])
+
+      // Filtering by material=foam returns only the foam product
+      const foamRes = await request(app).get('/api/v1/catalog/products?material=foam')
+      expect(foamRes.status).toBe(200)
+      expect(foamRes.body.data.items.length).toBe(1)
+      expect(foamRes.body.data.items[0].materials).toContain('foam')
+
+      // Existing products remain completely unaffected
+      const allRes = await request(app).get('/api/v1/catalog/products')
+      expect(allRes.status).toBe(200)
+      expect(allRes.body.data.items.length).toBe(2)
+      const fetchedExisting = allRes.body.data.items.find((i) => i.id === existing._id.toString())
+      expect(fetchedExisting.materials).toEqual(['felt', 'cardstock'])
     })
   })
 })

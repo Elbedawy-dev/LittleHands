@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import '../src/config/i18n'
 import i18n from '../src/config/i18n'
@@ -7,6 +7,9 @@ import apiClient from '../src/services/api'
 import { AppProviders } from '../src/app/providers'
 import { router } from '../src/app/router'
 import { ProductCard } from '../src/components/product/ProductCard'
+import { ProductTabs } from '../src/features/storefront/ProductTabs'
+import { FilterSidebar } from '../src/features/storefront/FilterSidebar'
+import { ProductForm } from '../src/features/products/ProductForm'
 
 const sampleProductRich = {
   id: '650000000000000000000101',
@@ -35,6 +38,8 @@ describe('C1: ProductsPage Responsive Layout & ProductCard Proportions', () => {
 
   afterEach(() => {
     apiClient.defaults.adapter = originalAdapter
+    localStorage.removeItem('lh_lang')
+    cleanup()
   })
 
   it('ProductCard uses <article> h-full, 4/3 image, 2-line desc, single-line stage/material rows with +N, and merged stock pill', () => {
@@ -135,5 +140,55 @@ describe('C1: ProductsPage Responsive Layout & ProductCard Proportions', () => {
     await waitFor(() => {
       expect(screen.getByTestId('product-stock-pill')).toBeTruthy()
     })
+  })
+
+  it('D1: displays, filters, and allows selecting foam (ورق فوم / Foam Sheets) in ProductCard, ProductTabs, ProductForm, and FilterSidebar', async () => {
+    const foamProduct = {
+      ...sampleProductRich,
+      id: '650000000000000000000199',
+      materials: ['foam'],
+      stages: ['nursery'],
+    }
+    const handleFilterChange = vi.fn()
+
+    const renderHarness = () =>
+      render(
+        <AppProviders>
+          <RouterProvider
+            router={createMemoryRouter([
+              {
+                path: '/',
+                element: (
+                  <div>
+                    <ProductCard product={foamProduct} />
+                    <ProductTabs product={foamProduct} />
+                    <ProductForm onSubmit={() => {}} />
+                    <FilterSidebar
+                      sellers={[]}
+                      filters={{ material: 'foam' }}
+                      onFilterChange={handleFilterChange}
+                      onReset={() => {}}
+                    />
+                  </div>
+                ),
+              },
+            ])}
+          />
+        </AppProviders>
+      )
+
+    localStorage.setItem('lh_lang', 'ar')
+    await i18n.changeLanguage('ar')
+    renderHarness()
+    fireEvent.click(await screen.findByText('التفاصيل والمواصفات'))
+    expect((await screen.findAllByText(/ورق فوم/)).length).toBeGreaterThanOrEqual(4)
+
+    cleanup()
+
+    localStorage.setItem('lh_lang', 'en')
+    await i18n.changeLanguage('en')
+    renderHarness()
+    fireEvent.click(await screen.findByText('Specifications & Details'))
+    expect((await screen.findAllByText(/Foam Sheets/)).length).toBeGreaterThanOrEqual(4)
   })
 })

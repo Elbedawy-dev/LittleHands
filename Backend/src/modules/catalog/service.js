@@ -115,6 +115,7 @@ export const catalogService = {
     minPrice,
     maxPrice,
     stage = '',
+    material = '',
     inStock,
     sort = 'newest',
     page = 1,
@@ -174,6 +175,11 @@ export const catalogService = {
       andConditions.push({
         $or: [{ stages: stage }, { stage: stage }],
       })
+    }
+
+    // 6b. Material filter
+    if (material) {
+      andConditions.push({ materials: material })
     }
 
     // 7. Stock availability filter

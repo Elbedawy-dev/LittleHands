@@ -40,6 +40,17 @@ export function FilterSidebar({
     })),
   ]
 
+  // الخامات المستخدمة
+  const materialOptions = [
+    { value: '', label: t('storefront:products.allMaterials') },
+    { value: 'felt', label: t('common:materials.felt') },
+    { value: 'cardstock', label: t('common:materials.cardstock') },
+    { value: 'fabric', label: t('common:materials.fabric') },
+    { value: 'canson', label: t('common:materials.canson') },
+    { value: 'nasbian', label: t('common:materials.nasbian') },
+    { value: 'foam', label: t('common:materials.foam') },
+  ]
+
   const handleCategoryToggle = (categorySlug) => {
     // إذا كان نفس التصنيف محدداً يتم إلغاؤه (العودة للكل) وإلا يتم تحديده
     const nextCategory = filters.category === categorySlug ? '' : categorySlug
@@ -165,6 +176,19 @@ export function FilterSidebar({
           value={filters.stage || ''}
           onChange={(e) => onFilterChange('stage', e.target.value)}
           options={stageOptions}
+          containerClassName="mb-0"
+          noScroll
+        />
+      </div>
+
+      {/* 3b. الخامة المستخدمة */}
+      <div className="pt-3 border-t border-surface-border">
+        <Select
+          id="material-filter"
+          label={t('storefront:products.material')}
+          value={filters.material || ''}
+          onChange={(e) => onFilterChange('material', e.target.value)}
+          options={materialOptions}
           containerClassName="mb-0"
           noScroll
         />

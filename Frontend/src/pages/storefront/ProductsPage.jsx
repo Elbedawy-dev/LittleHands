@@ -47,6 +47,7 @@ export default function ProductsPage() {
   // قراءة الفلاتر الحالية من URL
   const currentCategory = searchParams.get('category') || ''
   const currentStage = searchParams.get('stage') || ''
+  const currentMaterial = searchParams.get('material') || ''
   const currentSeller = searchParams.get('seller') || ''
   const currentMinPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined
   const currentMaxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined
@@ -58,6 +59,7 @@ export default function ProductsPage() {
   const activeFiltersCount = [
     Boolean(currentCategory),
     Boolean(currentStage),
+    Boolean(currentMaterial),
     Boolean(currentSeller),
     Boolean(currentMinPrice !== undefined && currentMinPrice > 0),
     Boolean(currentMaxPrice !== undefined && currentMaxPrice < 1000),
@@ -108,6 +110,7 @@ export default function ProductsPage() {
         category: currentCategory,
         sellerId: currentSeller,
         stage: currentStage,
+        material: currentMaterial,
         minPrice: currentMinPrice,
         maxPrice: currentMaxPrice,
         inStock: currentInStock ? true : undefined,
@@ -128,6 +131,7 @@ export default function ProductsPage() {
     currentCategory,
     currentSeller,
     currentStage,
+    currentMaterial,
     currentMinPrice,
     currentMaxPrice,
     currentInStock,
@@ -157,6 +161,7 @@ export default function ProductsPage() {
   const filtersState = {
     category: currentCategory,
     stage: currentStage,
+    material: currentMaterial,
     seller: currentSeller,
     minPrice: currentMinPrice,
     maxPrice: currentMaxPrice,

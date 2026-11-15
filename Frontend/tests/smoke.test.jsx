@@ -456,29 +456,27 @@ function createSmokeAdapter(role, fixtures) {
       })
     }
     if (cleanUrl === '/admin/sellers/earnings') {
-      return makeResponse(config, {
-        items: [
-          {
-            sellerId: IDS.seller,
-            id: IDS.seller,
-            sellerName: rawSeller.seller.displayName.ar,
-            nameEn: rawSeller.seller.displayName.en,
-            displayName: rawSeller.seller.displayName,
-            bio: rawSeller.seller.bio,
-            status: rawSeller.status,
-            avatar: rawSeller.avatar.url,
-            walletNumber: rawSeller.seller.payoutWallet,
-            payoutWallet: rawSeller.seller.payoutWallet,
-            governorate: rawSeller.governorate,
-            ordersCount: 1,
-            totalSales: 250,
-            commission: 37.5,
-            net: 212.5,
-            paid: 150,
-            due: 62.5,
-          },
-        ],
-      })
+      return makeResponse(config, [
+        {
+          sellerId: IDS.seller,
+          id: IDS.seller,
+          sellerName: rawSeller.seller.displayName.ar,
+          nameEn: rawSeller.seller.displayName.en,
+          displayName: rawSeller.seller.displayName,
+          bio: rawSeller.seller.bio,
+          status: rawSeller.status,
+          avatar: rawSeller.avatar.url,
+          walletNumber: rawSeller.seller.payoutWallet,
+          payoutWallet: rawSeller.seller.payoutWallet,
+          governorate: rawSeller.governorate,
+          ordersCount: 1,
+          totalSales: 250,
+          commission: 37.5,
+          net: 212.5,
+          paid: 150,
+          due: 62.5,
+        },
+      ])
     }
     if (/^\/admin\/sellers\/[^/]+\/orders$/.test(cleanUrl)) {
       return makeResponse(config, { items: [sellerOrderRow], total: 1 })
@@ -668,6 +666,30 @@ describe('Smoke render check across all routes and roles with real Backend DTOs'
       interact: async () => {
         const btns = await screen.findAllByText(/عرض التفاصيل|View Details/i)
         fireEvent.click(btns[0])
+      },
+    })
+  })
+
+  it('renders seller avatar image on /admin/sellers and /sellers/:id (A5)', async () => {
+    await renderSmokeRoute({
+      routePath: '/admin/sellers',
+      role: 'admin',
+      interact: async () => {
+        await waitFor(() => {
+          const imgs = Array.from(document.querySelectorAll('img')).map((el) => el.getAttribute('src'))
+          expect(imgs).toContain('https://res.cloudinary.com/demo/image/upload/seller.jpg')
+        })
+      },
+    })
+
+    await renderSmokeRoute({
+      routePath: `/sellers/${IDS.seller}`,
+      role: 'guest',
+      interact: async () => {
+        await waitFor(() => {
+          const imgs = Array.from(document.querySelectorAll('img')).map((el) => el.getAttribute('src'))
+          expect(imgs).toContain('https://res.cloudinary.com/demo/image/upload/seller.jpg')
+        })
       },
     })
   })

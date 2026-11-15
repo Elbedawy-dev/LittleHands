@@ -19,7 +19,7 @@ export const sellerService = {
    */
   async getSeller(id) {
     const res = await apiClient.get(`/sellers/${id}`)
-    return res?.seller || res
+    return res?.id ? res : res?.seller || res
   },
 
   async getSellerById(id) {

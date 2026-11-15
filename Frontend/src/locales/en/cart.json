@@ -20,8 +20,10 @@
     "shippingSelect": "Delivery Governorate in Egypt",
     "shippingSelectPlaceholder": "Select governorate for shipping...",
     "total": "Final Total:",
-    "notesLabel": "Nursery Name & Educational Notes (Optional)",
-    "notesPlaceholder": "e.g. Baraem Nursery - print nursery name on felt board",
+    "nurseryLabel": "Nursery / Kindergarten Name (Optional)",
+    "nurseryPlaceholder": "e.g. Future Buds Nursery",
+    "notesLabel": "Educational & Customization Notes (Optional)",
+    "notesPlaceholder": "e.g. Print nursery name on felt board or adjust colors",
     "checkoutButton": "Proceed to Checkout",
     "vodafoneCashNotice": "Payment via Vodafone Cash in the next step",
     "vodafoneCashDesc": "Direct wallet transfer with screenshot receipt upload to confirm order."

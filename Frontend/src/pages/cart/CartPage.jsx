@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Phone, RefreshCw, ShoppingBag, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Phone, RefreshCw, School, ShoppingBag, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Input } from '../../components/ui/Input'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { ProductImage } from '../../components/ui/ProductImage'
@@ -27,10 +28,18 @@ export default function CartPage() {
   // المحافظة المختارة لحساب تكلفة الشحن
   const [selectedGovName, setSelectedGovName] = useState(() => {
     try {
-      const saved = sessionStorage.getItem('lh_selected_gov')
-      return saved || 'القاهرة'
+      return sessionStorage.getItem('lh_selected_gov') || ''
     } catch {
-      return 'القاهرة'
+      return ''
+    }
+  })
+
+  // اسم الحضانة وملاحظات التخصيص
+  const [nurseryName, setNurseryName] = useState(() => {
+    try {
+      return sessionStorage.getItem('lh_cart_nursery') || ''
+    } catch {
+      return ''
     }
   })
 
@@ -47,22 +56,36 @@ export default function CartPage() {
   const shipping = useShippingRates({ revalidate: true })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
-  // حفظ المحافظة والملاحظات في sessionStorage للربط السلس مع شاشة الدفع
+  // حفظ المحافظة واسم الحضانة والملاحظات في sessionStorage للربط السلس مع شاشة الدفع
   useEffect(() => {
     try {
-      if (selectedGovName) sessionStorage.setItem('lh_selected_gov', selectedGovName)
-      if (cartNotes !== undefined) sessionStorage.setItem('lh_cart_notes', cartNotes)
+      if (selectedGovName) {
+        sessionStorage.setItem('lh_selected_gov', selectedGovName)
+      } else {
+        sessionStorage.removeItem('lh_selected_gov')
+      }
+      if (nurseryName) {
+        sessionStorage.setItem('lh_cart_nursery', nurseryName)
+      } else {
+        sessionStorage.removeItem('lh_cart_nursery')
+      }
+      if (cartNotes) {
+        sessionStorage.setItem('lh_cart_notes', cartNotes)
+      } else {
+        sessionStorage.removeItem('lh_cart_notes')
+      }
     } catch {
       // ignore storage errors
     }
-  }, [selectedGovName, cartNotes])
+  }, [selectedGovName, nurseryName, cartNotes])
 
   const lang = isRtl ? 'ar' : 'en'
   const shippingReady = shipping.isLoaded && !shipping.isLoading && !shipping.error
   const governorateOptions = shippingReady
     ? getGovernorateOptions(shipping, lang, { currencyLabel: t('common:currency') })
     : []
-  const shippingRate = shippingReady ? shipping.getRateForGov(selectedGovName) : null
+  const shippingRate =
+    shippingReady && selectedGovName ? shipping.getRateForGov(selectedGovName) : null
   const grandTotal = shippingRate !== null ? subtotal + shippingRate : null
 
   // استخراج تفاصيل التصنيف للعرض بالشارة المخصصة
@@ -82,6 +105,7 @@ export default function CartPage() {
     navigate('/checkout', {
       state: {
         governorate: selectedGovName,
+        nurseryName,
         notes: cartNotes,
       },
     })
@@ -255,6 +279,7 @@ export default function CartPage() {
               <Select
                 id="cart-governorate"
                 label={t('cart:summary.shippingSelect')}
+                placeholder={t('common:shipping.chooseFromList')}
                 value={shippingReady ? selectedGovName : ''}
                 disabled={!shippingReady}
                 onChange={(e) => setSelectedGovName(e.target.value)}
@@ -285,7 +310,16 @@ export default function CartPage() {
             </div>
 
             {/* حقل اسم الحضانة وملاحظات التخصيص */}
-            <div>
+            <div className="space-y-3">
+              <Input
+                id="cart-nursery-name"
+                label={t('cart:summary.nurseryLabel')}
+                placeholder={t('cart:summary.nurseryPlaceholder')}
+                startIcon={<School className="w-4 h-4" />}
+                value={nurseryName}
+                onChange={(e) => setNurseryName(e.target.value)}
+                containerClassName="mb-0"
+              />
               <Textarea
                 id="cart-nursery-notes"
                 label={t('cart:summary.notesLabel')}

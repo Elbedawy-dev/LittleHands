@@ -20,6 +20,14 @@ import { getFriendlyError } from '../../utils'
 
 const CHECKOUT_STORAGE_KEY = 'lh_checkout_flow_state'
 
+const readSessionValue = (key) => {
+  try {
+    return sessionStorage.getItem(key) || ''
+  } catch {
+    return ''
+  }
+}
+
 export default function CheckoutPage() {
   const { t } = useTranslation(['checkout', 'common', 'cart'])
   const { isRtl } = useLanguage()
@@ -41,14 +49,23 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(() => savedFlow?.step || 0)
   const [deliveryData, setDeliveryData] = useState(() => {
     const locState = location.state || {}
+    const sessionGov = readSessionValue('lh_selected_gov')
+    const sessionNursery = readSessionValue('lh_cart_nursery')
+    const sessionNotes = readSessionValue('lh_cart_notes')
     return {
       name: savedFlow?.delivery?.name || user?.name || '',
       phone: savedFlow?.delivery?.phone || user?.phone || '',
-      governorate: locState.governorate || savedFlow?.delivery?.governorate || user?.governorate || 'القاهرة',
+      governorate:
+        locState.governorate || sessionGov || savedFlow?.delivery?.governorate || '',
       city: savedFlow?.delivery?.city || user?.city || '',
       address: savedFlow?.delivery?.address || user?.address || '',
-      nurseryName: savedFlow?.delivery?.nurseryName || user?.nurseryName || '',
-      notes: locState.notes || savedFlow?.delivery?.notes || '',
+      nurseryName:
+        locState.nurseryName ||
+        sessionNursery ||
+        savedFlow?.delivery?.nurseryName ||
+        user?.nurseryName ||
+        '',
+      notes: locState.notes || sessionNotes || savedFlow?.delivery?.notes || '',
     }
   })
 
@@ -73,18 +90,17 @@ export default function CheckoutPage() {
 
   // مزامنة حالة الخطوة والبيانات مع sessionStorage للاستمرار عند التحديث
   useEffect(() => {
-    if (user && !savedFlow) {
+    if (user) {
       setDeliveryData((prev) => ({
         ...prev,
         name: prev.name || user.name || '',
         phone: prev.phone || user.phone || '',
-        governorate: prev.governorate || user.governorate || 'القاهرة',
         city: prev.city || user.city || '',
         address: prev.address || user.address || '',
         nurseryName: prev.nurseryName || user.nurseryName || '',
       }))
     }
-  }, [user, savedFlow])
+  }, [user])
 
   useEffect(() => {
     try {
@@ -109,7 +125,10 @@ export default function CheckoutPage() {
   const governorateOptions = isShippingReady
     ? getGovernorateOptions(shipping, isRtl ? 'ar' : 'en', { currencyLabel: t('common:currency') })
     : []
-  const shippingRate = isShippingReady ? shipping.getRateForGov(deliveryData.governorate) : null
+  const shippingRate =
+    isShippingReady && deliveryData.governorate
+      ? shipping.getRateForGov(deliveryData.governorate)
+      : null
   const grandTotal = shippingRate !== null ? subtotal + shippingRate : subtotal
 
   // التعامل مع إكمال الخطوة 1
@@ -119,13 +138,33 @@ export default function CheckoutPage() {
     { label: t('checkout:steps.review') },
   ]
 
+  const syncCartDeliverySession = (gov, nursery, notesVal) => {
+    try {
+      if (gov) sessionStorage.setItem('lh_selected_gov', gov)
+      else sessionStorage.removeItem('lh_selected_gov')
+      if (nursery !== undefined) {
+        if (nursery) sessionStorage.setItem('lh_cart_nursery', nursery)
+        else sessionStorage.removeItem('lh_cart_nursery')
+      }
+      if (notesVal !== undefined) {
+        if (notesVal) sessionStorage.setItem('lh_cart_notes', notesVal)
+        else sessionStorage.removeItem('lh_cart_notes')
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
   const handleGovernorateChange = (gov) => {
     setDeliveryData((prev) => ({ ...prev, governorate: gov }))
+    setPaymentData((prev) => ({ ...prev, transferredAmount: 0 }))
+    syncCartDeliverySession(gov)
   }
 
   // التعامل مع إكمال الخطوة 1
   const handleDeliveryComplete = (data) => {
     setDeliveryData(data)
+    syncCartDeliverySession(data.governorate, data.nurseryName, data.notes)
     setStep(1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -169,6 +208,8 @@ export default function CheckoutPage() {
       // 3. تفريغ السلة وحذف حالة التخزين المؤقت
       clearCart()
       sessionStorage.removeItem(CHECKOUT_STORAGE_KEY)
+      sessionStorage.removeItem('lh_selected_gov')
+      sessionStorage.removeItem('lh_cart_nursery')
       sessionStorage.removeItem('lh_cart_notes')
 
       // 5. الانتقال لصفحة نجاح الطلب

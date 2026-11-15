@@ -64,7 +64,7 @@ export function DeliveryStep({
     defaultValues: {
       name: initialData.name || '',
       phone: initialData.phone || '',
-      governorate: initialData.governorate || 'القاهرة',
+      governorate: initialData.governorate || '',
       city: initialData.city || '',
       address: initialData.address || '',
       nurseryName: initialData.nurseryName || '',
@@ -79,7 +79,7 @@ export function DeliveryStep({
         {
           name: initialData.name || '',
           phone: initialData.phone || '',
-          governorate: initialData.governorate || 'القاهرة',
+          governorate: initialData.governorate || '',
           city: initialData.city || '',
           address: initialData.address || '',
           nurseryName: initialData.nurseryName || '',
@@ -92,8 +92,8 @@ export function DeliveryStep({
 
   // مزامنة القيمة الظاهرة في قائمة المحافظة بعد اكتمال تحميل الخيارات من الباك
   useEffect(() => {
-    if (ratesReady && initialData?.governorate) {
-      setValue('governorate', initialData.governorate, { shouldDirty: false })
+    if (ratesReady && initialData?.governorate !== undefined) {
+      setValue('governorate', initialData.governorate || '', { shouldDirty: false })
     }
   }, [ratesReady, initialData?.governorate, setValue])
 
@@ -161,6 +161,7 @@ export function DeliveryStep({
           <Select
             id="delivery-governorate"
             label={t('checkout:delivery.governorate')}
+            placeholder={t('common:shipping.chooseFromList')}
             required
             disabled={!ratesReady}
             error={errors.governorate?.message}

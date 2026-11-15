@@ -101,6 +101,46 @@ function setupApiMock({ zones = buildZonesWithDelta10(), failShipping = false, r
     if (cleanUrl === '/notifications/unread-count') {
       return { data: { success: true, data: { count: 0 } }, status: 200, headers: {}, config }
     }
+    if (cleanUrl === '/orders' && (config.method || 'get').toUpperCase() === 'POST') {
+      return {
+        data: {
+          success: true,
+          data: {
+            id: '650000000000000000000999',
+            number: 'LH-2026-999',
+            status: 'pending_payment',
+            subtotal: 400,
+            shipping: 65,
+            total: 465,
+          },
+        },
+        status: 201,
+        headers: {},
+        config,
+      }
+    }
+    if (cleanUrl.endsWith('/payment') && (config.method || 'get').toUpperCase() === 'POST') {
+      return { data: { success: true, data: { status: 'submitted' } }, status: 200, headers: {}, config }
+    }
+    if (cleanUrl.startsWith('/orders/')) {
+      return {
+        data: {
+          success: true,
+          data: {
+            id: '650000000000000000000999',
+            number: 'LH-2026-999',
+            status: 'pending_payment',
+            items: [],
+            subtotal: 400,
+            shipping: 65,
+            total: 465,
+          },
+        },
+        status: 200,
+        headers: {},
+        config,
+      }
+    }
     return { data: { success: true, data: { items: [] } }, status: 200, headers: {}, config }
   }
 }
@@ -305,5 +345,144 @@ describe('B1: Unified Dynamic Shipping Rates (Delta = 10 EGP)', () => {
     expect(requests.some((r) => r.url.includes('/users/me/addresses'))).toBe(false)
     expect(document.body.textContent).not.toContain('العناوين المسجلة')
     expect(document.getElementById('save-address-chk')).toBeNull()
+  })
+
+  it('B3: no default Cairo selection in Cart or Checkout, shows "اختاري من القائمة"', async () => {
+    setupApiMock()
+    const memRouter = createMemoryRouter(router.routes, { initialEntries: ['/cart'] })
+    const { unmount } = render(
+      <AppProviders>
+        <RouterProvider router={memRouter} />
+      </AppProviders>
+    )
+
+    await waitFor(
+      () => {
+        const el = screen.getByLabelText(/محافظة مقر الحضانة/)
+        expect(el.disabled).toBe(false)
+        expect(document.body.textContent).toContain('اختاري من القائمة')
+        expect(document.body.textContent).toContain('اختاري المحافظة لحساب الشحن')
+      },
+      { timeout: 5000 }
+    )
+    expect(sessionStorage.getItem('lh_selected_gov')).toBeNull()
+    unmount()
+
+    const coRouter = createMemoryRouter(router.routes, { initialEntries: ['/checkout'] })
+    render(
+      <AppProviders>
+        <RouterProvider router={coRouter} />
+      </AppProviders>
+    )
+
+    await waitFor(
+      () => {
+        const govControl = screen.getByLabelText(/المحافظة/)
+        expect(govControl.disabled).toBe(false)
+        const selectEl =
+          govControl.tagName === 'SELECT'
+            ? govControl
+            : govControl.parentElement.querySelector('select')
+        expect(selectEl.value).toBe('')
+        expect(document.body.textContent).toContain('اختاري من القائمة')
+      },
+      { timeout: 5000 }
+    )
+  })
+
+  it('B3: syncs nursery/gov/notes from Cart to DeliveryStep, updates summary & sessionStorage live, and clears on order submit', async () => {
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-receipt')
+    const requests = []
+    setupApiMock({ requests })
+
+    const memRouter = createMemoryRouter(router.routes, { initialEntries: ['/cart'] })
+    render(
+      <AppProviders>
+        <RouterProvider router={memRouter} />
+      </AppProviders>
+    )
+
+    await waitFor(
+      () => {
+        const el = screen.getByLabelText(/محافظة مقر الحضانة/)
+        expect(el.disabled).toBe(false)
+      },
+      { timeout: 5000 }
+    )
+
+    // Pick governorate, enter nursery name & notes in Cart
+    const govEl = screen.getByLabelText(/محافظة مقر الحضانة/)
+    const cartSelect =
+      govEl.tagName === 'SELECT' ? govEl : govEl.parentElement.querySelector('select')
+    fireEvent.change(cartSelect, { target: { value: 'كفر الشيخ' } })
+
+    const nurseryInput = document.getElementById('cart-nursery-name')
+    fireEvent.change(nurseryInput, { target: { value: 'حضانة المستقبل' } })
+    const notesInput = document.getElementById('cart-nursery-notes')
+    fireEvent.change(notesInput, { target: { value: 'ملاحظة تغليف هدايا' } })
+
+    expect(sessionStorage.getItem('lh_selected_gov')).toBe('كفر الشيخ')
+    expect(sessionStorage.getItem('lh_cart_nursery')).toBe('حضانة المستقبل')
+    expect(sessionStorage.getItem('lh_cart_notes')).toBe('ملاحظة تغليف هدايا')
+
+    // Proceed to Checkout -> verifies Cart + User auto-fill
+    const proceedButtons = screen.getAllByRole('button', { name: /إتمام الطلب/ })
+    fireEvent.click(proceedButtons[0])
+
+    await waitFor(
+      () => {
+        expect(document.getElementById('delivery-nursery')?.value).toBe('حضانة المستقبل')
+        expect(document.getElementById('delivery-notes')?.value).toBe('ملاحظة تغليف هدايا')
+        expect(document.getElementById('delivery-name')?.value).toBe('منى الحضانات')
+        expect(document.getElementById('delivery-phone')?.value).toBe('01099887766')
+      },
+      { timeout: 5000 }
+    )
+
+    // Changing governorate in DeliveryStep syncs CheckoutSummaryCard & lh_selected_gov immediately
+    const deliveryGovControl = screen.getByLabelText(/المحافظة/)
+    const deliverySelect =
+      deliveryGovControl.tagName === 'SELECT'
+        ? deliveryGovControl
+        : deliveryGovControl.parentElement.querySelector('select')
+    fireEvent.change(deliverySelect, { target: { value: 'أسيوط' } })
+
+    await waitFor(
+      () => {
+        expect(sessionStorage.getItem('lh_selected_gov')).toBe('أسيوط')
+        expect(document.body.textContent).toContain('465')
+      },
+      { timeout: 5000 }
+    )
+
+    // Fill remaining required address fields & continue to PaymentStep
+    fireEvent.change(document.getElementById('delivery-city'), { target: { value: 'أسيوط' } })
+    fireEvent.change(document.getElementById('delivery-address'), {
+      target: { value: 'شارع الجمهورية عمارة 12' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /متابعة للدفع/ }))
+
+    // PaymentStep -> upload receipt & continue to ReviewStep
+    const senderPhoneInput = await screen.findByLabelText(/رقم الهاتف المحوّل منه/, {}, { timeout: 5000 })
+    expect(senderPhoneInput.value).toBe('01099887766')
+    const fileInput = document.querySelector('input[type="file"]')
+    const mockFile = new File(['png-bytes'], 'receipt.png', { type: 'image/png' })
+    fireEvent.change(fileInput, { target: { files: [mockFile] } })
+    fireEvent.click(screen.getByRole('button', { name: /مراجعة وتأكيد الطلب/ }))
+
+    // ReviewStep -> final submit clears cart & all session keys
+    const submitOrderBtn = await screen.findByRole('button', { name: /تأكيد الطلب وإرسال إيصال الدفع/ }, { timeout: 5000 })
+    fireEvent.click(submitOrderBtn)
+
+    await waitFor(
+      () => {
+        expect(requests.some((r) => r.method === 'POST' && r.url === '/orders')).toBe(true)
+        expect(sessionStorage.getItem('lh_selected_gov')).toBeNull()
+        expect(sessionStorage.getItem('lh_cart_nursery')).toBeNull()
+        expect(sessionStorage.getItem('lh_cart_notes')).toBeNull()
+        expect(sessionStorage.getItem('lh_checkout_flow_state')).toBeNull()
+      },
+      { timeout: 5000 }
+    )
   })
 })

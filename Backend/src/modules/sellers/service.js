@@ -217,6 +217,20 @@ export const sellerService = {
         request: updated,
         seller: sellerUser,
       })
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: sellerUser._id,
+        role: 'seller',
+        actionKey: `seller.custom_request.claim:${updated._id}`,
+        title: {
+          ar: 'تم استلام طلب تفصيل للورشة',
+          en: 'Custom request claimed',
+        },
+        message: {
+          ar: `تم تخصيص طلب التفصيل الخاص بـ "${updated.name}" لورشتكِ.`,
+          en: `Custom request from "${updated.name}" is now assigned to your workshop.`,
+        },
+        link: '/seller/custom-requests',
+      })
       return toSellerCustomRequestDTO(updated, sellerUser._id)
     }
 
@@ -277,6 +291,20 @@ export const sellerService = {
     ).populate('claimedBy', 'name seller.displayName')
 
     if (updated) {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: sellerUser._id,
+        role: 'seller',
+        actionKey: `seller.custom_request.status:${updated._id}:${status}`,
+        title: {
+          ar: 'تم تحديث حالة طلب التفصيل',
+          en: 'Custom request status updated',
+        },
+        message: {
+          ar: `تم تحديث حالة طلب التفصيل الخاص بـ "${updated.name}".`,
+          en: `Updated custom request status for "${updated.name}".`,
+        },
+        link: '/seller/custom-requests',
+      })
       return toSellerCustomRequestDTO(updated, sellerUser._id)
     }
 

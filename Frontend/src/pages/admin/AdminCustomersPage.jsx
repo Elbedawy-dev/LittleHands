@@ -71,7 +71,6 @@ export default function AdminCustomersPage() {
     setIsDeletingCustomer(true)
     try {
       await adminService.deleteUser(customerToDelete.id)
-      toast.success(t('customers.deleteSuccess'))
       setCustomerToDelete(null)
       await loadCustomersData()
     } catch (err) {

@@ -106,6 +106,8 @@
     "stageKg1": "Kindergarten 1 (KG1)",
     "stageKg2": "Kindergarten 2 (KG2)",
     "stagePrimary": "Early Elementary",
+    "material": "Material Used",
+    "allMaterials": "All Materials",
     "seller": "Craftswoman / Artisan",
     "allSellers": "All Artisans",
     "inStockOnly": "In-stock Only",

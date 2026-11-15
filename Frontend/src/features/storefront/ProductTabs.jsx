@@ -24,12 +24,13 @@ export function ProductTabs({ product }) {
             if (m === 'fabric') return language === 'ar' ? 'قماش' : 'Fabric'
             if (m === 'canson') return language === 'ar' ? 'كانسون' : 'Canson Paper'
             if (m === 'nasbian') return language === 'ar' ? 'ناصبيان' : 'Nasbian'
+            if (m === 'foam') return language === 'ar' ? 'ورق فوم' : 'Foam Sheets'
             return m
           })
           .join(language === 'ar' ? '، ' : ', ')
       : language === 'ar'
-      ? 'جوخ ملون، قماش، ورق مقوى، كانسون، ناصبيان'
-      : 'Craft Felt, Fabric, Laminated Cardstock, Canson Paper, Nasbian'
+      ? 'جوخ ملون، قماش، ورق مقوى، كانسون، ناصبيان، ورق فوم'
+      : 'Craft Felt, Fabric, Laminated Cardstock, Canson Paper, Nasbian, Foam Sheets'
 
   // المراحل المستهدفة المترجمة
   const stagesList =

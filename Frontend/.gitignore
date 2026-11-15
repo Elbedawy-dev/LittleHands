@@ -25,3 +25,4 @@ FIX_REPORT.md
 *.njsproj
 *.sln
 *.sw?
+tests/

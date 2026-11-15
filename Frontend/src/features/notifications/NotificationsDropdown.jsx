@@ -17,7 +17,7 @@ import { useNotifications } from '../../context/NotificationContext'
 import { useFormat } from '../../hooks/useFormat'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import toast from 'react-hot-toast'
-import { cn, pickLocaleText, getFriendlyError } from '../../utils'
+import { cn, pickLocaleText, getFriendlyError, resolveNotificationLink } from '../../utils'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { getNotificationBadge } from './NotificationsList'
 
@@ -179,7 +179,6 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
     e.stopPropagation()
     try {
       await deleteNotification(id)
-      toast.success(t('notifications:deleteSuccess'))
     } catch (err) {
       console.error('Failed to delete notification:', err)
       toast.error(getFriendlyError(err, t))
@@ -195,7 +194,6 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
       } else if (confirmDialog === 'clearAll') {
         await deleteNotifications(false)
       }
-      toast.success(t('notifications:clearSuccess'))
       setConfirmDialog(null)
     } catch (err) {
       console.error('Failed to clear notifications:', err)
@@ -217,7 +215,7 @@ export function NotificationsDropdown({ open, onClose, triggerRef }) {
           markAsRead(item.id)
           onClose()
           if (item.link) {
-            navigate(item.link)
+            navigate(resolveNotificationLink(item, currentRole))
           }
         }
 

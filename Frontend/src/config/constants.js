@@ -182,14 +182,13 @@ export const GOVERNORATE_NAMES = {
   'جنوب سيناء': { ar: 'جنوب سيناء', en: 'South Sinai' },
 }
 
-// المحافظات المصرية ومناطق الشحن بالأسعار
+// المحافظات المصرية ومناطق الشحن (مرجع أسماء وتصنيف المناطق فقط — الأسعار تُجلب ديناميكياً من الباك)
 export const SHIPPING_ZONES = [
   {
     id: 'greater_cairo',
     name: 'القاهرة الكبرى',
     nameAr: 'القاهرة الكبرى',
     nameEn: 'Greater Cairo',
-    rate: 40,
     governorates: ['القاهرة'],
   },
   {
@@ -197,7 +196,6 @@ export const SHIPPING_ZONES = [
     name: 'الجيزة',
     nameAr: 'الجيزة',
     nameEn: 'Giza',
-    rate: 45,
     governorates: ['الجيزة'],
   },
   {
@@ -205,7 +203,6 @@ export const SHIPPING_ZONES = [
     name: 'الإسكندرية',
     nameAr: 'الإسكندرية',
     nameEn: 'Alexandria',
-    rate: 50,
     governorates: ['الإسكندرية'],
   },
   {
@@ -213,7 +210,6 @@ export const SHIPPING_ZONES = [
     name: 'الدلتا والقناة',
     nameAr: 'الدلتا والقناة',
     nameEn: 'Delta & Canal',
-    rate: 55,
     governorates: [
       'القليوبية',
       'الشرقية',
@@ -233,7 +229,6 @@ export const SHIPPING_ZONES = [
     name: 'الصعيد والوادي الجديد',
     nameAr: 'الصعيد والوادي الجديد',
     nameEn: 'Upper Egypt & Frontiers',
-    rate: 65,
     governorates: [
       'الفيوم',
       'بني سويف',
@@ -252,7 +247,7 @@ export const SHIPPING_ZONES = [
   },
 ]
 
-// قائمة مسطحة لجميع المحافظات مع سعر الشحن الخاص بها
+// قائمة مسطحة بأسماء المحافظات ومناطقها (بدون أي أسعار ثابتة)
 export const GOVERNORATES = SHIPPING_ZONES.flatMap((zone) =>
   zone.governorates.map((gov) => ({
     name: gov,
@@ -262,7 +257,6 @@ export const GOVERNORATES = SHIPPING_ZONES.flatMap((zone) =>
     zoneName: zone.name,
     zoneNameAr: zone.nameAr,
     zoneNameEn: zone.nameEn,
-    shippingRate: zone.rate,
   }))
 )
 

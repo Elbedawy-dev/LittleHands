@@ -42,6 +42,7 @@ const MATERIAL_OPTIONS = [
   { id: 'fabric', labelKey: 'seller.matFabric' },
   { id: 'canson', labelKey: 'seller.matCanson' },
   { id: 'nasbian', labelKey: 'seller.matNasbian' },
+  { id: 'foam', labelKey: 'seller.matFoam' },
 ]
 
 export default function SellerProfilePage() {

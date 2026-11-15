@@ -248,3 +248,5 @@ export const storage = {
   },
 }
 
+export { resolveNotificationLink } from './notifications'
+

@@ -43,7 +43,7 @@ export function registerNotificationListeners() {
           en: `Your order ${order.number} has been received and is awaiting Vodafone Cash payment.`,
         },
         params: { orderNumber: order.number, totalAmount: order.total },
-        link: `/orders/${order.id || order._id}`,
+        link: `/account/orders/${order.id || order._id}`,
       })
 
       if (customerEmail && !payment) {
@@ -84,7 +84,7 @@ export function registerNotificationListeners() {
             en: `New order ${order.number} created for ${order.total} EGP.`,
           },
           params: { orderNumber: order.number, totalAmount: order.total },
-          link: `/admin/orders/${order.id || order._id}`,
+          link: `/admin/orders?order=${order.id || order._id}`,
         })
 
         // If payment screenshot was submitted immediately at checkout
@@ -181,7 +181,7 @@ export function registerNotificationListeners() {
           en: `Payment confirmed for order ${order.number}. Your items are being prepared.`,
         },
         params: { orderNumber: order.number },
-        link: `/orders/${order.id || order._id}`,
+        link: `/account/orders/${order.id || order._id}`,
       })
 
       if (customer?.email) {
@@ -235,7 +235,7 @@ export function registerNotificationListeners() {
             en: `Order ${order.number} payment confirmed. Your net: ${netSellerAmount} EGP.`,
           },
           params: { orderNumber: order.number, netSellerAmount },
-          link: `/seller/orders/${order.id || order._id}`,
+          link: `/seller/orders?order=${order.id || order._id}`,
         })
 
         if (seller.email) {
@@ -297,7 +297,7 @@ export function registerNotificationListeners() {
           rejectReasonCode: payment?.rejectReason,
           status: 'rejected',
         },
-        link: `/orders/${order.id || order._id}`,
+        link: `/account/orders/${order.id || order._id}`,
         dedupKey: `${order.customerId}:payment:${order.number}:rejected:${payment?.rejectReason || ''}`,
       })
 
@@ -312,7 +312,7 @@ export function registerNotificationListeners() {
             rejectionReason: localizedReason,
             rejectionReasonCode: payment?.rejectReason || '',
             adminNotes: payment?.rejectNotes || '',
-            orderUrl: `${env.CLIENT_URL}/orders/${order.id || order._id}`,
+            orderUrl: `${env.CLIENT_URL}/account/orders/${order.id || order._id}`,
           },
           {
             locale,
@@ -361,7 +361,7 @@ export function registerNotificationListeners() {
             en: `Your order ${order.number} has been shipped and is on its way.`,
           },
           params: { orderNumber: order.number, status: 'shipped' },
-          link: `/orders/${order.id || order._id}`,
+          link: `/account/orders/${order.id || order._id}`,
           dedupKey: `${order.customerId}:shipping:${order.number}:shipped`,
         })
 
@@ -396,7 +396,7 @@ export function registerNotificationListeners() {
             en: `Your order ${order.number} has been delivered. Thank you for choosing Little Hands!`,
           },
           params: { orderNumber: order.number, status: 'delivered' },
-          link: `/orders/${order.id || order._id}`,
+          link: `/account/orders/${order.id || order._id}`,
           dedupKey: `${order.customerId}:shipping:${order.number}:delivered`,
         })
       } else if (to === 'cancelled') {
@@ -426,7 +426,7 @@ export function registerNotificationListeners() {
             cancelReason: localizedCancelReason,
             cancelReasonCode: order.cancelReason || '',
           },
-          link: `/orders/${order.id || order._id}`,
+          link: `/account/orders/${order.id || order._id}`,
           dedupKey: `${order.customerId}:order:${order.number}:cancelled`,
         })
 
@@ -725,6 +725,29 @@ export function registerNotificationListeners() {
       )
     } catch (err) {
       console.error('[EVENT_LISTENER] Error handling auth.passwordResetRequested:', err)
+    }
+  })
+
+  // =========================================================================
+  // 14. Actor Action -> Private Bilingual Activity Notification (60s dedup)
+  // =========================================================================
+  eventBus.on(EVENT_TYPES.ACTOR_ACTION, async (payload) => {
+    try {
+      const { userId, role, actionKey, title, message, link, params, windowMs } = payload || {}
+      if (!userId || !actionKey) return
+
+      await notifications.notifyActor({
+        userId,
+        role,
+        actionKey,
+        title,
+        message,
+        link,
+        params,
+        windowMs,
+      })
+    } catch (err) {
+      console.error('[EVENT_LISTENER] Error handling actor.action:', err)
     }
   })
 }

@@ -5,7 +5,7 @@ import { Payment } from '../../db/models/Payment.js'
 import { User } from '../../db/models/User.js'
 import { AppError } from '../../utils/appError.js'
 import { fromPiasters, toPiasters } from '../../utils/money.js'
-import { mapOrderDTO } from '../../utils/dto.js'
+import { extractAvatarUrl, mapOrderDTO } from '../../utils/dto.js'
 import { eventBus, EVENT_TYPES } from '../../events/eventBus.js'
 import { audit } from '../../infra/audit/index.js'
 import { toPaymentDTO } from '../payments/dto.js'
@@ -204,6 +204,11 @@ export const earningsService = {
       return {
         sellerId: key,
         sellerName: seller.name,
+        displayName: seller.seller?.displayName || null,
+        nameEn: seller.seller?.displayName?.en || '',
+        bio: seller.seller?.bio || { ar: '', en: '' },
+        status: seller.status,
+        avatar: extractAvatarUrl(seller.avatar),
         email: seller.email,
         phone: seller.phone,
         wallet,
@@ -374,6 +379,24 @@ export const earningsService = {
         payout: payout.toObject(),
         seller: seller.toObject(),
       })
+
+      if (actorId) {
+        const displayName = seller.seller?.displayName?.ar || seller.name || ''
+        eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+          userId: actorId,
+          role: 'admin',
+          actionKey: `admin.payout.record:${payout._id}`,
+          title: {
+            ar: 'تم توثيق تحويل أرباح بائعة',
+            en: 'Seller payout recorded',
+          },
+          message: {
+            ar: `تم تسجيل دفعة أرباح بقيمة ${amountPiasters / 100} ج.م للبائعة ${displayName}.`,
+            en: `Recorded payout of ${amountPiasters / 100} EGP to ${seller.seller?.displayName?.en || displayName}.`,
+          },
+          link: '/admin/sellers',
+        })
+      }
 
       return toPayoutDTO(payout)
     })

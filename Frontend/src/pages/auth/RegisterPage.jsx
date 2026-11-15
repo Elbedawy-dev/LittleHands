@@ -42,9 +42,7 @@ export default function RegisterPage() {
   const isEn = i18n.language === 'en'
   const governorateOptions = GOVERNORATES.map((g) => ({
     value: g.name,
-    label: isEn
-      ? `${g.nameEn || g.name} (Shipping EGP ${g.shippingRate})`
-      : `${g.name} (الشحن ${g.shippingRate} ج.م)`,
+    label: isEn ? g.nameEn || g.name : g.name,
   }))
 
   // التحقق الموضعي من كافة الحقول

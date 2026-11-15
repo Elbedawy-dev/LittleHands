@@ -18,10 +18,10 @@ export const settingsController = {
     return ok(res, await settingsService.getPublicSettings())
   }),
 
-  /** GET /settings/shipping-rates — price map by zone; full zones in meta. */
+  /** GET /settings/shipping-rates — price map by zone; zones & governorates in meta. */
   getShippingRates: asyncHandler(async (_req, res) => {
-    const { rates, zones } = await settingsService.getShippingRates()
-    return ok(res, rates, { zones })
+    const { rates, zones, governorates } = await settingsService.getShippingRates()
+    return ok(res, rates, { zones, governorates })
   }),
 
   /** PUT /admin/settings */
@@ -33,11 +33,11 @@ export const settingsController = {
   /** PUT /admin/settings/shipping-rates */
   updateShippingRates: asyncHandler(async (req, res) => {
     const input = updateShippingRatesSchema.parse(req.body)
-    const { rates, zones } = await settingsService.updateShippingRates(input, {
+    const { rates, zones, governorates } = await settingsService.updateShippingRates(input, {
       actorId: req.user._id,
       ip: req.ip,
     })
-    return ok(res, rates, { zones })
+    return ok(res, rates, { zones, governorates })
   }),
 }
 

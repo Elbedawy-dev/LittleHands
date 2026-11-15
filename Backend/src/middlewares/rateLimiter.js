@@ -2,23 +2,45 @@ import rateLimit from 'express-rate-limit'
 import { env } from '../config/env.js'
 import { AppError } from '../utils/appError.js'
 
-function createLimiter({ windowMs, max, messageCode = 'TOO_MANY_REQUESTS' }) {
+export const GLOBAL_LIMITER_MAX = 600
+
+export const GLOBAL_LIMIT_SKIP_PATHS = new Set([
+  '/api/v1/notifications/unread-count',
+  '/api/v1/settings/public',
+  '/api/v1/auth/me',
+])
+
+export function shouldSkipGlobalLimiter(req) {
+  if (req.method !== 'GET') return false
+  const raw = req.originalUrl || `${req.baseUrl || ''}${req.path || req.url || ''}`
+  const pathname = raw.split('?')[0]
+  return GLOBAL_LIMIT_SKIP_PATHS.has(pathname)
+}
+
+function createLimiter({ windowMs, max, messageCode = 'TOO_MANY_REQUESTS', skip, forceProdLimit = false }) {
   return rateLimit({
     windowMs,
-    max: env.NODE_ENV === 'test' || env.NODE_ENV === 'development' ? 10000 : max,
+    max: !forceProdLimit && (env.NODE_ENV === 'test' || env.NODE_ENV === 'development') ? 10000 : max,
     standardHeaders: true,
     legacyHeaders: false,
+    ...(skip ? { skip } : {}),
     handler: (req, res, next) => {
       next(new AppError(messageCode, 429))
     },
   })
 }
 
-// Global API rate limit: 200 requests per 15 minutes
-export const globalLimiter = createLimiter({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-})
+export function createGlobalLimiter({ max = GLOBAL_LIMITER_MAX, forceProdLimit = false } = {}) {
+  return createLimiter({
+    windowMs: 15 * 60 * 1000,
+    max,
+    skip: shouldSkipGlobalLimiter,
+    forceProdLimit,
+  })
+}
+
+// Global API rate limit: 600 requests per 15 minutes (excludes SPA polling endpoints)
+export const globalLimiter = createGlobalLimiter()
 
 // Strict Auth limit: 10 attempts per 15 minutes
 export const authLimiter = createLimiter({
@@ -56,6 +78,10 @@ export const customRequestLimiter = createLimiter({
 })
 
 export default {
+  GLOBAL_LIMITER_MAX,
+  GLOBAL_LIMIT_SKIP_PATHS,
+  shouldSkipGlobalLimiter,
+  createGlobalLimiter,
   globalLimiter,
   authLimiter,
   passwordResetLimiter,

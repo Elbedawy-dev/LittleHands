@@ -94,6 +94,7 @@ export const catalogService = {
       category: params.category || '',
       sellerId: params.sellerId || '',
       stage: params.stage || '',
+      material: params.material || '',
       minPrice: params.minPrice,
       maxPrice: params.maxPrice,
       inStock: params.inStock,

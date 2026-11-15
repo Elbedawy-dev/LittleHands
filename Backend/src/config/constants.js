@@ -134,6 +134,44 @@ export const SHIPPING_ZONES = [
 
 export const EGYPTIAN_GOVERNORATES = SHIPPING_ZONES.flatMap((z) => z.governorates)
 
+export const SHIPPING_ZONE_LABELS = {
+  greater_cairo: { ar: 'القاهرة الكبرى', en: 'Greater Cairo' },
+  giza: { ar: 'الجيزة', en: 'Giza' },
+  alexandria: { ar: 'الإسكندرية', en: 'Alexandria' },
+  delta_canal: { ar: 'الدلتا والقناة', en: 'Delta & Canal' },
+  upper_egypt: { ar: 'الصعيد والوادي الجديد', en: 'Upper Egypt & Frontiers' },
+}
+
+export const GOVERNORATE_NAMES = {
+  'القاهرة': { ar: 'القاهرة', en: 'Cairo' },
+  'الجيزة': { ar: 'الجيزة', en: 'Giza' },
+  'الإسكندرية': { ar: 'الإسكندرية', en: 'Alexandria' },
+  'القليوبية': { ar: 'القليوبية', en: 'Qalyubia' },
+  'الشرقية': { ar: 'الشرقية', en: 'Sharqia' },
+  'الغربية': { ar: 'الغربية', en: 'Gharbia' },
+  'الدقهلية': { ar: 'الدقهلية', en: 'Dakahlia' },
+  'المنوفية': { ar: 'المنوفية', en: 'Monufia' },
+  'كفر الشيخ': { ar: 'كفر الشيخ', en: 'Kafr El Sheikh' },
+  'دمياط': { ar: 'دمياط', en: 'Damietta' },
+  'بورسعيد': { ar: 'بورسعيد', en: 'Port Said' },
+  'الإسماعيلية': { ar: 'الإسماعيلية', en: 'Ismailia' },
+  'السويس': { ar: 'السويس', en: 'Suez' },
+  'البحيرة': { ar: 'البحيرة', en: 'Beheira' },
+  'الفيوم': { ar: 'الفيوم', en: 'Faiyum' },
+  'بني سويف': { ar: 'بني سويف', en: 'Beni Suef' },
+  'المنيا': { ar: 'المنيا', en: 'Minya' },
+  'أسيوط': { ar: 'أسيوط', en: 'Asyut' },
+  'سوهاج': { ar: 'سوهاج', en: 'Sohag' },
+  'قنا': { ar: 'قنا', en: 'Qena' },
+  'الأقصر': { ar: 'الأقصر', en: 'Luxor' },
+  'أسوان': { ar: 'أسوان', en: 'Aswan' },
+  'البحر الأحمر': { ar: 'البحر الأحمر', en: 'Red Sea' },
+  'الوادي الجديد': { ar: 'الوادي الجديد', en: 'New Valley' },
+  'مطروح': { ar: 'مطروح', en: 'Matrouh' },
+  'شمال سيناء': { ar: 'شمال سيناء', en: 'North Sinai' },
+  'جنوب سيناء': { ar: 'جنوب سيناء', en: 'South Sinai' },
+}
+
 export const EGYPTIAN_PHONE_REGEX = /^01[0125]\d{8}$/
 
 export const FORBIDDEN_WORDS = [
@@ -156,7 +194,7 @@ export const ACCOUNT_TYPES = ['parent', 'teacher', 'nursery']
 
 export const EDUCATIONAL_STAGES = ['nursery', 'kg1', 'kg2', 'primary']
 
-export const MATERIAL_TYPES = ['felt', 'paper', 'fabric', 'cardstock', 'canson', 'nasbian']
+export const MATERIAL_TYPES = ['felt', 'paper', 'fabric', 'cardstock', 'canson', 'nasbian', 'foam']
 
 export const ORDER_STATUSES = [
   'pending_payment',

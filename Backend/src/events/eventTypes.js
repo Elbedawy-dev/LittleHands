@@ -16,6 +16,7 @@ export const EVENT_TYPES = {
   PAYOUT_RECORDED: 'payout.recorded', // { payout, seller }
   CUSTOM_REQUEST_CREATED: 'customRequest.created', // { request }
   CUSTOM_REQUEST_CLAIMED: 'customRequest.claimed', // { request, seller }
+  ACTOR_ACTION: 'actor.action', // { userId, role, actionKey, title, message, link, params }
 }
 
 export default EVENT_TYPES

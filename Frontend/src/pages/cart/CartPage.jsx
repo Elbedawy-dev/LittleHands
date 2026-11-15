@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Phone, ShoppingBag, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Phone, RefreshCw, School, ShoppingBag, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -6,16 +6,17 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Input } from '../../components/ui/Input'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { ProductImage } from '../../components/ui/ProductImage'
 import { QuantityStepper } from '../../components/ui/QuantityStepper'
 import { Select } from '../../components/ui/Select'
 import { Textarea } from '../../components/ui/Textarea'
-import { CATEGORIES, GOVERNORATES } from '../../config/constants'
+import { CATEGORIES } from '../../config/constants'
 import { useCart } from '../../context/CartContext'
 import { useLanguage } from '../../context/LanguageContext'
-import { settingsService } from '../../services/settingsService'
+import { getGovernorateOptions, useShippingRates } from '../../hooks/useShippingRates'
 import { getDisplayName, pickLocale } from '../../utils'
 
 export default function CartPage() {
@@ -27,10 +28,18 @@ export default function CartPage() {
   // المحافظة المختارة لحساب تكلفة الشحن
   const [selectedGovName, setSelectedGovName] = useState(() => {
     try {
-      const saved = sessionStorage.getItem('lh_selected_gov')
-      return saved || 'القاهرة'
+      return sessionStorage.getItem('lh_selected_gov') || ''
     } catch {
-      return 'القاهرة'
+      return ''
+    }
+  })
+
+  // اسم الحضانة وملاحظات التخصيص
+  const [nurseryName, setNurseryName] = useState(() => {
+    try {
+      return sessionStorage.getItem('lh_cart_nursery') || ''
+    } catch {
+      return ''
     }
   })
 
@@ -43,50 +52,41 @@ export default function CartPage() {
     }
   })
 
-  // أسعار الشحن الديناميكية من خدمة الإعدادات
-  const [shippingRates, setShippingRates] = useState(null)
+  // أسعار الشحن الحية من السياق العام
+  const shipping = useShippingRates({ revalidate: true })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
-  // جلب أسعار الشحن من طبقة الخدمات
-  useEffect(() => {
-    let isMounted = true
-    async function loadRates() {
-      try {
-        const rates = await settingsService.getShippingRates()
-        if (isMounted && rates) {
-          setShippingRates(rates)
-        }
-      } catch (err) {
-        console.warn('Could not load shipping rates from service:', err)
-      }
-    }
-    loadRates()
-    return () => {
-      isMounted = false
-    }
-  }, [])
-
-  // حفظ المحافظة والملاحظات في sessionStorage للربط السلس مع شاشة الدفع
+  // حفظ المحافظة واسم الحضانة والملاحظات في sessionStorage للربط السلس مع شاشة الدفع
   useEffect(() => {
     try {
-      if (selectedGovName) sessionStorage.setItem('lh_selected_gov', selectedGovName)
-      if (cartNotes !== undefined) sessionStorage.setItem('lh_cart_notes', cartNotes)
+      if (selectedGovName) {
+        sessionStorage.setItem('lh_selected_gov', selectedGovName)
+      } else {
+        sessionStorage.removeItem('lh_selected_gov')
+      }
+      if (nurseryName) {
+        sessionStorage.setItem('lh_cart_nursery', nurseryName)
+      } else {
+        sessionStorage.removeItem('lh_cart_nursery')
+      }
+      if (cartNotes) {
+        sessionStorage.setItem('lh_cart_notes', cartNotes)
+      } else {
+        sessionStorage.removeItem('lh_cart_notes')
+      }
     } catch {
       // ignore storage errors
     }
-  }, [selectedGovName, cartNotes])
+  }, [selectedGovName, nurseryName, cartNotes])
 
-  // حساب تكلفة الشحن بدقة بناءً على المحافظة وإعدادات النظام
-  const currentGov = GOVERNORATES.find((g) => g.name === selectedGovName)
-  const shippingRate = (() => {
-    if (!currentGov) return 40
-    if (shippingRates && shippingRates[currentGov.zoneId] !== undefined) {
-      return shippingRates[currentGov.zoneId]
-    }
-    return currentGov.shippingRate || 40
-  })()
-
-  const grandTotal = subtotal + shippingRate
+  const lang = isRtl ? 'ar' : 'en'
+  const shippingReady = shipping.isLoaded && !shipping.isLoading && !shipping.error
+  const governorateOptions = shippingReady
+    ? getGovernorateOptions(shipping, lang, { currencyLabel: t('common:currency') })
+    : []
+  const shippingRate =
+    shippingReady && selectedGovName ? shipping.getRateForGov(selectedGovName) : null
+  const grandTotal = shippingRate !== null ? subtotal + shippingRate : null
 
   // استخراج تفاصيل التصنيف للعرض بالشارة المخصصة
   const getCategoryDetails = (categoryId) => {
@@ -105,6 +105,7 @@ export default function CartPage() {
     navigate('/checkout', {
       state: {
         governorate: selectedGovName,
+        nurseryName,
         notes: cartNotes,
       },
     })
@@ -274,29 +275,51 @@ export default function CartPage() {
             </h3>
 
             {/* اختيار المحافظة لحساب تكلفة الشحن المباشر */}
-            <div>
+            <div className="space-y-2">
               <Select
                 id="cart-governorate"
                 label={t('cart:summary.shippingSelect')}
-                value={selectedGovName}
+                placeholder={t('common:shipping.chooseFromList')}
+                value={shippingReady ? selectedGovName : ''}
+                disabled={!shippingReady}
                 onChange={(e) => setSelectedGovName(e.target.value)}
               >
-                {GOVERNORATES.map((g) => {
-                  const rate =
-                    shippingRates && shippingRates[g.zoneId] !== undefined
-                      ? shippingRates[g.zoneId]
-                      : g.shippingRate
-                  return (
-                    <option key={g.name} value={g.name}>
-                      {isRtl ? g.name : (g.nameEn || g.name)} ({rate} {t('common:currency')})
+                {!shippingReady ? (
+                  <option value="">{t('common:shipping.loadingRates')}</option>
+                ) : (
+                  governorateOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
-                  )
-                })}
+                  ))
+                )}
               </Select>
+              {shipping.error && !shipping.isLoading && (
+                <div className="flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
+                  <span>{t('common:shipping.loadingRates')}</span>
+                  <button
+                    type="button"
+                    onClick={shipping.refresh}
+                    className="inline-flex items-center gap-1 font-bold text-brand-orange-text dark:text-brand-orange hover:underline shrink-0 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>{t('common:actions.retry')}</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* حقل اسم الحضانة وملاحظات التخصيص */}
-            <div>
+            <div className="space-y-3">
+              <Input
+                id="cart-nursery-name"
+                label={t('cart:summary.nurseryLabel')}
+                placeholder={t('cart:summary.nurseryPlaceholder')}
+                startIcon={<School className="w-4 h-4" />}
+                value={nurseryName}
+                onChange={(e) => setNurseryName(e.target.value)}
+                containerClassName="mb-0"
+              />
               <Textarea
                 id="cart-nursery-notes"
                 label={t('cart:summary.notesLabel')}
@@ -317,14 +340,26 @@ export default function CartPage() {
 
               <div className="flex items-center justify-between text-text-muted">
                 <span>{t('cart:summary.shipping')}</span>
-                <PriceTag amount={shippingRate} size="sm" />
+                {shippingRate !== null ? (
+                  <PriceTag amount={shippingRate} size="sm" />
+                ) : (
+                  <span className="text-xs font-bold text-text-muted">
+                    {shippingReady ? t('common:shipping.selectGovHint') : t('common:shipping.loadingRates')}
+                  </span>
+                )}
               </div>
 
               <div className="pt-3 border-t border-surface-border flex items-baseline justify-between">
                 <span className="font-heading font-bold text-base text-text-main">
                   {t('cart:summary.total')}
                 </span>
-                <PriceTag amount={grandTotal} size="lg" />
+                {grandTotal !== null ? (
+                  <PriceTag amount={grandTotal} size="lg" />
+                ) : (
+                  <span className="text-xs font-bold text-text-muted">
+                    {shippingReady ? '—' : t('common:shipping.loadingRates')}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -347,6 +382,7 @@ export default function CartPage() {
             <Button
               type="button"
               onClick={handleProceedToCheckout}
+              disabled={!shippingReady}
               size="lg"
               className="w-full font-bold whitespace-nowrap shadow-soft"
               endIcon={
@@ -370,12 +406,19 @@ export default function CartPage() {
             <span className="text-[11px] text-text-muted font-medium">
               {t('cart:summary.total')}
             </span>
-            <PriceTag amount={grandTotal} size="md" />
+            {grandTotal !== null ? (
+              <PriceTag amount={grandTotal} size="md" />
+            ) : (
+              <span className="text-xs font-bold text-text-muted">
+                {shippingReady ? '—' : t('common:shipping.loadingRates')}
+              </span>
+            )}
           </div>
 
           <Button
             type="button"
             onClick={handleProceedToCheckout}
+            disabled={!shippingReady}
             size="md"
             className="font-bold whitespace-nowrap px-6 shrink-0 shadow-soft"
             endIcon={

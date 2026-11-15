@@ -6,6 +6,7 @@ import { CATEGORIES } from '../../config/constants.js'
 import { arabicNormalize } from '../../utils/arabic.js'
 import { escapeRegex } from '../../utils/regex.js'
 import { AppError } from '../../utils/appError.js'
+import { eventBus, EVENT_TYPES } from '../../events/index.js'
 import { toCategoryDTO, toCatalogProductDTO } from './dto.js'
 
 export const catalogService = {
@@ -28,7 +29,7 @@ export const catalogService = {
    * Updates an existing category (Admin only).
    * Changing the slug or deleting categories is strictly forbidden.
    */
-  async updateCategory(slugOrId, data) {
+  async updateCategory(slugOrId, data, { actorId = null } = {}) {
     if (!slugOrId) {
       throw new AppError('ERR_CATEGORY_NOT_FOUND', 404)
     }
@@ -76,13 +77,29 @@ export const catalogService = {
     if (data.order !== undefined) category.order = data.order
 
     await category.save()
+    if (actorId) {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: actorId,
+        role: 'admin',
+        actionKey: `admin.category.update:${category.slug}`,
+        title: {
+          ar: 'تم تحديث بيانات قسم بالمتجر',
+          en: 'Category updated',
+        },
+        message: {
+          ar: `تم حفظ تعديلات قسم "${category.nameAr || category.slug}".`,
+          en: `Updates to category "${category.nameEn || category.nameAr || category.slug}" were saved.`,
+        },
+        link: '/admin/categories',
+      })
+    }
     return toCategoryDTO(category)
   },
 
   /**
    * Reorders categories (Admin only).
    */
-  async reorderCategories(slugsOrIds) {
+  async reorderCategories(slugsOrIds, { actorId = null } = {}) {
     const list = Array.isArray(slugsOrIds)
       ? slugsOrIds
       : slugsOrIds?.slugs || slugsOrIds?.ids || []
@@ -100,6 +117,23 @@ export const catalogService = {
       await Category.updateOne(query, { $set: { order: i + 1 } })
     }
 
+    if (actorId) {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: actorId,
+        role: 'admin',
+        actionKey: 'admin.categories.reorder',
+        title: {
+          ar: 'تم تحديث ترتيب الأقسام',
+          en: 'Categories reordered',
+        },
+        message: {
+          ar: 'تم حفظ الترتيب الجديد لأقسام المتجر.',
+          en: 'New storefront categories order was saved.',
+        },
+        link: '/admin/categories',
+      })
+    }
+
     return this.getCategories()
   },
 
@@ -115,6 +149,7 @@ export const catalogService = {
     minPrice,
     maxPrice,
     stage = '',
+    material = '',
     inStock,
     sort = 'newest',
     page = 1,
@@ -174,6 +209,11 @@ export const catalogService = {
       andConditions.push({
         $or: [{ stages: stage }, { stage: stage }],
       })
+    }
+
+    // 6b. Material filter
+    if (material) {
+      andConditions.push({ materials: material })
     }
 
     // 7. Stock availability filter

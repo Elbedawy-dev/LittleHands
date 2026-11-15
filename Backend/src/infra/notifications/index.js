@@ -119,7 +119,149 @@ export const notifications = {
     }
   },
 
+  /**
+   * Saves a private activity notification for the actor who performed a mutation,
+   * aggregating identical repeated actions by the same actor within 60 seconds.
+   */
+  async notifyActor({
+    userId,
+    role = 'customer',
+    actionKey,
+    title = { ar: '', en: '' },
+    message = { ar: '', en: '' },
+    link = '',
+    params = {},
+    windowMs = 60_000,
+  } = {}) {
+    if (!userId || !actionKey) return null
+
+    try {
+      const setting = await Setting.findOne().select('inSiteNotifications').lean()
+      if (setting && setting.inSiteNotifications === false) {
+        return null
+      }
+
+      const user = await User.findById(userId).select('notificationPrefs role').lean()
+      if (!user) return null
+      if (user.notificationPrefs && user.notificationPrefs.inApp === false) {
+        return null
+      }
+
+      const allowedRoles = ['customer', 'seller', 'admin']
+      const targetRole = allowedRoles.includes(role)
+        ? role
+        : (allowedRoles.includes(user.role) ? user.role : 'customer')
+
+      const baseTitle = normalizeBilingual(title)
+      const baseMessage = normalizeBilingual(message)
+      const resolvedLink =
+        typeof link === 'string' && link.startsWith('/') ? link : defaultActivityLink(targetRole)
+
+      const lockKey = `${userId.toString()}:${actionKey}`
+
+      return await withActorActionLock(lockKey, async () => {
+        const safeWindowMs = Number(windowMs) > 0 ? Number(windowMs) : 60_000
+        const cutoff = new Date(Date.now() - safeWindowMs)
+
+        const existing = await Notification.findOne({
+          userId,
+          type: 'activity',
+          'params.actionKey': actionKey,
+          createdAt: { $gte: cutoff },
+        }).sort({ createdAt: -1 })
+
+        if (existing) {
+          const prevCount = Number(existing.params?.repeatCount || 1)
+          const repeatCount = prevCount + 1
+          const storedBaseTitle = normalizeBilingual(existing.params?.baseTitle || baseTitle)
+          const storedBaseMessage = normalizeBilingual(existing.params?.baseMessage || baseMessage)
+
+          const aggTitle = {
+            ar: storedBaseTitle.ar,
+            en: storedBaseTitle.en,
+          }
+          const aggMessage = {
+            ar: `${storedBaseMessage.ar} (×${repeatCount})`,
+            en: `${storedBaseMessage.en} (×${repeatCount})`,
+          }
+
+          existing.title = aggTitle.ar
+          existing.message = aggMessage.ar
+          existing.link = resolvedLink || existing.link
+          existing.read = false
+          existing.readAt = null
+          existing.params = {
+            ...(existing.params || {}),
+            ...(params || {}),
+            actionKey,
+            repeatCount,
+            baseTitle: storedBaseTitle,
+            baseMessage: storedBaseMessage,
+            rawTitle: aggTitle,
+            rawMessage: aggMessage,
+          }
+          existing.markModified('params')
+          await existing.save()
+          return existing
+        }
+
+        return await Notification.create({
+          userId,
+          role: targetRole,
+          type: 'activity',
+          title: baseTitle.ar,
+          message: baseMessage.ar,
+          params: {
+            ...(params || {}),
+            actionKey,
+            repeatCount: 1,
+            baseTitle,
+            baseMessage,
+            rawTitle: baseTitle,
+            rawMessage: baseMessage,
+          },
+          link: resolvedLink,
+          read: false,
+        })
+      })
+    } catch (err) {
+      console.error('[NOTIFICATION] Failed to save actor activity notification:', err.message)
+      return null
+    }
+  },
+
   registerNotificationListeners,
+}
+
+const actorActionMutexes = new Map()
+
+function withActorActionLock(lockKey, fn) {
+  const prev = actorActionMutexes.get(lockKey) || Promise.resolve()
+  const run = prev.catch(() => {}).then(fn)
+  const tracked = run.finally(() => {
+    if (actorActionMutexes.get(lockKey) === tracked) {
+      actorActionMutexes.delete(lockKey)
+    }
+  })
+  actorActionMutexes.set(lockKey, tracked)
+  return run
+}
+
+function normalizeBilingual(value, fallback = '') {
+  if (value && typeof value === 'object') {
+    return {
+      ar: String(value.ar || value.en || fallback || '').trim(),
+      en: String(value.en || value.ar || fallback || '').trim(),
+    }
+  }
+  const str = String(value || fallback || '').trim()
+  return { ar: str, en: str }
+}
+
+function defaultActivityLink(role) {
+  if (role === 'admin') return '/admin/notifications'
+  if (role === 'seller') return '/seller/notifications'
+  return '/notifications'
 }
 
 // Automatically register listeners on module load

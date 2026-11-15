@@ -16,13 +16,16 @@ export const contactController = {
   updateCustomRequestStatus: asyncHandler(async (req, res) => {
     const request = await contactService.updateCustomRequestStatus(
       req.params.id,
-      req.body.status
+      req.body.status,
+      { actorId: req.user?._id || req.userId }
     )
     return ok(res, request)
   }),
 
   deleteCustomRequest: asyncHandler(async (req, res) => {
-    const result = await contactService.deleteCustomRequest(req.params.id)
+    const result = await contactService.deleteCustomRequest(req.params.id, {
+      actorId: req.user?._id || req.userId,
+    })
     return ok(res, result)
   }),
 }

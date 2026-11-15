@@ -53,7 +53,6 @@ export function ProfileHeaderCard({
       await userService.uploadAvatar(avatarFile)
       const updatedUser = await refreshUser()
       const successText = avatarSuccessMessage || t('profile:info.avatarSuccess')
-      toast.success(successText)
       onAvatarSuccess?.(updatedUser, successText)
     } catch (err) {
       const msg =

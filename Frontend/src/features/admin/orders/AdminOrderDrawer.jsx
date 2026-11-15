@@ -122,7 +122,6 @@ export function AdminOrderDrawer({
     setIsUpdatingStatus(true)
     try {
       await orderService.updateOrderStatus(order.id, newStatus)
-      toast.success(t('orders.drawer.statusUpdateSuccess'))
       if (onStatusUpdated) onStatusUpdated()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -145,7 +144,6 @@ export function AdminOrderDrawer({
         reference: refundRef.trim(),
         note: refundNote.trim(),
       })
-      toast.success(t('orders.drawer.refundSuccessToast'))
       setRefundModalOpen(false)
       setRefundRef('')
       setRefundNote('')
@@ -324,9 +322,9 @@ export function AdminOrderDrawer({
                           value={it.name}
                           className="font-bold text-xs sm:text-sm text-text-main truncate"
                         />
-                        <p className="text-xs text-text-muted mt-0.5">
+                        <div className="text-xs text-text-muted mt-0.5">
                           {it.qty} × <PriceTag amount={it.unitPrice} size="sm" />
-                        </p>
+                        </div>
                       </div>
                       <div className="text-end">
                         <PriceTag amount={it.unitPrice * it.qty} size="sm" />
@@ -368,7 +366,7 @@ export function AdminOrderDrawer({
                   {breakdownRows.map((row, idx) => (
                     <tr key={idx} className="hover:bg-surface-subtle/30">
                       <td className="py-2.5 px-3 font-medium text-text-main">
-                        {row.name} ({row.qty}×)
+                        <LocalizedText value={row.name} /> ({row.qty}×)
                       </td>
                       <td className="py-2.5 px-3 text-text-muted">{row.sellerTitle}</td>
                       <td className="py-2.5 px-3 text-end font-bold">

@@ -25,7 +25,7 @@
  */
 
 /**
- * @typedef {'felt' | 'paper' | 'fabric'} MaterialType
+ * @typedef {'felt' | 'paper' | 'fabric' | 'cardstock' | 'canson' | 'nasbian' | 'foam'} MaterialType
  */
 
 /**
@@ -55,7 +55,7 @@
  * @property {LocalizedString|string} description - Localized detailed educational description {ar, en}
  * @property {ProductDetails} [details] - Detailed specifications {material, size, usage, care}
  * @property {EducationalStage[]} stages - Target educational stages
- * @property {string[]} materials - Educational materials (felt, cardstock, fabric, canson, nasbian, etc.)
+ * @property {string[]} materials - Educational materials (felt, cardstock, fabric, canson, nasbian, foam, etc.)
  * @property {string[]} images - Image paths or placeholder identifiers
  * @property {boolean} inStock - Stock availability flag
  * @property {number} stockCount - Current quantity available

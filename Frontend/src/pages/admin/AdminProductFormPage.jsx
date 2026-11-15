@@ -67,7 +67,6 @@ export default function AdminProductFormPage() {
       } else {
         await productService.createProduct(values)
       }
-      toast.success(t('productForm.saveSuccess'))
       navigate('/admin/products')
     } catch (err) {
       toast.error(getFriendlyError(err, t))

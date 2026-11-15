@@ -240,7 +240,9 @@
       "pendingDue": "Pending Balance Due",
       "walletNumber": "Vodafone Cash Wallet:",
       "recordPayoutAction": "Record Payout Transfer",
-      "noPendingBalance": "All dues settled"
+      "noPendingBalance": "All dues settled",
+      "loadError": "Failed to load seller cards right now",
+      "empty": "No registered seller accounts yet"
     },
     "createAccount": {
       "button": "Create new seller account",
@@ -304,7 +306,8 @@
       "reference": "Reference #",
       "notes": "Notes",
       "empty": "No previous payouts recorded",
-      "emptyDescription": "Vodafone Cash payouts recorded for sellers will appear here."
+      "emptyDescription": "Vodafone Cash payouts recorded for sellers will appear here.",
+      "loadError": "Failed to load payout history right now"
     },
     "drilldown": {
       "title": "Seller Sales & Commission Audit",
@@ -319,7 +322,8 @@
       "status": "Status",
       "date": "Date",
       "empty": "No orders for this seller",
-      "emptyDescription": "This seller's orders will appear here once they are placed."
+      "emptyDescription": "This seller's orders will appear here once they are placed.",
+      "loadError": "Failed to load seller orders audit right now"
     },
     "statusActiveToast": "Seller account activated successfully",
     "statusSuspendedToast": "Seller account suspended",

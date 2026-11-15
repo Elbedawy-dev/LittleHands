@@ -1,7 +1,8 @@
 import { Archive } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { AdminOrderDrawer } from '../../features/admin/orders/AdminOrderDrawer'
@@ -17,6 +18,9 @@ import { getFriendlyError } from '../../utils'
  */
 export default function AdminOrdersPage() {
   const { t } = useTranslation('admin-core')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const orderQueryId = searchParams.get('order')
+  const handledOrderParamRef = useRef(null)
 
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -56,6 +60,51 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     fetchOrders()
   }, [fetchOrders])
+
+  // Auto-open order drawer when navigated with ?order=<id|number> (e.g. from notification)
+  useEffect(() => {
+    if (!orderQueryId) {
+      handledOrderParamRef.current = null
+      return
+    }
+    if (loading || handledOrderParamRef.current === orderQueryId) return
+
+    const found = orders.find(
+      (o) => o.id === orderQueryId || o._id === orderQueryId || o.number === orderQueryId
+    )
+    if (found) {
+      handledOrderParamRef.current = orderQueryId
+      setSelectedOrder(found)
+      setDrawerOpen(true)
+      return
+    }
+
+    handledOrderParamRef.current = orderQueryId
+    let active = true
+    orderService
+      .getAdminOrder(orderQueryId)
+      .then((fetched) => {
+        if (active && fetched && (fetched.id || fetched._id || fetched.number)) {
+          setSelectedOrder(fetched)
+          setDrawerOpen(true)
+        }
+      })
+      .catch(() => {
+        // Ignore invalid or missing order ID silently
+      })
+    return () => {
+      active = false
+    }
+  }, [orderQueryId, loading, orders])
+
+  const handleCloseDrawer = () => {
+    setDrawerOpen(false)
+    if (searchParams.has('order')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('order')
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
@@ -141,7 +190,6 @@ export default function AdminOrdersPage() {
   const handleArchiveOrder = async (order) => {
     try {
       await orderService.archiveOrder(order.id)
-      toast.success(t('orders.archive.successToast', { number: order.number }))
       await fetchOrders()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -151,7 +199,6 @@ export default function AdminOrdersPage() {
   const handleUnarchiveOrder = async (order) => {
     try {
       await orderService.unarchiveOrder(order.id)
-      toast.success(t('orders.archive.unarchiveSuccessToast', { number: order.number }))
       await fetchOrders()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -164,7 +211,6 @@ export default function AdminOrdersPage() {
     setIsBulkArchiving(true)
     try {
       await Promise.all(toArchive.map((o) => orderService.archiveOrder(o.id)))
-      toast.success(t('orders.archive.bulkArchiveSuccess'))
       await fetchOrders()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -178,7 +224,6 @@ export default function AdminOrdersPage() {
     setDeletingOrder(true)
     try {
       await orderService.deleteOrder(orderToDelete.id)
-      toast.success(t('orders.delete.successToast', { number: orderToDelete.number }))
       if (selectedOrder?.id === orderToDelete.id) {
         setDrawerOpen(false)
         setSelectedOrder(null)
@@ -260,7 +305,7 @@ export default function AdminOrdersPage() {
       <AdminOrderDrawer
         order={selectedOrder}
         isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={handleCloseDrawer}
         onStatusUpdated={handleStatusUpdated}
         onDeleteOrder={(order) => setOrderToDelete(order)}
       />

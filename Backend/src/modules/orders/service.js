@@ -26,6 +26,16 @@ import {
  * Implements full order lifecycle, atomic stock reservation/compensation,
  * pricing, multi-seller fulfillment status derivation, and TTL cancellation.
  */
+const ORDER_STATUS_LABELS = {
+  pending_payment: { ar: 'بانتظار الدفع', en: 'Pending payment' },
+  payment_confirmed: { ar: 'تم تأكيد الدفع', en: 'Payment confirmed' },
+  payment_rejected: { ar: 'تم رفض الدفع', en: 'Payment rejected' },
+  preparing: { ar: 'قيد التجهيز', en: 'Preparing' },
+  shipped: { ar: 'تم الشحن', en: 'Shipped' },
+  delivered: { ar: 'تم التسليم', en: 'Delivered' },
+  cancelled: { ar: 'ملغي', en: 'Cancelled' },
+}
+
 export const orderService = {
   /**
    * Creates a new customer order
@@ -451,6 +461,26 @@ export const orderService = {
           sellerId: currentUser._id,
           status: newStatus,
         })
+        eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+          userId: currentUser._id,
+          role: 'seller',
+          actionKey: `seller.order.fulfillment:${finalOrder._id}:${newStatus}`,
+          title:
+            newStatus === 'preparing'
+              ? { ar: 'بدء تجهيز طلب بالورشة', en: 'Order preparation started' }
+              : { ar: 'تم تسجيل شحن طلبكِ', en: 'Order marked as shipped' },
+          message:
+            newStatus === 'preparing'
+              ? {
+                  ar: `بدأ تجهيز طلبكِ رقم ${finalOrder.number}.`,
+                  en: `Preparation started for order ${finalOrder.number}.`,
+                }
+              : {
+                  ar: `تم تحديث حالة تجهيز الطلب رقم ${finalOrder.number} إلى تم الشحن.`,
+                  en: `Fulfillment status for order ${finalOrder.number} updated to shipped.`,
+                },
+          link: `/seller/orders?order=${finalOrder._id}`,
+        })
         return finalOrder
       }
     }
@@ -459,6 +489,26 @@ export const orderService = {
       order: updatedOrder,
       sellerId: currentUser._id,
       status: newStatus,
+    })
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'seller',
+      actionKey: `seller.order.fulfillment:${updatedOrder._id}:${newStatus}`,
+      title:
+        newStatus === 'preparing'
+          ? { ar: 'بدء تجهيز طلب بالورشة', en: 'Order preparation started' }
+          : { ar: 'تم تسجيل شحن طلبكِ', en: 'Order marked as shipped' },
+      message:
+        newStatus === 'preparing'
+          ? {
+              ar: `بدأ تجهيز طلبكِ رقم ${updatedOrder.number}.`,
+              en: `Preparation started for order ${updatedOrder.number}.`,
+            }
+          : {
+              ar: `تم تحديث حالة تجهيز الطلب رقم ${updatedOrder.number} إلى تم الشحن.`,
+              en: `Fulfillment status for order ${updatedOrder.number} updated to shipped.`,
+            },
+      link: `/seller/orders?order=${updatedOrder._id}`,
     })
 
     return updatedOrder
@@ -635,6 +685,22 @@ export const orderService = {
       to: newStatus,
     })
 
+    const statusLabel = ORDER_STATUS_LABELS[newStatus] || { ar: newStatus, en: newStatus }
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'admin',
+      actionKey: `admin.order.status:${updatedOrder._id}:${newStatus}`,
+      title: {
+        ar: 'تم تحديث حالة الطلب',
+        en: 'Order status updated',
+      },
+      message: {
+        ar: `تم تغيير حالة الطلب رقم ${updatedOrder.number} إلى "${statusLabel.ar}".`,
+        en: `Order ${updatedOrder.number} status changed to "${statusLabel.en}".`,
+      },
+      link: `/admin/orders?order=${updatedOrder._id}`,
+    })
+
     return updatedOrder
   },
 
@@ -762,6 +828,23 @@ export const orderService = {
       reason: cancelNote,
     })
 
+    if (currentUser.role === 'admin') {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: currentUser._id,
+        role: 'admin',
+        actionKey: `admin.order.cancel:${updatedOrder._id}`,
+        title: {
+          ar: 'تم إلغاء طلب إدارياً',
+          en: 'Order cancelled by admin',
+        },
+        message: {
+          ar: `تم إلغاء الطلب رقم ${updatedOrder.number}.`,
+          en: `Order ${updatedOrder.number} was cancelled.`,
+        },
+        link: `/admin/orders?order=${updatedOrder._id}`,
+      })
+    }
+
     return updatedOrder
   },
 
@@ -811,6 +894,21 @@ export const orderService = {
       reference,
       amount: updatedOrder.refund.amount,
       note,
+    })
+
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'admin',
+      actionKey: `admin.order.refund:${updatedOrder._id}`,
+      title: {
+        ar: 'تم تسجيل رد مبلغ الطلب',
+        en: 'Order refund recorded',
+      },
+      message: {
+        ar: `تم توثيق استرداد مبلغ الطلب رقم ${updatedOrder.number}.`,
+        en: `Refund for order ${updatedOrder.number} was recorded.`,
+      },
+      link: `/admin/orders?order=${updatedOrder._id}`,
     })
 
     return updatedOrder
@@ -872,9 +970,12 @@ export const orderService = {
         { 'params.orderId': orderIdStr },
         { 'params.orderId': orderDoc._id },
         { 'params.orderNumber': orderNum },
+        { link: `/orders/${orderIdStr}` },
         { link: `/account/orders/${orderIdStr}` },
         { link: `/seller/orders?order=${orderNum}` },
+        { link: `/seller/orders?order=${orderIdStr}` },
         { link: `/admin/orders?order=${orderNum}` },
+        { link: `/admin/orders?order=${orderIdStr}` },
         { link: `/admin/payments?order=${orderNum}` },
       ],
     }).catch(() => {})
@@ -894,6 +995,21 @@ export const orderService = {
       },
       ip
     )
+
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'admin',
+      actionKey: `admin.order.delete:${orderIdStr}`,
+      title: {
+        ar: 'تم حذف طلب نهائياً',
+        en: 'Order permanently deleted',
+      },
+      message: {
+        ar: `تم حذف الطلب رقم ${orderNum} من السجل.`,
+        en: `Order ${orderNum} was permanently removed.`,
+      },
+      link: '/admin/orders',
+    })
 
     return {
       id: orderIdStr,
@@ -931,6 +1047,21 @@ export const orderService = {
       archivedAt: orderDoc.archivedAt,
     })
 
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'admin',
+      actionKey: `admin.order.archive:${orderDoc._id}`,
+      title: {
+        ar: 'تمت أرشفة طلب',
+        en: 'Order archived',
+      },
+      message: {
+        ar: `تم نقل الطلب رقم ${orderDoc.number} إلى الأرشيف.`,
+        en: `Order ${orderDoc.number} was moved to archive.`,
+      },
+      link: `/admin/orders?order=${orderDoc._id}`,
+    })
+
     return { success: true, order: orderDoc }
   },
 
@@ -956,6 +1087,21 @@ export const orderService = {
 
     await audit.log(currentUser._id, 'ORDER_UNARCHIVED', 'Order', orderDoc._id.toString(), {
       number: orderDoc.number,
+    })
+
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'admin',
+      actionKey: `admin.order.unarchive:${orderDoc._id}`,
+      title: {
+        ar: 'تمت استعادة طلب من الأرشيف',
+        en: 'Order unarchived',
+      },
+      message: {
+        ar: `تمت إزالة الطلب رقم ${orderDoc.number} من الأرشيف.`,
+        en: `Order ${orderDoc.number} was restored from archive.`,
+      },
+      link: `/admin/orders?order=${orderDoc._id}`,
     })
 
     return { success: true, order: orderDoc }
@@ -993,6 +1139,21 @@ export const orderService = {
       { _id: orderDoc._id },
       { $addToSet: { hiddenBySellers: currentUser._id } }
     )
+
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'seller',
+      actionKey: `seller.order.hide:${orderDoc._id}`,
+      title: {
+        ar: 'تم إخفاء طلب من قائمة الورشة',
+        en: 'Order hidden from workshop list',
+      },
+      message: {
+        ar: `تم إخفاء الطلب رقم ${orderDoc.number} من قائمتكِ.`,
+        en: `Order ${orderDoc.number} was hidden from your orders list.`,
+      },
+      link: '/seller/orders',
+    })
 
     return {
       id: orderDoc._id.toString(),

@@ -43,6 +43,7 @@ const APPROVED_MATERIALS = [
   { id: 'fabric', labelAr: 'قماش', labelEn: 'Fabric' },
   { id: 'canson', labelAr: 'كانسون', labelEn: 'Canson Paper' },
   { id: 'nasbian', labelAr: 'ناصبيان', labelEn: 'Nasbian' },
+  { id: 'foam', labelAr: 'ورق فوم', labelEn: 'Foam Sheets' },
 ]
 
 /**

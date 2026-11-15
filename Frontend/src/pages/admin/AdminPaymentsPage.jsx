@@ -88,11 +88,6 @@ export default function AdminPaymentsPage() {
     setIsProcessing(true)
     try {
       await paymentService.confirmPayment(confirmDialogPayment.orderId)
-      toast.success(
-        t('payments.confirmDialog.successToast', {
-          number: confirmDialogPayment.orderNumber,
-        })
-      )
       setConfirmDialogPayment(null)
       await fetchPayments()
       fetchNotifications()
@@ -114,11 +109,6 @@ export default function AdminPaymentsPage() {
         notes,
         notify,
       })
-      toast.success(
-        t('payments.rejectModal.successToast', {
-          number: rejectModalPayment.orderNumber,
-        })
-      )
       setRejectModalPayment(null)
       await fetchPayments()
       fetchNotifications()

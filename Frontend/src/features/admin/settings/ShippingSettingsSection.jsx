@@ -4,6 +4,7 @@ import { Card } from '../../../components/ui/Card'
 import { Input } from '../../../components/ui/Input'
 import { SHIPPING_ZONES, getGovernorateName } from '../../../config/constants'
 import { useLanguage } from '../../../context/LanguageContext'
+import { useShippingRates } from '../../../hooks/useShippingRates'
 
 /**
  * قسم تسعيرة الشحن حسب مناطق التوصيل ومدة التسليم
@@ -16,6 +17,17 @@ export function ShippingSettingsSection({
 }) {
   const { t } = useTranslation('admin-manage')
   const { isRtl } = useLanguage()
+  const { zones: liveZones } = useShippingRates()
+
+  const zoneRows =
+    liveZones.length > 0
+      ? liveZones
+      : SHIPPING_ZONES.map((z) => ({
+          zone: z.id,
+          name: z.nameAr,
+          nameEn: z.nameEn,
+          governorates: z.governorates,
+        }))
 
   return (
     <Card variant="default" padding="lg" className="shadow-soft space-y-5">
@@ -43,17 +55,17 @@ export function ShippingSettingsSection({
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-border">
-            {SHIPPING_ZONES.map((zone) => {
-              const currentRate = shippingRates[zone.id] ?? zone.rate
+            {zoneRows.map((zone) => {
+              const currentRate = shippingRates[zone.zone] ?? ''
 
               return (
-                <tr key={zone.id} className="hover:bg-surface-subtle/30 transition-colors">
+                <tr key={zone.zone} className="hover:bg-surface-subtle/30 transition-colors">
                   <td className="py-3 px-4">
                     <span className="font-bold text-text-main block text-sm">
                       {isRtl ? zone.name : (zone.nameEn || zone.name)}
                     </span>
                     <span className="text-xs text-text-muted block mt-0.5 line-clamp-1">
-                      {zone.governorates
+                      {(zone.governorates || [])
                         .map((g) => getGovernorateName(g, isRtl ? 'ar' : 'en'))
                         .join(isRtl ? '، ' : ', ')}
                     </span>
@@ -66,7 +78,7 @@ export function ShippingSettingsSection({
                         min="0"
                         step="5"
                         value={currentRate}
-                        onChange={(e) => onChangeZoneRate(zone.id, e.target.value)}
+                        onChange={(e) => onChangeZoneRate(zone.zone, e.target.value)}
                         className="w-full h-11 ps-3 pe-9 rounded-[14px] bg-surface-subtle/60 border border-surface-border text-sm font-bold text-text-main text-start outline-none transition-colors focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20"
                         required
                       />

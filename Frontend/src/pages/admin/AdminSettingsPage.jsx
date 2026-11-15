@@ -30,13 +30,7 @@ export default function AdminSettingsPage() {
     supportEmail: '',
     whatsappNumber: '',
     payoutScheduleText: '',
-    shippingRates: {
-      greater_cairo: 40,
-      giza: 45,
-      alexandria: 50,
-      delta_canal: 55,
-      upper_egypt: 65,
-    },
+    shippingRates: {},
     deliveryTime: '2 - 4 أيام عمل حسب المحافظة وورشة البائعة',
     emailNotifications: true,
     inSiteNotifications: true,
@@ -59,13 +53,7 @@ export default function AdminSettingsPage() {
         supportEmail: settings.supportEmail || '',
         whatsappNumber: settings.whatsappNumber || '',
         payoutScheduleText: settings.payoutScheduleText || '',
-        shippingRates: {
-          greater_cairo: settings.shippingRates?.greater_cairo ?? 40,
-          giza: settings.shippingRates?.giza ?? 45,
-          alexandria: settings.shippingRates?.alexandria ?? 50,
-          delta_canal: settings.shippingRates?.delta_canal ?? 55,
-          upper_egypt: settings.shippingRates?.upper_egypt ?? 65,
-        },
+        shippingRates: settings.shippingRates ? { ...settings.shippingRates } : {},
         deliveryTime:
           settings.deliveryTime || '2 - 4 أيام عمل حسب المحافظة وورشة البائعة',
         emailNotifications: settings.emailNotifications !== false,
@@ -113,6 +101,12 @@ export default function AdminSettingsPage() {
 
     setIsSaving(true)
     try {
+      const normalizedRates = Object.fromEntries(
+        Object.entries(form.shippingRates || {}).map(([zoneId, val]) => {
+          const parsed = Number(val)
+          return [zoneId, Number.isFinite(parsed) && parsed >= 0 ? parsed : 0]
+        })
+      )
       await updateSettings({
         commissionRate: Number(form.commissionRate) / 100,
         platformWallet: form.platformWallet.trim(),
@@ -120,20 +114,13 @@ export default function AdminSettingsPage() {
         supportEmail: form.supportEmail.trim(),
         whatsappNumber: form.whatsappNumber.trim(),
         payoutScheduleText: form.payoutScheduleText.trim(),
-        shippingRates: {
-          greater_cairo: Number(form.shippingRates.greater_cairo) || 40,
-          giza: Number(form.shippingRates.giza) || 45,
-          alexandria: Number(form.shippingRates.alexandria) || 50,
-          delta_canal: Number(form.shippingRates.delta_canal) || 55,
-          upper_egypt: Number(form.shippingRates.upper_egypt) || 65,
-        },
+        shippingRates: normalizedRates,
         deliveryTime: form.deliveryTime.trim(),
         emailNotifications: form.emailNotifications,
         inSiteNotifications: form.inSiteNotifications,
       })
 
       setSavedSuccess(true)
-      toast.success(t('settings.saveSuccess'))
       setTimeout(() => setSavedSuccess(false), 4000)
     } catch (err) {
       toast.error(getFriendlyError(err, t))

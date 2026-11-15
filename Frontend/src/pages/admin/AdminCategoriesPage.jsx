@@ -68,7 +68,6 @@ export default function AdminCategoriesPage() {
     try {
       const ids = nextCategories.map((c) => c.id || c.slug)
       await adminService.reorderCategories(ids)
-      toast.success(t('categories.reorderSuccess'))
     } catch (err) {
       toast.error(getFriendlyError(err, t))
       // إعادة تحميل الترتيب السابق في حال الفشل
@@ -88,7 +87,6 @@ export default function AdminCategoriesPage() {
     try {
       const ids = nextCategories.map((c) => c.id || c.slug)
       await adminService.reorderCategories(ids)
-      toast.success(t('categories.reorderSuccess'))
     } catch (err) {
       toast.error(getFriendlyError(err, t))
       loadCategoriesData()
@@ -105,7 +103,6 @@ export default function AdminCategoriesPage() {
       setCategories((prev) =>
         prev.map((c) => ((c.id || c.slug) === targetId ? { ...c, ...updated } : c))
       )
-      toast.success(t('categories.saveSuccess'))
       setEditingCategory(null)
     } catch (err) {
       toast.error(getFriendlyError(err, t))

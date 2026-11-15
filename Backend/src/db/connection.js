@@ -2,10 +2,14 @@ import mongoose from 'mongoose'
 import { env } from '../config/env.js'
 
 let isConnected = false
+let connectionPromise = null
 
-export async function connectDB(uri = env.MONGODB_URI) {
-  if (isConnected || mongoose.connection.readyState === 1) {
-    return mongoose.connection
+export async function connectDB(uri = env.MONGODB_URI, mongooseClient = mongoose) {
+  if (
+    mongooseClient.connection.readyState === 1 ||
+    (isConnected && mongooseClient.connection.readyState === 1)
+  ) {
+    return mongooseClient.connection
   }
 
   if (process.env.NODE_ENV !== 'test') {
@@ -14,22 +18,37 @@ export async function connectDB(uri = env.MONGODB_URI) {
     }
   }
 
-  try {
-    const conn = await mongoose.connect(uri, {
-      autoIndex: true,
-    })
-    isConnected = true
-    return conn
-  } catch (error) {
-    console.error('[DATABASE] Failed to connect to MongoDB:', error.message)
-    throw error
+  if (connectionPromise) {
+    return connectionPromise
   }
+
+  connectionPromise = mongooseClient
+    .connect(uri, {
+      autoIndex: true,
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 8000,
+      socketTimeoutMS: 20000,
+      maxPoolSize: 5,
+    })
+    .then((conn) => {
+      isConnected = true
+      return conn
+    })
+    .catch((error) => {
+      isConnected = false
+      connectionPromise = null
+      console.error('[DATABASE] Failed to connect to MongoDB:', error.message)
+      throw error
+    })
+
+  return connectionPromise
 }
 
-export async function disconnectDB() {
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.disconnect()
-    isConnected = false
+export async function disconnectDB(mongooseClient = mongoose) {
+  connectionPromise = null
+  isConnected = false
+  if (mongooseClient.connection.readyState !== 0) {
+    await mongooseClient.disconnect()
   }
 }
 

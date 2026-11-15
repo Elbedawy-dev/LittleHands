@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { LocalizedText } from '../../components/ui/LocalizedText'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -270,7 +271,7 @@ export default function SellerEarningsPage() {
                       {/* اسم الوسيلة والكمية */}
                       <td className="py-3.5 px-4">
                         <span className="font-bold text-text-main block truncate max-w-[220px]">
-                          {firstItem?.name || t('earnings.breakdown.default_aid')}
+                          {firstItem?.name ? <LocalizedText value={firstItem.name} /> : t('earnings.breakdown.default_aid')}
                         </span>
                         <span className="text-[10px] text-text-muted">
                           {myItems.length > 1

@@ -569,6 +569,27 @@ export const authService = {
       )
     }
 
+    const passwordLink =
+      user.role === 'admin'
+        ? '/admin/account'
+        : user.role === 'seller'
+          ? '/seller/profile'
+          : '/account/settings'
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: user.role || 'customer',
+      actionKey: `${user.role || 'customer'}.password.change`,
+      title: {
+        ar: 'تم تغيير كلمة المرور بنجاح',
+        en: 'Password changed successfully',
+      },
+      message: {
+        ar: 'تم تحديث كلمة المرور الخاصة بحسابك وتأمين الجلسات النشطة.',
+        en: 'Your account password was updated and active sessions secured.',
+      },
+      link: passwordLink,
+    })
+
     return { success: true }
   },
 }

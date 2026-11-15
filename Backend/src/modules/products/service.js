@@ -8,6 +8,7 @@ import { storage } from '../../infra/storage/index.js'
 import { arabicNormalize } from '../../utils/arabic.js'
 import { escapeRegex } from '../../utils/regex.js'
 import { AppError } from '../../utils/appError.js'
+import { eventBus, EVENT_TYPES } from '../../events/index.js'
 import { DEFAULT_COMMISSION_RATE } from '../../config/constants.js'
 import { toManageProductDTO } from './dto.js'
 import { hasForbiddenWord } from './schemas.js'
@@ -196,6 +197,21 @@ export const productService = {
     }
 
     const commissionRate = await getCurrentCommissionRate()
+    const actorRole = user.role === 'admin' ? 'admin' : 'seller'
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: actorRole,
+      actionKey: `product.create:${product._id}`,
+      title: {
+        ar: 'تمت إضافة وسيلة تعليمية جديدة',
+        en: 'New teaching aid added',
+      },
+      message: {
+        ar: `تم إنشاء الوسيلة "${product.name.ar}" بنجاح.`,
+        en: `Teaching aid "${product.name.en || product.name.ar}" was created.`,
+      },
+      link: actorRole === 'admin' ? '/admin/products' : '/seller/products',
+    })
     return toManageProductDTO(product, commissionRate)
   },
 
@@ -324,6 +340,21 @@ export const productService = {
     await product.save()
 
     const commissionRate = await getCurrentCommissionRate()
+    const actorRole = user.role === 'admin' ? 'admin' : 'seller'
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: actorRole,
+      actionKey: `product.update:${product._id}`,
+      title: {
+        ar: 'تم تحديث بيانات وسيلة تعليمية',
+        en: 'Teaching aid updated',
+      },
+      message: {
+        ar: `تم حفظ تعديلات الوسيلة "${product.name?.ar || ''}".`,
+        en: `Updates to "${product.name?.en || product.name?.ar || ''}" were saved.`,
+      },
+      link: actorRole === 'admin' ? '/admin/products' : '/seller/products',
+    })
     return toManageProductDTO(product, commissionRate)
   },
 
@@ -347,6 +378,22 @@ export const productService = {
 
     product.deletedAt = new Date()
     await product.save()
+
+    const actorRole = user.role === 'admin' ? 'admin' : 'seller'
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: actorRole,
+      actionKey: `product.delete:${product._id}`,
+      title: {
+        ar: 'تم حذف وسيلة تعليمية',
+        en: 'Teaching aid deleted',
+      },
+      message: {
+        ar: `تم حذف الوسيلة "${product.name?.ar || ''}".`,
+        en: `Teaching aid "${product.name?.en || product.name?.ar || ''}" was deleted.`,
+      },
+      link: actorRole === 'admin' ? '/admin/products' : '/seller/products',
+    })
 
     return { success: true }
   },
@@ -376,6 +423,25 @@ export const productService = {
     await product.save()
 
     const commissionRate = await getCurrentCommissionRate()
+    const actorRole = user.role === 'admin' ? 'admin' : 'seller'
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: actorRole,
+      actionKey: `product.publish:${product._id}:${Boolean(product.published)}`,
+      title: product.published
+        ? { ar: 'تم نشر وسيلة تعليمية بالمتجر', en: 'Teaching aid published' }
+        : { ar: 'تم إيقاف نشر وسيلة تعليمية', en: 'Teaching aid unpublished' },
+      message: product.published
+        ? {
+            ar: `أصبحت الوسيلة "${product.name?.ar || ''}" متاحة بالمتجر الآن.`,
+            en: `"${product.name?.en || product.name?.ar || ''}" is now live in the store.`,
+          }
+        : {
+            ar: `تم إخفاء الوسيلة "${product.name?.ar || ''}" من المتجر مؤقتاً.`,
+            en: `"${product.name?.en || product.name?.ar || ''}" was unpublished from the store.`,
+          },
+      link: actorRole === 'admin' ? '/admin/products' : '/seller/products',
+    })
     return toManageProductDTO(product, commissionRate)
   },
 

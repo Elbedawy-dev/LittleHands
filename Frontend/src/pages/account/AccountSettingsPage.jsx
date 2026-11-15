@@ -10,7 +10,6 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { toast } from 'react-hot-toast'
 import { Card } from '../../components/ui/Card'
 import { Switch } from '../../components/ui/Switch'
 import { Button } from '../../components/ui/Button'
@@ -55,7 +54,6 @@ export default function AccountSettingsPage() {
       setIsDeleting(true)
       setDeleteError('')
       await userService.deleteMyAccount(deletePassword)
-      toast.success(isEn ? 'Account deleted successfully' : 'تم حذف الحساب بنجاح')
       setIsDeleteModalOpen(false)
       await logout()
       navigate('/')

@@ -21,7 +21,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import toast from 'react-hot-toast'
 import { useFormat } from '../../hooks/useFormat'
-import { cn, pickLocaleText, getFriendlyError } from '../../utils'
+import { cn, pickLocaleText, getFriendlyError, resolveNotificationLink } from '../../utils'
 
 /**
  * دالة مساعدة لتحديد أيقونة ولون الإشعار حسب نوعه ومحتواه
@@ -73,6 +73,15 @@ export function getNotificationBadge(notif, isEn = false) {
       bg: 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900',
       badgeColor: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
       label: isEn ? 'Custom Request' : 'طلب تفصيل',
+    }
+  }
+
+  if (type === 'activity') {
+    return {
+      icon: <CheckCheck className="w-5 h-5 text-violet-600 dark:text-violet-400" />,
+      bg: 'bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-900',
+      badgeColor: 'bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300',
+      label: isEn ? 'Account Activity' : 'سجل النشاط',
     }
   }
 
@@ -140,7 +149,6 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
   const handleDeleteItem = async (id) => {
     try {
       await deleteNotification(id)
-      toast.success(t('notifications:deleteSuccess'))
     } catch (err) {
       console.error('Failed to delete notification:', err)
       toast.error(getFriendlyError(err, t))
@@ -156,7 +164,6 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
       } else if (confirmDialog === 'clearAll') {
         await deleteNotifications(false)
       }
-      toast.success(t('notifications:clearSuccess'))
       setConfirmDialog(null)
     } catch (err) {
       console.error('Failed to clear notifications:', err)
@@ -177,6 +184,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
         const title = typeof n.title === 'string' ? n.title : n.title?.ar || ''
         if (categoryFilter === 'shipping' && n.type !== 'shipping' && !title.includes('شحن') && !title.includes('تسليم')) return false
         if (categoryFilter === 'payouts' && n.type !== 'payout') return false
+        if (categoryFilter === 'activity' && n.type !== 'activity') return false
       }
 
       return true
@@ -213,6 +221,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
     if (currentRole === 'seller' || currentRole === 'admin') {
       base.push({ id: 'payouts', label: isEn ? 'Payouts' : 'تحويل الأرباح' })
     }
+    base.push({ id: 'activity', label: isEn ? 'Activity' : 'سجل النشاط' })
     return base
   }, [currentRole, isEn])
 
@@ -338,6 +347,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
                   <NotificationItem
                     key={n.id}
                     notification={n}
+                    role={currentRole}
                     onMarkRead={handleMarkItemRead}
                     onDelete={handleDeleteItem}
                     formatRelativeTime={formatRelativeTime}
@@ -365,6 +375,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
                   <NotificationItem
                     key={n.id}
                     notification={n}
+                    role={currentRole}
                     onMarkRead={handleMarkItemRead}
                     onDelete={handleDeleteItem}
                     formatRelativeTime={formatRelativeTime}
@@ -407,6 +418,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
  */
 function NotificationItem({
   notification,
+  role,
   onMarkRead,
   onDelete,
   formatRelativeTime,
@@ -524,7 +536,7 @@ function NotificationItem({
 
         {notification.link && (
           <Link
-            to={notification.link}
+            to={resolveNotificationLink(notification, role)}
             onClick={(e) => {
               e.stopPropagation()
               onMarkRead(notification.id)

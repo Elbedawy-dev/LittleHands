@@ -5,7 +5,7 @@ import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { CopyButton } from '../../../components/ui/CopyButton'
 import { PriceTag } from '../../../components/ui/PriceTag'
-import { getDisplayName } from '../../../utils'
+import { getDisplayName, getImageUrl, pickLocaleText } from '../../../utils'
 
 /**
  * بطاقة المستحقات المالية للبائعة الحرفية
@@ -34,12 +34,14 @@ export function AdminSellerCard({
     {
       id: seller.sellerId || seller.id,
       sellerId: seller.sellerId || seller.id,
+      displayName: seller.displayName || seller.seller?.displayName,
       name: seller.sellerName || seller.name,
       nameEn: seller.nameEn,
     },
     i18n.language
   )
-  const sellerBio = (typeof seller.bio === 'object' ? (seller.bio?.ar || seller.bio?.en || '') : seller.bio) || ''
+  const sellerBio = pickLocaleText(seller.bio || seller.seller?.bio, i18n.language)
+  const avatarUrl = getImageUrl(seller.avatar || seller.seller?.avatar)
 
   return (
     <Card padding="lg" className="flex flex-col justify-between space-y-6">
@@ -48,7 +50,7 @@ export function AdminSellerCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <Avatar
-              src={seller.avatar}
+              src={avatarUrl}
               name={sellerDisplayName}
               role="seller"
               size="lg"

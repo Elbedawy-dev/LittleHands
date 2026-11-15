@@ -106,8 +106,8 @@ export const adminService = {
   recordPayout: (data, ctx) => earningsService.recordPayout(data, ctx),
 
   // Categories are owned by the catalog module (B2)
-  updateCategory: (id, values) => catalogService.updateCategory(id, values),
-  reorderCategories: (ids) => catalogService.reorderCategories(ids),
+  updateCategory: (id, values, ctx) => catalogService.updateCategory(id, values, ctx),
+  reorderCategories: (ids, ctx) => catalogService.reorderCategories(ids, ctx),
 }
 
 export default adminService

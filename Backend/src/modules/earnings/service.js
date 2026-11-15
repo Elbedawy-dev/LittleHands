@@ -380,6 +380,24 @@ export const earningsService = {
         seller: seller.toObject(),
       })
 
+      if (actorId) {
+        const displayName = seller.seller?.displayName?.ar || seller.name || ''
+        eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+          userId: actorId,
+          role: 'admin',
+          actionKey: `admin.payout.record:${payout._id}`,
+          title: {
+            ar: 'تم توثيق تحويل أرباح بائعة',
+            en: 'Seller payout recorded',
+          },
+          message: {
+            ar: `تم تسجيل دفعة أرباح بقيمة ${amountPiasters / 100} ج.م للبائعة ${displayName}.`,
+            en: `Recorded payout of ${amountPiasters / 100} EGP to ${seller.seller?.displayName?.en || displayName}.`,
+          },
+          link: '/admin/sellers',
+        })
+      }
+
       return toPayoutDTO(payout)
     })
   },

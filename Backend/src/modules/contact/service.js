@@ -72,7 +72,7 @@ export const contactService = {
   /**
    * Updates status of a custom request (Admin only).
    */
-  async updateCustomRequestStatus(id, status) {
+  async updateCustomRequestStatus(id, status, { actorId = null } = {}) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       throw new AppError('NOT_FOUND', 404)
     }
@@ -102,13 +102,30 @@ export const contactService = {
       await request.populate('claimedBy', 'name seller.displayName')
     }
 
+    if (actorId) {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: actorId,
+        role: 'admin',
+        actionKey: `admin.custom_request.status:${request._id}:${status}`,
+        title: {
+          ar: 'تم تحديث حالة طلب تفصيل',
+          en: 'Custom request status updated',
+        },
+        message: {
+          ar: `تم تحديث حالة طلب التفصيل الخاص بـ "${request.name}".`,
+          en: `Updated status of custom request from "${request.name}".`,
+        },
+        link: '/admin/custom-requests',
+      })
+    }
+
     return toCustomRequestDTO(request)
   },
 
   /**
    * Deletes a custom request (Admin only).
    */
-  async deleteCustomRequest(id) {
+  async deleteCustomRequest(id, { actorId = null } = {}) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       throw new AppError('NOT_FOUND', 404)
     }
@@ -116,6 +133,23 @@ export const contactService = {
     const request = await CustomRequest.findByIdAndDelete(id)
     if (!request) {
       throw new AppError('NOT_FOUND', 404)
+    }
+
+    if (actorId) {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: actorId,
+        role: 'admin',
+        actionKey: `admin.custom_request.delete:${id}`,
+        title: {
+          ar: 'تم حذف طلب تفصيل',
+          en: 'Custom request deleted',
+        },
+        message: {
+          ar: `تم حذف طلب التفصيل الخاص بـ "${request.name}".`,
+          en: `Deleted custom request from "${request.name}".`,
+        },
+        link: '/admin/custom-requests',
+      })
     }
 
     return { id, success: true }

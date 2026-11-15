@@ -2,6 +2,7 @@ import { Setting } from '../../db/models/Setting.js'
 import { SHIPPING_ZONES } from '../../config/constants.js'
 import { AppError } from '../../utils/appError.js'
 import { audit } from '../../infra/audit/index.js'
+import { eventBus, EVENT_TYPES } from '../../events/index.js'
 import {
   mapSettingsDTO,
   toAdminSettingsDTO,
@@ -125,6 +126,22 @@ export const settingsService = {
     if (Object.keys(a).length) {
       await audit.log(actorId, 'SETTINGS_UPDATED', 'Setting', doc._id.toString(), { before: b, after: a }, ip)
     }
+    if (actorId) {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: actorId,
+        role: 'admin',
+        actionKey: 'admin.settings.update',
+        title: {
+          ar: 'تم تحديث إعدادات المنصة',
+          en: 'Platform settings updated',
+        },
+        message: {
+          ar: 'تم حفظ التعديلات على إعدادات المنصة.',
+          en: 'Changes to platform settings were saved.',
+        },
+        link: '/admin/settings',
+      })
+    }
     return toAdminSettingsDTO(doc)
   },
 
@@ -150,6 +167,22 @@ export const settingsService = {
     await doc.save()
     const after = toShippingZonesDTO(doc.shippingRates)
     await audit.log(actorId, 'SHIPPING_RATES_UPDATED', 'Setting', doc._id.toString(), { before, after }, ip)
+    if (actorId) {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: actorId,
+        role: 'admin',
+        actionKey: 'admin.shipping_rates.update',
+        title: {
+          ar: 'تم تحديث أسعار التوصيل والشحن',
+          en: 'Shipping rates updated',
+        },
+        message: {
+          ar: 'تم حفظ تحديثات أسعار الشحن للمحافظات والمناطق.',
+          en: 'Shipping rates updates for governorates and zones were saved.',
+        },
+        link: '/admin/settings',
+      })
+    }
     return {
       rates: toShippingRatesMap(doc.shippingRates),
       zones: after,

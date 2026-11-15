@@ -76,6 +76,15 @@ export function getNotificationBadge(notif, isEn = false) {
     }
   }
 
+  if (type === 'activity') {
+    return {
+      icon: <CheckCheck className="w-5 h-5 text-violet-600 dark:text-violet-400" />,
+      bg: 'bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-900',
+      badgeColor: 'bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300',
+      label: isEn ? 'Account Activity' : 'سجل النشاط',
+    }
+  }
+
   // افتراضي: طلب
   return {
     icon: <Package className="w-5 h-5 text-brand-orange" />,
@@ -175,6 +184,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
         const title = typeof n.title === 'string' ? n.title : n.title?.ar || ''
         if (categoryFilter === 'shipping' && n.type !== 'shipping' && !title.includes('شحن') && !title.includes('تسليم')) return false
         if (categoryFilter === 'payouts' && n.type !== 'payout') return false
+        if (categoryFilter === 'activity' && n.type !== 'activity') return false
       }
 
       return true
@@ -211,6 +221,7 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
     if (currentRole === 'seller' || currentRole === 'admin') {
       base.push({ id: 'payouts', label: isEn ? 'Payouts' : 'تحويل الأرباح' })
     }
+    base.push({ id: 'activity', label: isEn ? 'Activity' : 'سجل النشاط' })
     return base
   }, [currentRole, isEn])
 

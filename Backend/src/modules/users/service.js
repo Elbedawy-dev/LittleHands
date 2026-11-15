@@ -65,6 +65,25 @@ export const userService = {
     if (data.locale !== undefined) user.locale = data.locale
 
     await user.save()
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: user.role || 'customer',
+      actionKey: `${user.role || 'customer'}.profile.update`,
+      title: {
+        ar: 'تم تحديث بيانات الحساب',
+        en: 'Profile details updated',
+      },
+      message: {
+        ar: 'تم حفظ التعديلات على بيانات حسابك الشخصي.',
+        en: 'Your personal profile updates were saved.',
+      },
+      link:
+        user.role === 'admin'
+          ? '/admin/account'
+          : user.role === 'seller'
+            ? '/seller/profile'
+            : '/account',
+    })
     return user
   },
 
@@ -117,6 +136,26 @@ export const userService = {
       url: saved.url,
     }
     await user.save()
+
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: user.role || 'customer',
+      actionKey: `${user.role || 'customer'}.avatar.upload`,
+      title: {
+        ar: 'تم تحديث الصورة الشخصية',
+        en: 'Profile photo updated',
+      },
+      message: {
+        ar: 'تم رفع وحفظ الصورة الشخصية الجديدة لحسابك.',
+        en: 'Your new profile photo was uploaded and saved.',
+      },
+      link:
+        user.role === 'admin'
+          ? '/admin/account'
+          : user.role === 'seller'
+            ? '/seller/profile'
+            : '/account',
+    })
 
     return {
       avatar: saved.url,
@@ -201,6 +240,21 @@ export const userService = {
       isDefault,
     })
 
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId,
+      role: 'customer',
+      actionKey: `customer.address.add:${address._id}`,
+      title: {
+        ar: 'تمت إضافة عنوان شحن جديد',
+        en: 'New shipping address added',
+      },
+      message: {
+        ar: `تم حفظ العنوان في ${address.governorate} - ${address.city}.`,
+        en: `Saved address in ${address.governorate} - ${address.city}.`,
+      },
+      link: '/account/addresses',
+    })
+
     return address
   },
 
@@ -238,6 +292,20 @@ export const userService = {
     if (data.nurseryName !== undefined) address.nurseryName = data.nurseryName.trim()
 
     await address.save()
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId,
+      role: 'customer',
+      actionKey: `customer.address.update:${address._id}`,
+      title: {
+        ar: 'تم تحديث بيانات العنوان',
+        en: 'Shipping address updated',
+      },
+      message: {
+        ar: `تم حفظ التعديلات على عنوان ${address.governorate} - ${address.city}.`,
+        en: `Updated address details for ${address.governorate} - ${address.city}.`,
+      },
+      link: '/account/addresses',
+    })
     return address
   },
 
@@ -265,6 +333,21 @@ export const userService = {
       }
     }
 
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId,
+      role: 'customer',
+      actionKey: `customer.address.delete:${addressId}`,
+      title: {
+        ar: 'تم حذف عنوان شحن',
+        en: 'Shipping address deleted',
+      },
+      message: {
+        ar: `تم حذف عنوان التوصيل (${address.governorate} - ${address.city}).`,
+        en: `Deleted shipping address (${address.governorate} - ${address.city}).`,
+      },
+      link: '/account/addresses',
+    })
+
     return { success: true }
   },
 
@@ -282,6 +365,26 @@ export const userService = {
       ...prefs,
     }
     await user.save()
+
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: user.role || 'customer',
+      actionKey: `${user.role || 'customer'}.notification_prefs.update`,
+      title: {
+        ar: 'تم تحديث تفضيلات الإشعارات',
+        en: 'Notification preferences updated',
+      },
+      message: {
+        ar: 'تم حفظ إعدادات الإشعارات والتنبيهات الخاصة بحسابك.',
+        en: 'Your notification preferences were saved.',
+      },
+      link:
+        user.role === 'admin'
+          ? '/admin/account'
+          : user.role === 'seller'
+            ? '/seller/profile'
+            : '/account/settings',
+    })
 
     return user.notificationPrefs
   },
@@ -348,6 +451,20 @@ export const userService = {
     }
 
     await user.save()
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: user._id,
+      role: 'seller',
+      actionKey: 'seller.profile.update',
+      title: {
+        ar: 'تم تحديث بيانات الورشة',
+        en: 'Workshop profile updated',
+      },
+      message: {
+        ar: 'تم حفظ التعديلات على ملف الورشة ومحفظة الأرباح.',
+        en: 'Your workshop profile and payout wallet changes were saved.',
+      },
+      link: '/seller/profile',
+    })
     return user
   },
 
@@ -419,6 +536,23 @@ export const userService = {
       tempPassword,
     })
 
+    if (adminId) {
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: adminId,
+        role: 'admin',
+        actionKey: `admin.seller.create:${seller._id}`,
+        title: {
+          ar: 'تم إنشاء حساب بائعة جديدة',
+          en: 'New seller account created',
+        },
+        message: {
+          ar: `تمت إضافة حساب البائعة "${seller.name}" بنجاح.`,
+          en: `Seller account "${seller.name}" was created successfully.`,
+        },
+        link: '/admin/sellers',
+      })
+    }
+
     return { seller, tempPassword }
   },
 
@@ -465,6 +599,21 @@ export const userService = {
       { status, prevStatus },
       ip
     )
+
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: adminId,
+      role: 'admin',
+      actionKey: `admin.user.status:${user._id}:${status}`,
+      title:
+        status === 'suspended'
+          ? { ar: 'تم إيقاف حساب مستخدم', en: 'User account suspended' }
+          : { ar: 'تم تفعيل حساب مستخدم', en: 'User account activated' },
+      message: {
+        ar: `تم تغيير حالة حساب "${user.name}" إلى ${status === 'suspended' ? 'موقوف' : 'نشط'}.`,
+        en: `Account status for "${user.name}" changed to ${status}.`,
+      },
+      link: user.role === 'seller' ? '/admin/sellers' : '/admin/customers',
+    })
 
     return user
   },
@@ -594,6 +743,7 @@ export const userService = {
         await CustomRequest.updateMany({ customerId: target._id }, { $set: { customerId: null } })
         await User.findByIdAndDelete(target._id)
         await audit.log(adminId, 'USER_DELETED_BY_ADMIN', 'User', target._id.toString(), { mode: 'hard', targetRole: 'customer' }, ip)
+        emitAdminUserDeleteActivity(adminId, target)
         return { success: true, mode: 'hard', id: target._id.toString() }
       }
 
@@ -618,6 +768,7 @@ export const userService = {
       )
 
       await audit.log(adminId, 'USER_ANONYMIZED_BY_ADMIN', 'User', target._id.toString(), { mode: 'anonymized', targetRole: 'customer' }, ip)
+      emitAdminUserDeleteActivity(adminId, target)
       return { success: true, mode: 'anonymized', id: target._id.toString() }
     }
 
@@ -694,16 +845,36 @@ export const userService = {
         )
 
         await audit.log(adminId, 'SELLER_ANONYMIZED_BY_ADMIN', 'User', target._id.toString(), { mode: 'anonymized' }, ip)
+        emitAdminUserDeleteActivity(adminId, target)
         return { success: true, mode: 'anonymized', id: target._id.toString() }
       }
 
       await User.findByIdAndDelete(target._id)
       await audit.log(adminId, 'SELLER_DELETED_BY_ADMIN', 'User', target._id.toString(), { mode: 'hard' }, ip)
+      emitAdminUserDeleteActivity(adminId, target)
       return { success: true, mode: 'hard', id: target._id.toString() }
     }
 
     throw new AppError('BAD_REQUEST', 400, 'Unsupported user role for deletion')
   },
+}
+
+function emitAdminUserDeleteActivity(adminId, target) {
+  if (!adminId || !target) return
+  eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+    userId: adminId,
+    role: 'admin',
+    actionKey: `admin.user.delete:${target._id}`,
+    title: {
+      ar: 'تم حذف حساب مستخدم',
+      en: 'User account removed',
+    },
+    message: {
+      ar: `تم حذف حساب "${target.name}" من المنصة.`,
+      en: `Account "${target.name}" was removed from the platform.`,
+    },
+    link: target.role === 'seller' ? '/admin/sellers' : '/admin/customers',
+  })
 }
 
 export default userService

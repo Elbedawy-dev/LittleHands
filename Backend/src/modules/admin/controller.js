@@ -54,14 +54,14 @@ export const adminController = {
   /** Category handlers: bodies are already validated by the catalog schemas on the route. */
   updateCategory: asyncHandler(async (req, res) => {
     const idOrSlug = req.params.slug || req.params.id
-    return ok(res, await adminService.updateCategory(idOrSlug, req.body))
+    return ok(res, await adminService.updateCategory(idOrSlug, req.body, { actorId: req.user?._id || req.userId }))
   }),
 
   reorderCategories: asyncHandler(async (req, res) => {
     const list = Array.isArray(req.body)
       ? req.body
       : req.body.slugs || req.body.ids || []
-    return ok(res, await adminService.reorderCategories(list))
+    return ok(res, await adminService.reorderCategories(list, { actorId: req.user?._id || req.userId }))
   }),
 }
 

@@ -727,6 +727,29 @@ export function registerNotificationListeners() {
       console.error('[EVENT_LISTENER] Error handling auth.passwordResetRequested:', err)
     }
   })
+
+  // =========================================================================
+  // 14. Actor Action -> Private Bilingual Activity Notification (60s dedup)
+  // =========================================================================
+  eventBus.on(EVENT_TYPES.ACTOR_ACTION, async (payload) => {
+    try {
+      const { userId, role, actionKey, title, message, link, params, windowMs } = payload || {}
+      if (!userId || !actionKey) return
+
+      await notifications.notifyActor({
+        userId,
+        role,
+        actionKey,
+        title,
+        message,
+        link,
+        params,
+        windowMs,
+      })
+    } catch (err) {
+      console.error('[EVENT_LISTENER] Error handling actor.action:', err)
+    }
+  })
 }
 
 async function getActiveAdmins() {

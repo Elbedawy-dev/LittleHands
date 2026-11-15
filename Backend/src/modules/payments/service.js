@@ -145,6 +145,20 @@ export const paymentService = {
       eventBus.emit(EVENT_TYPES.ORDER_CREATED, { order, payment })
     } else {
       eventBus.emit(EVENT_TYPES.PAYMENT_RESUBMITTED, { order, payment })
+      eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+        userId: currentUser._id,
+        role: 'customer',
+        actionKey: `customer.payment.resubmit:${order._id}`,
+        title: {
+          ar: 'تمت إعادة إرسال إيصال التحويل',
+          en: 'Payment receipt resubmitted',
+        },
+        message: {
+          ar: `تم استلام إيصال الدفع الجديد للطلب رقم ${order.number} وجارٍ مراجعته.`,
+          en: `Your updated payment receipt for order ${order.number} is under review.`,
+        },
+        link: `/account/orders/${order._id}`,
+      })
     }
 
     await audit.log(currentUser._id, 'PAYMENT_SUBMITTED', 'Payment', payment._id.toString(), {
@@ -308,6 +322,21 @@ export const paymentService = {
       orderId: updatedOrder._id,
     })
 
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'admin',
+      actionKey: `admin.payment.confirm:${updatedOrder._id}`,
+      title: {
+        ar: 'تم تأكيد دفعة فودافون كاش',
+        en: 'Vodafone Cash payment confirmed',
+      },
+      message: {
+        ar: `تم اعتماد دفع الطلب رقم ${updatedOrder.number}.`,
+        en: `Payment for order ${updatedOrder.number} was confirmed.`,
+      },
+      link: '/admin/payments',
+    })
+
     return { order: updatedOrder, payment: updatedPayment }
   },
 
@@ -400,6 +429,21 @@ export const paymentService = {
       orderId: updatedOrder._id,
       reason,
       notes,
+    })
+
+    eventBus.emit(EVENT_TYPES.ACTOR_ACTION, {
+      userId: currentUser._id,
+      role: 'admin',
+      actionKey: `admin.payment.reject:${updatedOrder._id}`,
+      title: {
+        ar: 'تم رفض إيصال التحويل',
+        en: 'Payment receipt rejected',
+      },
+      message: {
+        ar: `تم رفض إيصال الدفع للطلب رقم ${updatedOrder.number}.`,
+        en: `Payment receipt for order ${updatedOrder.number} was rejected.`,
+      },
+      link: '/admin/payments',
     })
 
     return { order: updatedOrder, payment: updatedPayment }

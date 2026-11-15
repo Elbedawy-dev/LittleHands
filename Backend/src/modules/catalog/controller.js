@@ -29,12 +29,16 @@ export const catalogController = {
   }),
 
   updateCategory: asyncHandler(async (req, res) => {
-    const category = await catalogService.updateCategory(req.params.id || req.params.slug, req.body)
+    const category = await catalogService.updateCategory(req.params.id || req.params.slug, req.body, {
+      actorId: req.user?._id || req.userId,
+    })
     return ok(res, category)
   }),
 
   reorderCategories: asyncHandler(async (req, res) => {
-    const categories = await catalogService.reorderCategories(req.body)
+    const categories = await catalogService.reorderCategories(req.body, {
+      actorId: req.user?._id || req.userId,
+    })
     return ok(res, categories)
   }),
 }

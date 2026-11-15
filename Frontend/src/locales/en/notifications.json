@@ -30,6 +30,7 @@
     "custom_request_new": "New custom request",
     "custom_request_claimed": "Custom request claimed",
     "system": "System alert",
+    "activity": "Account activity",
     "generic": "New notification",
     "customerOrderReceived": "Your order has been received successfully",
     "customerPaymentConfirmed": "Your payment transfer has been confirmed",
@@ -51,6 +52,7 @@
     "custom_request_new": "New custom teaching aid request available now",
     "custom_request_claimed": "Custom request has been claimed by a seller",
     "system": "Platform system notification",
+    "activity": "A new action was performed on your account",
     "generic": "You have a new update in your account"
   },
   "deleteNotification": "Delete notification",

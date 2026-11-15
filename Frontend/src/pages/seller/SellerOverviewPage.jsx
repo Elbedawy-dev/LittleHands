@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { LocalizedText } from '../../components/ui/LocalizedText'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { ProductImage } from '../../components/ui/ProductImage'
@@ -25,7 +26,7 @@ import { CommissionInfoCard, OrderDetailsDrawer, SalesChart } from '../../featur
 import { useFormat } from '../../hooks/useFormat'
 import { earningsService } from '../../services/earningsService'
 import { orderService } from '../../services/orderService'
-import { calcCommission, getDisplayName, getFriendlyError } from '../../utils'
+import { calcCommission, getDisplayName, getFriendlyError, pickLocaleText } from '../../utils'
 
 /**
  * لوحة التحكم الرئيسية للبائعة الحرفية
@@ -282,14 +283,14 @@ export default function SellerOverviewPage() {
                           <div className="w-9 h-9 shrink-0">
                             <ProductImage
                               src={firstItem?.image}
-                              alt={firstItem?.name || ''}
+                              alt={pickLocaleText(firstItem?.name, i18n.language) || ''}
                               aspectRatio="1/1"
                               className="rounded-lg"
                             />
                           </div>
                           <div className="max-w-[200px]">
                             <span className="font-bold text-text-main block truncate">
-                              {firstItem?.name || t('overview.recent_orders.default_aid')}
+                              {firstItem?.name ? <LocalizedText value={firstItem.name} /> : t('overview.recent_orders.default_aid')}
                             </span>
                             {myItems.length > 1 && (
                               <span className="text-[10px] text-text-muted">

@@ -7,6 +7,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import { LocalizedText } from '../../components/ui/LocalizedText'
+import { pickLocaleText } from '../../utils'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -35,7 +37,7 @@ const SELLER_HIDEABLE_STATUSES = ['cancelled', 'payment_rejected', 'delivered', 
  * Strictly scoped to the authenticated seller and hides customer payment screenshots.
  */
 export default function SellerOrdersPage() {
-  const { t } = useTranslation(['seller', 'common'])
+  const { t, i18n } = useTranslation(['seller', 'common'])
   const { user } = useAuth()
   const sellerId = user?.id || ''
   const [searchParams, setSearchParams] = useSearchParams()
@@ -306,14 +308,14 @@ export default function SellerOrdersPage() {
                               <div className="w-11 h-11 shrink-0">
                                 <ProductImage
                                   src={firstItem?.image}
-                                  alt={firstItem?.name || ''}
+                                  alt={pickLocaleText(firstItem?.name, i18n.language) || ''}
                                   aspectRatio="1/1"
                                   className="rounded-xl"
                                 />
                               </div>
                               <div className="max-w-[200px]">
                                 <span className="font-bold text-text-main block truncate">
-                                  {firstItem?.name || t('orders.default_aid')}
+                                  {firstItem?.name ? <LocalizedText value={firstItem.name} /> : t('orders.default_aid')}
                                 </span>
                                 <span className="text-[11px] text-text-muted block truncate mt-0.5">
                                   {ord.delivery?.nurseryName || ord.delivery?.name}
@@ -433,14 +435,14 @@ export default function SellerOrdersPage() {
                     <div className="w-14 h-14 shrink-0">
                       <ProductImage
                         src={firstItem?.image}
-                        alt={firstItem?.name || ''}
+                        alt={pickLocaleText(firstItem?.name, i18n.language) || ''}
                         aspectRatio="1/1"
                         className="rounded-xl"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-xs text-text-main truncate">
-                        {firstItem?.name || t('orders.default_aid')}
+                        {firstItem?.name ? <LocalizedText value={firstItem.name} /> : t('orders.default_aid')}
                       </h4>
                       <p className="text-[11px] text-text-muted mt-0.5">
                         {ord.delivery?.nurseryName || ord.delivery?.name}

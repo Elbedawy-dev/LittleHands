@@ -16,6 +16,8 @@ export const Input = forwardRef(function Input(
     containerClassName,
     disabled,
     required,
+    clearable: _clearable,
+    onClear: _onClear,
     ...props
   },
   ref

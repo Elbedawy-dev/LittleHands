@@ -26,7 +26,7 @@ import { useLanguage } from '../../context/LanguageContext'
 import { ProductCardSeller } from '../../features/seller'
 import { useFormat } from '../../hooks/useFormat'
 import { productService } from '../../services/productService'
-import { getFriendlyError, pickLocale } from '../../utils'
+import { getFriendlyError, pickLocale, pickLocaleText } from '../../utils'
 
 /**
  * صفحة إدارة الوسائل التعليمية للبائعة
@@ -37,7 +37,7 @@ export default function SellerProductsPage() {
   const { t } = useTranslation('seller')
   const { user } = useAuth()
   const sellerId = user?.id || ''
-  const { isRtl } = useLanguage()
+  const { isRtl, language } = useLanguage()
   const { formatNumber } = useFormat()
 
   const [products, setProducts] = useState([])
@@ -243,7 +243,7 @@ export default function SellerProductsPage() {
                               <div className="w-12 h-12 shrink-0">
                                 <ProductImage
                                   src={p.images && p.images[0]}
-                                  alt={p.name}
+                                  alt={pickLocaleText(p.name, language) || ''}
                                   aspectRatio="1/1"
                                   className="rounded-xl"
                                 />

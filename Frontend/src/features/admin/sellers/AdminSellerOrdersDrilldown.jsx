@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LocalizedText } from '../../../components/ui/LocalizedText'
 import { Card } from '../../../components/ui/Card'
 import { DataTable } from '../../../components/ui/DataTable'
 import { PriceTag } from '../../../components/ui/PriceTag'
@@ -112,7 +113,7 @@ export function AdminSellerOrdersDrilldown({
       key: 'itemName',
       render: (r) => (
         <div>
-          <span className="text-text-main font-medium">{r.itemName}</span>
+          <span className="text-text-main font-medium"><LocalizedText value={r.itemName} /></span>
           <span className="text-[11px] text-text-muted block mt-0.5">
             ({r.qty}×) • {r.sellerName}
           </span>
@@ -178,7 +179,7 @@ export function AdminSellerOrdersDrilldown({
       <div className="flex justify-between items-center text-xs">
         <span className="text-text-muted">{t('sellers.drilldown.item')}:</span>
         <span className="font-medium text-text-main text-end max-w-[200px] truncate">
-          {r.itemName} ({r.qty}×)
+          <LocalizedText value={r.itemName} /> ({r.qty}×)
         </span>
       </div>
 

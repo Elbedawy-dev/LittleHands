@@ -270,7 +270,7 @@ export default function AdminSellersPage() {
           onRetry={fetchOrders}
         />
       ) : (
-        <AdminSellerOrdersDrilldown orders={orders} loading={ordersLoading} />
+        <AdminSellerOrdersDrilldown orders={orders} sellers={sellers} loading={ordersLoading} />
       )}
 
       {/* سجل التحويلات الصادرة السابقة */}

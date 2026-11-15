@@ -15,28 +15,73 @@ import { calcCommission, getDisplayName } from '../../../utils'
  */
 export function AdminSellerOrdersDrilldown({
   orders = [],
+  sellers = [],
   loading = false,
 }) {
   const { t, i18n } = useTranslation(['admin-core', 'common'])
-  const { formatDate } = useFormat()
+  const { formatDate, formatNumber } = useFormat()
   const [selectedSellerTab, setSelectedSellerTab] = useState('all')
 
-  // استخراج البائعات ديناميكياً من عناصر الطلبات
-  const dynamicSellers = useMemo(() => {
+  // دمج حسابات البائعات (النشطة والموقوفة) مع أي بائعة ظهرت في الطلبات وحساب عدّاد الطلبات
+  const { sellerTabs, totalOrdersCount } = useMemo(() => {
     const map = new Map()
-    orders.forEach((o) => {
-      (o.items || []).forEach((item) => {
-        if (item.sellerId && !map.has(item.sellerId)) {
-          map.set(item.sellerId, {
-            id: item.sellerId,
-            name: item.sellerName || item.sellerId,
-            nameEn: item.sellerNameEn,
-          })
+    const orderSetsBySeller = new Map()
+    const validOrderIds = new Set()
+
+    const upsertSeller = (raw) => {
+      const id = raw?.sellerId || raw?.id || raw?._id
+      if (!id) return
+      const key = String(id)
+      const label = getDisplayName(
+        {
+          id: key,
+          displayName: raw.displayName,
+          name: raw.sellerName || raw.name,
+          nameEn: raw.nameEn || raw.sellerNameEn,
+        },
+        i18n.language
+      )
+      if (!map.has(key)) {
+        map.set(key, { id: key, label: label || key })
+      } else if (label && map.get(key).label === key) {
+        map.get(key).label = label
+      }
+      if (!orderSetsBySeller.has(key)) {
+        orderSetsBySeller.set(key, new Set())
+      }
+    }
+
+    ;(sellers || []).forEach(upsertSeller)
+
+    ;(orders || []).forEach((order, orderIdx) => {
+      const isExcluded = order.status === 'payment_rejected' || order.status === 'cancelled'
+      const orderKey = String(order.id || order._id || order.number || orderIdx)
+      if (!isExcluded) validOrderIds.add(orderKey)
+
+      ;(order.items || []).forEach((item) => {
+        if (!item?.sellerId) return
+        const sKey = String(item.sellerId)
+        upsertSeller({
+          id: sKey,
+          name: item.sellerName,
+          nameEn: item.sellerNameEn,
+        })
+        if (!isExcluded) {
+          orderSetsBySeller.get(sKey).add(orderKey)
         }
       })
     })
-    return Array.from(map.values())
-  }, [orders])
+
+    const list = Array.from(map.values()).map((entry) => ({
+      ...entry,
+      count: orderSetsBySeller.get(entry.id)?.size || 0,
+    }))
+
+    return {
+      sellerTabs: list,
+      totalOrdersCount: validOrderIds.size,
+    }
+  }, [sellers, orders, i18n.language])
 
   // استخراج بنود الوسائل المرتبطة بالبائعات من كافة الطلبات المؤكدة والمسلمة
   const drilldownRows = useMemo(() => {
@@ -76,10 +121,15 @@ export function AdminSellerOrdersDrilldown({
   }, [orders, selectedSellerTab, i18n.language])
 
   const tabs = [
-    { id: 'all', label: t('sellers.drilldown.allSellers') },
-    ...dynamicSellers.map((s) => ({
+    {
+      id: 'all',
+      label: t('sellers.drilldown.allSellers'),
+      badge: formatNumber(totalOrdersCount),
+    },
+    ...sellerTabs.map((s) => ({
       id: s.id,
-      label: getDisplayName(s, i18n.language),
+      label: s.label,
+      badge: formatNumber(s.count),
     })),
   ]
 

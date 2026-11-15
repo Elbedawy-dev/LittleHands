@@ -5,6 +5,7 @@ import '../src/config/i18n'
 import apiClient from '../src/services/api'
 import { AppProviders } from '../src/app/providers'
 import { router } from '../src/app/router'
+import { AdminSellerOrdersDrilldown } from '../src/features/admin/sellers/AdminSellerOrdersDrilldown'
 import { mapUserDTO } from '../../Backend/src/utils/dto.js'
 import { toOrderDTO } from '../../Backend/src/modules/orders/dto.js'
 import { toPayoutDTO } from '../../Backend/src/modules/earnings/dto.js'
@@ -154,5 +155,90 @@ describe('AdminSellersPage resilience & Promise.allSettled (A3)', () => {
     })
 
     view.unmount()
+  })
+
+  it('builds drilldown tabs from all seller accounts (active + suspended) even with 0 orders, plus order-only sellers, with order counts (A4)', () => {
+    apiClient.defaults.adapter = async (config) => ({
+      data: { success: true, data: {} },
+      status: 200,
+      headers: {},
+      config,
+    })
+
+    const view1 = render(
+      <AppProviders>
+        <AdminSellerOrdersDrilldown
+          orders={[]}
+          sellers={[
+            { sellerId: 's1', sellerName: 'ورشة النور', status: 'active' },
+            { sellerId: 's2', sellerName: 'ورشة الأمل', status: 'suspended' },
+          ]}
+        />
+      </AppProviders>
+    )
+
+    const tabs1 = Array.from(view1.container.querySelectorAll('[role="tab"]')).map((el) => el.textContent)
+    expect(tabs1.length).toBe(3)
+    expect(tabs1[1]).toContain('ورشة النور')
+    expect(tabs1[2]).toContain('ورشة الأمل')
+    view1.unmount()
+
+    const view2 = render(
+      <AppProviders>
+        <AdminSellerOrdersDrilldown
+          sellers={[
+            { sellerId: 's1', displayName: { ar: 'ورشة النور', en: 'Noor Workshop' }, status: 'active' },
+            { sellerId: 's2', displayName: { ar: 'ورشة الأمل', en: 'Amal Workshop' }, status: 'suspended' },
+          ]}
+          orders={[
+            {
+              id: 'o1',
+              number: 'LH-1001',
+              status: 'confirmed',
+              delivery: { name: 'Sara' },
+              createdAt: new Date().toISOString(),
+              items: [
+                { sellerId: 's1', sellerName: 'ورشة النور', name: { ar: 'بازل', en: 'Puzzle' }, unitPrice: 100, qty: 1 },
+                { sellerId: 's1', sellerName: 'ورشة النور', name: { ar: 'خرز', en: 'Beads' }, unitPrice: 50, qty: 2 },
+              ],
+            },
+            {
+              id: 'o2',
+              number: 'LH-1002',
+              status: 'delivered',
+              delivery: { name: 'Mona' },
+              createdAt: new Date().toISOString(),
+              items: [
+                { sellerId: 's3', sellerName: 'ورشة قديمة', name: { ar: 'جوخ', en: 'Felt' }, unitPrice: 80, qty: 1 },
+              ],
+            },
+            {
+              id: 'o3',
+              number: 'LH-1003',
+              status: 'cancelled',
+              delivery: { name: 'Laila' },
+              createdAt: new Date().toISOString(),
+              items: [
+                { sellerId: 's2', sellerName: 'ورشة الأمل', name: { ar: 'بطاقات', en: 'Cards' }, unitPrice: 60, qty: 1 },
+              ],
+            },
+          ]}
+        />
+      </AppProviders>
+    )
+
+    const tabs2 = Array.from(view2.container.querySelectorAll('[role="tab"]'))
+    // All + s1 + s2 + s3 (order-only) = 4 tabs
+    expect(tabs2.length).toBe(4)
+    expect(tabs2[0].querySelector('span:last-child')?.textContent).toMatch(/2|٢/)
+    expect(tabs2[1].querySelector('span:last-child')?.textContent).toMatch(/1|١/)
+    expect(tabs2[2].querySelector('span:last-child')?.textContent).toMatch(/0|٠/)
+    expect(tabs2[3].textContent).toContain('ورشة قديمة')
+    expect(tabs2[3].querySelector('span:last-child')?.textContent).toMatch(/1|١/)
+
+    fireEvent.click(tabs2[1])
+    expect(view2.container.textContent).toContain('LH-1001')
+    expect(view2.container.textContent).not.toContain('LH-1002')
+    view2.unmount()
   })
 })

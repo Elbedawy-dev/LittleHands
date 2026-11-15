@@ -110,12 +110,6 @@ export default function SellerCustomRequestsPage() {
     setClaiming(true)
     try {
       const updated = await sellerService.claimCustomRequest(claimTarget.id)
-      toast.success(
-        t(
-          'seller:customRequests.confirm.successToast',
-          'تم استلام الطلب بنجاح! يمكنكِ الآن التواصل مع العميلة.'
-        )
-      )
 
       // Update state locally with full details
       setRequests((prev) =>
@@ -163,9 +157,6 @@ export default function SellerCustomRequestsPage() {
     setUpdatingStatusId(id)
     try {
       const res = await sellerService.updateCustomRequestStatus(id, newStatus)
-      toast.success(
-        isEn ? 'Request status updated successfully' : 'تم تحديث حالة الطلب بنجاح'
-      )
       setRequests((prev) =>
         prev.map((r) =>
           r.id === id

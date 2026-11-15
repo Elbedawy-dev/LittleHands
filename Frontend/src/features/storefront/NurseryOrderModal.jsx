@@ -67,11 +67,6 @@ export function NurseryOrderModal({ isOpen, onClose }) {
         details: formData.details.trim(),
       })
 
-      toast.success(t('home.nurseryBanner.successToast'), {
-        duration: 4000,
-        position: 'top-center',
-      })
-
       // إعادة ضبط النموذج والإغلاق
       setFormData({ name: '', phone: '', nurseryName: '', details: '' })
       onClose()

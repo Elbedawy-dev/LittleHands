@@ -140,7 +140,6 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
   const handleDeleteItem = async (id) => {
     try {
       await deleteNotification(id)
-      toast.success(t('notifications:deleteSuccess'))
     } catch (err) {
       console.error('Failed to delete notification:', err)
       toast.error(getFriendlyError(err, t))
@@ -156,7 +155,6 @@ export function NotificationsList({ role: propRole, showFilters = true }) {
       } else if (confirmDialog === 'clearAll') {
         await deleteNotifications(false)
       }
-      toast.success(t('notifications:clearSuccess'))
       setConfirmDialog(null)
     } catch (err) {
       console.error('Failed to clear notifications:', err)

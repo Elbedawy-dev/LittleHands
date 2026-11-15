@@ -160,12 +160,6 @@ export default function AdminSellersPage() {
         notes,
       })
 
-      toast.success(
-        t('sellers.payoutModal.successToast', {
-          amount,
-        })
-      )
-
       setPayoutModalOpen(false)
       setSelectedSeller(null)
       await fetchData()
@@ -181,7 +175,6 @@ export default function AdminSellersPage() {
   const handleToggleStatus = async (userId, newStatus) => {
     try {
       await adminService.updateUserStatus(userId, newStatus)
-      toast.success(newStatus === 'active' ? t('sellers.statusActiveToast') : t('sellers.statusSuspendedToast'))
       await fetchData()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -194,7 +187,6 @@ export default function AdminSellersPage() {
     try {
       const id = sellerToDelete.userId || sellerToDelete.sellerId || sellerToDelete.id
       await adminService.deleteUser(id)
-      toast.success(t('sellers.deleteSuccess'))
       setSellerToDelete(null)
       await fetchData()
     } catch (err) {

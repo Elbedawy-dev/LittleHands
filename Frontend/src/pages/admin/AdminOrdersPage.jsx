@@ -190,7 +190,6 @@ export default function AdminOrdersPage() {
   const handleArchiveOrder = async (order) => {
     try {
       await orderService.archiveOrder(order.id)
-      toast.success(t('orders.archive.successToast', { number: order.number }))
       await fetchOrders()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -200,7 +199,6 @@ export default function AdminOrdersPage() {
   const handleUnarchiveOrder = async (order) => {
     try {
       await orderService.unarchiveOrder(order.id)
-      toast.success(t('orders.archive.unarchiveSuccessToast', { number: order.number }))
       await fetchOrders()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -213,7 +211,6 @@ export default function AdminOrdersPage() {
     setIsBulkArchiving(true)
     try {
       await Promise.all(toArchive.map((o) => orderService.archiveOrder(o.id)))
-      toast.success(t('orders.archive.bulkArchiveSuccess'))
       await fetchOrders()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -227,7 +224,6 @@ export default function AdminOrdersPage() {
     setDeletingOrder(true)
     try {
       await orderService.deleteOrder(orderToDelete.id)
-      toast.success(t('orders.delete.successToast', { number: orderToDelete.number }))
       if (selectedOrder?.id === orderToDelete.id) {
         setDrawerOpen(false)
         setSelectedOrder(null)

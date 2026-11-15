@@ -122,7 +122,6 @@ export function AdminOrderDrawer({
     setIsUpdatingStatus(true)
     try {
       await orderService.updateOrderStatus(order.id, newStatus)
-      toast.success(t('orders.drawer.statusUpdateSuccess'))
       if (onStatusUpdated) onStatusUpdated()
     } catch (err) {
       toast.error(getFriendlyError(err, t))
@@ -145,7 +144,6 @@ export function AdminOrderDrawer({
         reference: refundRef.trim(),
         note: refundNote.trim(),
       })
-      toast.success(t('orders.drawer.refundSuccessToast'))
       setRefundModalOpen(false)
       setRefundRef('')
       setRefundNote('')

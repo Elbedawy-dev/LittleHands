@@ -121,7 +121,6 @@ export default function AdminSettingsPage() {
       })
 
       setSavedSuccess(true)
-      toast.success(t('settings.saveSuccess'))
       setTimeout(() => setSavedSuccess(false), 4000)
     } catch (err) {
       toast.error(getFriendlyError(err, t))

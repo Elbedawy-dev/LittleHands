@@ -63,7 +63,6 @@ export default function AdminCustomRequestsPage() {
     try {
       setIsDeletingRequest(true)
       await contactService.deleteCustomRequest(id)
-      toast.success(isEn ? 'Custom request deleted successfully' : 'تم حذف طلب التفصيل بنجاح')
       setRequestToDelete(null)
       await fetchRequests()
     } catch (err) {

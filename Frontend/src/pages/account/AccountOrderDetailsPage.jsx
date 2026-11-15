@@ -97,7 +97,6 @@ export default function AccountOrderDetailsPage() {
     setCancelling(true)
     try {
       await orderService.cancelOrder(order.id, { reason: cancelReason.trim() })
-      toast.success(t('profile:orders.cancelOrderSuccess'))
       setCancelModalOpen(false)
       setCancelReason('')
       await fetchOrderDetails()

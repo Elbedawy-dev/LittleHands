@@ -125,7 +125,6 @@ export default function AdminProductsPage() {
       setProducts((prev) =>
         prev.map((item) => (item.id === product.id ? { ...item, isPublished: nextState } : item))
       )
-      toast.success(t('products.togglePublishSuccess'))
     } catch (err) {
       toast.error(getFriendlyError(err, t))
     }
@@ -138,7 +137,6 @@ export default function AdminProductsPage() {
     try {
       await productService.deleteProduct(deleteTarget.id)
       setProducts((prev) => prev.filter((item) => item.id !== deleteTarget.id))
-      toast.success(t('products.deleteSuccess'))
       setDeleteTarget(null)
     } catch (err) {
       toast.error(getFriendlyError(err, t))

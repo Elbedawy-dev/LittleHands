@@ -162,7 +162,6 @@ export default function SellerOrdersPage() {
     setHidingOrder(true)
     try {
       await orderService.hideSellerOrder(orderToHide.id)
-      toast.success(t('orders.hide.successToast', { number: orderToHide.number }))
       if (selectedOrder?.id === orderToHide.id) {
         setSelectedOrder(null)
       }

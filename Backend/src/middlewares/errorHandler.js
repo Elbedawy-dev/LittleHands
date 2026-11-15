@@ -4,6 +4,7 @@ import { getErrorMessage } from '../config/messages.js'
 import { env } from '../config/env.js'
 
 export function errorHandler(err, req, res, _next) {
+  if (res.headersSent || res.writableEnded) return
   let status = err.status || 500
   let code = err.code || 'INTERNAL_SERVER_ERROR'
   let details = err.details

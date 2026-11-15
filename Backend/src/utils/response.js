@@ -5,6 +5,7 @@
  */
 
 export function ok(res, data, meta) {
+  if (res.headersSent || res.writableEnded) return res
   const payload = { success: true, data }
   if (meta !== undefined) {
     payload.meta = meta
@@ -13,6 +14,7 @@ export function ok(res, data, meta) {
 }
 
 export function created(res, data, meta) {
+  if (res.headersSent || res.writableEnded) return res
   const payload = { success: true, data }
   if (meta !== undefined) {
     payload.meta = meta
@@ -21,6 +23,7 @@ export function created(res, data, meta) {
 }
 
 export function paginated(res, { items, total, page, pageSize }, meta) {
+  if (res.headersSent || res.writableEnded) return res
   const totalPages = Math.ceil(total / pageSize) || 1
   const payload = {
     success: true,

@@ -56,7 +56,7 @@ const cartItems = [
   },
 ]
 
-function setupApiMock({ zones = buildZonesWithDelta10(), failShipping = false } = {}) {
+function setupApiMock({ zones = buildZonesWithDelta10(), failShipping = false, requests = [] } = {}) {
   const settingsDoc = {
     platformWallet: '01012345678',
     supportPhone: '01012345678',
@@ -68,6 +68,7 @@ function setupApiMock({ zones = buildZonesWithDelta10(), failShipping = false } 
 
   apiClient.defaults.adapter = async (config) => {
     const cleanUrl = (config.url || '').split('?')[0].replace(/^\/api\/v1/, '')
+    requests.push({ method: (config.method || 'get').toUpperCase(), url: cleanUrl })
     if (cleanUrl === '/auth/me') {
       return { data: { success: true, data: { user: sampleCustomer } }, status: 200, headers: {}, config }
     }
@@ -155,12 +156,22 @@ describe('B1: Unified Dynamic Shipping Rates (Delta = 10 EGP)', () => {
     expect(kafrOption.textContent).toContain('10')
     expect(kafrOption.textContent).not.toContain('55')
 
-    if (activeControl.tagName === 'SELECT') {
-      fireEvent.change(activeControl, { target: { value: 'كفر الشيخ' } })
+    const freshControl = screen.getByLabelText(/محافظة مقر الحضانة/)
+    if (freshControl.tagName === 'SELECT') {
+      fireEvent.change(freshControl, { target: { value: 'كفر الشيخ' } })
     } else {
-      fireEvent.click(activeControl)
-      const optionBtn = await screen.findByRole('option', { name: /كفر الشيخ/ }, { timeout: 5000 })
-      fireEvent.click(optionBtn)
+      fireEvent.click(freshControl)
+      const listbox = screen.queryByRole('listbox')
+      if (listbox) {
+        fireEvent.click(within(listbox).getByRole('option', { name: /كفر الشيخ/ }))
+      } else {
+        const latestControl = screen.getByLabelText(/محافظة مقر الحضانة/)
+        const latestSelect =
+          latestControl.tagName === 'SELECT'
+            ? latestControl
+            : latestControl.parentElement.querySelector('select')
+        fireEvent.change(latestSelect, { target: { value: 'كفر الشيخ' } })
+      }
     }
 
     await waitFor(
@@ -270,5 +281,29 @@ describe('B1: Unified Dynamic Shipping Rates (Delta = 10 EGP)', () => {
         : profileGovTrigger.parentElement.querySelector('select')
     expect(profileSelect.textContent).toContain('كفر الشيخ')
     expect(profileSelect.textContent).not.toMatch(/الشحن|\d+\s*ج\.م|Shipping EGP/i)
+  })
+
+  it('B2: CheckoutPage & DeliveryStep do not fetch or render saved addresses or save-address checkbox', async () => {
+    const requests = []
+    setupApiMock({ requests })
+    sessionStorage.setItem('lh_selected_gov', 'كفر الشيخ')
+    const memRouter = createMemoryRouter(router.routes, { initialEntries: ['/checkout'] })
+    render(
+      <AppProviders>
+        <RouterProvider router={memRouter} />
+      </AppProviders>
+    )
+
+    await screen.findByLabelText(/المحافظة/, {}, { timeout: 5000 })
+    await waitFor(
+      () => {
+        expect(document.body.textContent).toContain('كفر الشيخ')
+      },
+      { timeout: 5000 }
+    )
+
+    expect(requests.some((r) => r.url.includes('/users/me/addresses'))).toBe(false)
+    expect(document.body.textContent).not.toContain('العناوين المسجلة')
+    expect(document.getElementById('save-address-chk')).toBeNull()
   })
 })

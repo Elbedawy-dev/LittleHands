@@ -1,19 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, ArrowLeft, ArrowRight, Bookmark, MapPin, RefreshCw, School, User } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertCircle, ArrowLeft, ArrowRight, MapPin, RefreshCw, School, User } from 'lucide-react'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { Checkbox } from '../../components/ui/Checkbox'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Textarea } from '../../components/ui/Textarea'
-import { getGovernorateName } from '../../config/constants'
 import { useLanguage } from '../../context/LanguageContext'
 import { getGovernorateOptions, useShippingRates } from '../../hooks/useShippingRates'
-import { userService } from '../../services/userService'
 
 /**
  * الخطوة 1: نموذج بيانات الاستلام والحضانة
@@ -30,7 +27,6 @@ export function DeliveryStep({
 }) {
   const { t } = useTranslation(['checkout', 'common'])
   const { isRtl } = useLanguage()
-  const [savedAddresses, setSavedAddresses] = useState([])
   const internalShipping = useShippingRates()
 
   const usingExternalRates = externalGovOptions !== undefined
@@ -55,7 +51,6 @@ export function DeliveryStep({
     address: z.string().min(5, t('checkout:errors.addressRequired')),
     nurseryName: z.string().optional(),
     notes: z.string().optional(),
-    saveAddress: z.boolean().optional(),
   })
 
   const {
@@ -74,7 +69,6 @@ export function DeliveryStep({
       address: initialData.address || '',
       nurseryName: initialData.nurseryName || '',
       notes: initialData.notes || '',
-      saveAddress: initialData.saveAddress !== undefined ? initialData.saveAddress : true,
     },
   })
 
@@ -90,7 +84,6 @@ export function DeliveryStep({
           address: initialData.address || '',
           nurseryName: initialData.nurseryName || '',
           notes: initialData.notes || '',
-          saveAddress: initialData.saveAddress !== undefined ? initialData.saveAddress : true,
         },
         { keepDirtyValues: true }
       )
@@ -103,36 +96,6 @@ export function DeliveryStep({
       setValue('governorate', initialData.governorate, { shouldDirty: false })
     }
   }, [ratesReady, initialData?.governorate, setValue])
-
-  // تحميل العناوين المحفوظة من حساب العميل إن وجدت
-  useEffect(() => {
-    let isMounted = true
-    async function fetchSavedAddresses() {
-      try {
-        const addresses = await userService.getAddresses()
-        if (isMounted && Array.isArray(addresses)) {
-          setSavedAddresses(addresses)
-        }
-      } catch (err) {
-        console.warn('Failed to load saved addresses:', err)
-      }
-    }
-    fetchSavedAddresses()
-    return () => {
-      isMounted = false
-    }
-  }, [])
-
-  // تطبيق بيانات عنوان محفوظ على الحقول
-  const handleSelectSavedAddress = (addr) => {
-    if (!addr) return
-    if (addr.name) setValue('name', addr.name)
-    if (addr.phone) setValue('phone', addr.phone)
-    if (addr.governorate) setValue('governorate', addr.governorate)
-    if (addr.city) setValue('city', addr.city)
-    if (addr.address) setValue('address', addr.address)
-    if (addr.nurseryName) setValue('nurseryName', addr.nurseryName)
-  }
 
   const onSubmit = (data) => {
     if (!ratesReady) return
@@ -156,29 +119,6 @@ export function DeliveryStep({
           </p>
         </div>
       </div>
-
-      {/* شريط اختيار عنوان سابق مسجل */}
-      {savedAddresses.length > 0 && (
-        <div className="mb-6 p-4 rounded-[20px] bg-surface-subtle border border-surface-border space-y-2.5">
-          <div className="flex items-center gap-2 text-xs font-bold text-text-main">
-            <Bookmark className="w-4 h-4 text-brand-orange" />
-            <span>{t('checkout:delivery.savedAddresses')}</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {savedAddresses.map((addr) => (
-              <button
-                key={addr.id}
-                type="button"
-                onClick={() => handleSelectSavedAddress(addr)}
-                className="px-3.5 py-1.5 rounded-full border border-surface-border bg-surface text-xs font-semibold text-text-main hover:border-brand-orange hover:text-brand-orange-text transition-all cursor-pointer shadow-xs"
-              >
-                {addr.nurseryName || addr.name} - {getGovernorateName(addr.governorate, isRtl ? 'ar' : 'en')}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* صف الاسم ورقم الهاتف */}
@@ -272,15 +212,6 @@ export function DeliveryStep({
             rows={2}
             className="text-xs"
             {...register('notes')}
-          />
-        </div>
-
-        {/* خيار حفظ العنوان */}
-        <div className="pt-1">
-          <Checkbox
-            id="save-address-chk"
-            label={t('checkout:delivery.saveAddress')}
-            {...register('saveAddress')}
           />
         </div>
 

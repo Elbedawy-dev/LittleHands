@@ -16,7 +16,6 @@ import { PaymentStep } from '../../features/checkout/PaymentStep'
 import { ReviewStep } from '../../features/checkout/ReviewStep'
 import { getGovernorateOptions, useShippingRates } from '../../hooks/useShippingRates'
 import { orderService } from '../../services/orderService'
-import { userService } from '../../services/userService'
 import { getFriendlyError } from '../../utils'
 
 const CHECKOUT_STORAGE_KEY = 'lh_checkout_flow_state'
@@ -50,7 +49,6 @@ export default function CheckoutPage() {
       address: savedFlow?.delivery?.address || user?.address || '',
       nurseryName: savedFlow?.delivery?.nurseryName || user?.nurseryName || '',
       notes: locState.notes || savedFlow?.delivery?.notes || '',
-      saveAddress: savedFlow?.delivery?.saveAddress !== undefined ? savedFlow?.delivery?.saveAddress : true,
     }
   })
 
@@ -168,23 +166,7 @@ export default function CheckoutPage() {
         screenshotFile: paymentData.screenshotFile || paymentData.screenshotPreview,
       })
 
-      // 3. حفظ العنوان للحساب إن تم اختيار ذلك
-      if (deliveryData.saveAddress) {
-        try {
-          await userService.saveAddress({
-            name: deliveryData.name,
-            phone: deliveryData.phone,
-            governorate: deliveryData.governorate,
-            city: deliveryData.city,
-            address: deliveryData.address,
-            nurseryName: deliveryData.nurseryName,
-          })
-        } catch (addrErr) {
-          console.warn('Could not save address to user book:', addrErr)
-        }
-      }
-
-      // 4. تفريغ السلة وحذف حالة التخزين المؤقت
+      // 3. تفريغ السلة وحذف حالة التخزين المؤقت
       clearCart()
       sessionStorage.removeItem(CHECKOUT_STORAGE_KEY)
       sessionStorage.removeItem('lh_cart_notes')

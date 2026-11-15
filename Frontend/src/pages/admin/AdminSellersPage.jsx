@@ -1,7 +1,9 @@
-import { UserPlus } from 'lucide-react'
+import { AlertCircle, RefreshCw, UserPlus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import { Button } from '../../components/ui/Button'
+import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -17,19 +19,58 @@ import { orderService } from '../../services/orderService'
 import { adminService } from '../../services/adminService'
 import { getFriendlyError } from '../../utils'
 
+const extractItems = (data) =>
+  Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : []
+
+function SectionErrorCard({ title, description, message, retryLabel, onRetry }) {
+  return (
+    <Card padding="lg" className="space-y-4">
+      {title && (
+        <div>
+          <h3 className="font-heading font-black text-lg text-text-main">{title}</h3>
+          {description && <p className="text-xs text-text-muted mt-0.5">{description}</p>}
+        </div>
+      )}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/70 dark:bg-red-950/20 p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+          <p className="text-sm font-medium text-red-800 dark:text-red-200">{message}</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onRetry}
+          startIcon={<RefreshCw className="w-4 h-4" />}
+          className="shrink-0"
+        >
+          {retryLabel}
+        </Button>
+      </div>
+    </Card>
+  )
+}
+
 /**
  * صفحة البائعات وأرباح المنصة (Admin Sellers & Earnings)
  * إدارة المستحقات المالية للبائعتين، حساب عمولة الوساطة (20٪)، وتسجيل حوالات فودافون كاش
  */
 export default function AdminSellersPage() {
-  const { t, i18n } = useTranslation('admin-core')
+  const { t, i18n } = useTranslation(['admin-core', 'common'])
   const isEn = i18n.language === 'en'
   const { fetchNotifications } = useNotifications()
 
   const [sellers, setSellers] = useState([])
+  const [sellersLoading, setSellersLoading] = useState(true)
+  const [sellersError, setSellersError] = useState(null)
+
   const [payouts, setPayouts] = useState([])
+  const [payoutsLoading, setPayoutsLoading] = useState(true)
+  const [payoutsError, setPayoutsError] = useState(null)
+
   const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [ordersLoading, setOrdersLoading] = useState(true)
+  const [ordersError, setOrdersError] = useState(null)
 
   // حالة نافذة تسجيل التحويل
   const [payoutModalOpen, setPayoutModalOpen] = useState(false)
@@ -43,24 +84,61 @@ export default function AdminSellersPage() {
   const [sellerToDelete, setSellerToDelete] = useState(null)
   const [isDeletingSeller, setIsDeletingSeller] = useState(false)
 
+  const loadSection = useCallback(
+    async ({ fetcher, setData, setLoading, setError, fallbackKey }) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await fetcher()
+        setData(extractItems(data))
+      } catch (err) {
+        setError(getFriendlyError(err, t) || t(fallbackKey))
+      } finally {
+        setLoading(false)
+      }
+    },
+    [t]
+  )
+
+  const fetchSellers = useCallback(
+    () =>
+      loadSection({
+        fetcher: () => earningsService.getSellersEarnings(),
+        setData: setSellers,
+        setLoading: setSellersLoading,
+        setError: setSellersError,
+        fallbackKey: 'sellers.cards.loadError',
+      }),
+    [loadSection]
+  )
+
+  const fetchPayouts = useCallback(
+    () =>
+      loadSection({
+        fetcher: () => earningsService.getPayouts({ page: 1, pageSize: 50 }),
+        setData: setPayouts,
+        setLoading: setPayoutsLoading,
+        setError: setPayoutsError,
+        fallbackKey: 'sellers.history.loadError',
+      }),
+    [loadSection]
+  )
+
+  const fetchOrders = useCallback(
+    () =>
+      loadSection({
+        fetcher: () => orderService.getAllOrders({ page: 1, pageSize: 50 }),
+        setData: setOrders,
+        setLoading: setOrdersLoading,
+        setError: setOrdersError,
+        fallbackKey: 'sellers.drilldown.loadError',
+      }),
+    [loadSection]
+  )
+
   const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [sellersData, payoutsData, ordersData] = await Promise.all([
-        earningsService.getSellersEarnings(),
-        earningsService.getPayouts(),
-        orderService.getAllOrders(),
-      ])
-      setSellers(Array.isArray(sellersData) ? sellersData : [])
-      setPayouts(Array.isArray(payoutsData) ? payoutsData : [])
-      setOrders(Array.isArray(ordersData) ? ordersData : [])
-    } catch (err) {
-      console.error('Failed to load sellers earnings:', err)
-      toast.error(getFriendlyError(err, t))
-    } finally {
-      setLoading(false)
-    }
-  }, [t])
+    await Promise.allSettled([fetchSellers(), fetchPayouts(), fetchOrders()])
+  }, [fetchSellers, fetchPayouts, fetchOrders])
 
   useEffect(() => {
     fetchData()
@@ -126,21 +204,6 @@ export default function AdminSellersPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-28 rounded-[24px]" />
-        <Skeleton className="h-[52px] rounded-full" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-80 rounded-[24px]" />
-          <Skeleton className="h-80 rounded-[24px]" />
-        </div>
-        <Skeleton className="h-72 rounded-[24px]" />
-        <Skeleton className="h-72 rounded-[24px]" />
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-8">
       <div>
@@ -163,24 +226,65 @@ export default function AdminSellersPage() {
         </div>
 
         {/* بطاقات البائعات الحرفيات */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {sellers.map((seller) => (
-            <AdminSellerCard
-              key={seller.sellerId || seller.id}
-              seller={seller}
-              onRecordPayout={handleOpenPayoutModal}
-              onToggleStatus={handleToggleStatus}
-              onDeleteSeller={(s) => setSellerToDelete(s)}
+        {sellersLoading ? (
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-80 rounded-[24px]" />
+            <Skeleton className="h-80 rounded-[24px]" />
+          </div>
+        ) : sellersError ? (
+          <div className="mt-6">
+            <SectionErrorCard
+              message={sellersError}
+              retryLabel={t('common:actions.retry')}
+              onRetry={fetchSellers}
             />
-          ))}
-        </div>
+          </div>
+        ) : sellers.length === 0 ? (
+          <div className="mt-6">
+            <Card padding="lg">
+              <p className="text-sm text-text-muted text-center">{t('sellers.cards.empty')}</p>
+            </Card>
+          </div>
+        ) : (
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {sellers.map((seller) => (
+              <AdminSellerCard
+                key={seller.sellerId || seller.id}
+                seller={seller}
+                onRecordPayout={handleOpenPayoutModal}
+                onToggleStatus={handleToggleStatus}
+                onDeleteSeller={(s) => setSellerToDelete(s)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* جدول تدقيق مبيعات وعمولات البائعات بالتفصيل (Orders Drilldown) */}
-      <AdminSellerOrdersDrilldown orders={orders} loading={loading} />
+      {ordersError ? (
+        <SectionErrorCard
+          title={t('sellers.drilldown.title')}
+          description={t('sellers.drilldown.description')}
+          message={ordersError}
+          retryLabel={t('common:actions.retry')}
+          onRetry={fetchOrders}
+        />
+      ) : (
+        <AdminSellerOrdersDrilldown orders={orders} loading={ordersLoading} />
+      )}
 
       {/* سجل التحويلات الصادرة السابقة */}
-      <AdminPayoutsHistoryTable payouts={payouts} loading={loading} />
+      {payoutsError ? (
+        <SectionErrorCard
+          title={t('sellers.history.title')}
+          description={t('sellers.history.description')}
+          message={payoutsError}
+          retryLabel={t('common:actions.retry')}
+          onRetry={fetchPayouts}
+        />
+      ) : (
+        <AdminPayoutsHistoryTable payouts={payouts} loading={payoutsLoading} />
+      )}
 
       {/* نافذة تسجيل تحويل أرباح جديدة */}
       <AdminPayoutModal

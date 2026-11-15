@@ -164,7 +164,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8">
+    <div className="max-w-[1360px] 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       {/* ترويسة الصفحة */}
       <PageHeader
         title={t('storefront:products.pageTitle')}
@@ -222,10 +222,10 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* المحتوى الرئيسي: الشريط الجانبي وشبكة المنتجات */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* الشريط الجانبي للشاشات الكبيرة (Desktop Sidebar) */}
-        <aside className="hidden lg:block lg:col-span-3 bg-surface p-6 rounded-[28px] border border-surface-border shadow-soft sticky top-24">
+      {/* المحتوى الرئيسي: الشريط الجانبي بعرض ثابت ~260px وشبكة المنتجات المتجاوبة */}
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6 lg:gap-7 items-start">
+        {/* الشريط الجانبي للشاشات الكبيرة (Desktop Sidebar ~260px) */}
+        <aside className="hidden lg:block bg-surface p-5 rounded-[24px] border border-surface-border shadow-soft sticky top-24">
           <FilterSidebar
             sellers={sellers}
             filters={filtersState}
@@ -235,19 +235,19 @@ export default function ProductsPage() {
         </aside>
 
         {/* شبكة الوسائل التعليمية ومحتوى النتائج */}
-        <main className="lg:col-span-9 space-y-8">
+        <main className="min-w-0 space-y-6">
           {loading ? (
             /* شبكة التحميل الهيكلي Skeleton */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4 sm:gap-5 items-stretch">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
                 <div
                   key={i}
-                  className="p-3 bg-surface rounded-[24px] border border-surface-border shadow-soft space-y-3"
+                  className="p-2.5 bg-surface rounded-[22px] border border-surface-border shadow-soft space-y-2.5"
                 >
-                  <Skeleton className="aspect-[4/3] w-full rounded-[20px]" />
+                  <Skeleton className="aspect-[4/3] w-full rounded-[18px]" />
                   <Skeleton className="h-4 w-3/4 rounded-md" />
                   <Skeleton className="h-4 w-1/2 rounded-md" />
-                  <div className="pt-3 border-t border-surface-border flex items-center justify-between">
+                  <div className="pt-2.5 border-t border-surface-border flex items-center justify-between">
                     <Skeleton className="h-6 w-16 rounded-md" />
                     <Skeleton className="h-9 w-20 rounded-full" />
                   </div>
@@ -280,7 +280,7 @@ export default function ProductsPage() {
               }
             />
           ) : (
-            /* شبكة المنتجات (4/3/2 أعمدة حسب العرض) */
+            /* شبكة المنتجات (تلقائية auto-fill بحد أدنى 240px للكارت: 3 أعمدة على 1366 و4 على الشاشات الأوسع) */
             <>
               <div className="flex items-center justify-between text-xs font-semibold text-text-muted px-1">
                 <span>
@@ -288,7 +288,10 @@ export default function ProductsPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              <div
+                data-testid="products-grid"
+                className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4 sm:gap-5 items-stretch"
+              >
                 {products.map((prod) => (
                   <ProductCard key={prod.id} product={prod} />
                 ))}

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Card } from '../../components/ui/Card'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { ProductImage } from '../../components/ui/ProductImage'
-import { CATEGORIES } from '../../config/constants'
+import { CATEGORIES, getGovernorateName } from '../../config/constants'
 import { useLanguage } from '../../context/LanguageContext'
 import { pickLocale } from '../../utils'
 
@@ -13,7 +13,9 @@ import { pickLocale } from '../../utils'
 export function CheckoutSummaryCard({
   items = [],
   subtotal = 0,
-  shippingRate = 0,
+  shippingRate = null,
+  isShippingLoading = false,
+  shippingError = null,
   grandTotal = 0,
   governorate = '',
   className,
@@ -84,16 +86,34 @@ export function CheckoutSummaryCard({
         <div className="flex items-center justify-between text-text-muted">
           <span>
             {t('checkout:orderSummary.shipping')}
-            {governorate && <span className="ms-1 font-bold text-text-main">({governorate})</span>}
+            {governorate && (
+              <span className="ms-1 font-bold text-text-main">
+                ({getGovernorateName(governorate, isRtl ? 'ar' : 'en') || governorate})
+              </span>
+            )}
           </span>
-          <PriceTag amount={shippingRate} size="sm" />
+          {shippingRate !== null && shippingRate !== undefined ? (
+            <PriceTag amount={shippingRate} size="sm" />
+          ) : (
+            <span className="text-xs font-bold text-text-muted">
+              {isShippingLoading || shippingError
+                ? t('common:shipping.loadingRates')
+                : t('common:shipping.selectGovHint')}
+            </span>
+          )}
         </div>
 
         <div className="pt-3 border-t border-surface-border flex items-baseline justify-between">
           <span className="font-heading font-black text-sm sm:text-base text-text-main">
             {t('checkout:orderSummary.total')}
           </span>
-          <PriceTag amount={grandTotal} size="lg" />
+          {shippingRate !== null && shippingRate !== undefined ? (
+            <PriceTag amount={grandTotal} size="lg" />
+          ) : (
+            <span className="text-xs font-bold text-text-muted">
+              {isShippingLoading || shippingError ? t('common:shipping.loadingRates') : '—'}
+            </span>
+          )}
         </div>
       </div>
     </Card>

@@ -161,5 +161,11 @@
     "confirmDialogDefaultCancel": "Cancel",
     "connection_error": "Cannot connect to server",
     "connection_error_desc": "Please check your internet connection and try again."
+  },
+  "shipping": {
+    "loadingRates": "Loading shipping rates...",
+    "loadFailed": "Unable to load shipping rates right now, please retry.",
+    "selectGovHint": "Select governorate to calculate shipping",
+    "chooseFromList": "Choose from list"
   }
 }

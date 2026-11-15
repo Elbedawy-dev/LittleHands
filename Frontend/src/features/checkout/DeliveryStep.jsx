@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, ArrowRight, Bookmark, MapPin, School, User } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, Bookmark, MapPin, RefreshCw, School, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -10,18 +10,39 @@ import { Checkbox } from '../../components/ui/Checkbox'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Textarea } from '../../components/ui/Textarea'
-import { GOVERNORATES, getGovernorateName } from '../../config/constants'
+import { getGovernorateName } from '../../config/constants'
 import { useLanguage } from '../../context/LanguageContext'
+import { getGovernorateOptions, useShippingRates } from '../../hooks/useShippingRates'
 import { userService } from '../../services/userService'
 
 /**
  * الخطوة 1: نموذج بيانات الاستلام والحضانة
  * التحقق من صحة رقم الهاتف والمحافظة والعنوان باستخدام zod
  */
-export function DeliveryStep({ initialData = {}, onComplete }) {
+export function DeliveryStep({
+  initialData = {},
+  governorateOptions: externalGovOptions,
+  isShippingLoading: externalLoading,
+  shippingError: externalError,
+  onRetryShipping,
+  onGovernorateChange,
+  onComplete,
+}) {
   const { t } = useTranslation(['checkout', 'common'])
   const { isRtl } = useLanguage()
   const [savedAddresses, setSavedAddresses] = useState([])
+  const internalShipping = useShippingRates()
+
+  const usingExternalRates = externalGovOptions !== undefined
+  const isShippingLoading = usingExternalRates ? Boolean(externalLoading) : internalShipping.isLoading
+  const shippingError = usingExternalRates ? externalError : internalShipping.error
+  const retryShipping = onRetryShipping || internalShipping.refresh
+  const governorateOptions = usingExternalRates
+    ? externalGovOptions
+    : getGovernorateOptions(internalShipping, isRtl ? 'ar' : 'en', {
+        currencyLabel: t('common:currency'),
+      })
+  const ratesReady = !isShippingLoading && !shippingError && governorateOptions.length > 0
 
   // مخطط التحقق Zod الصارم لرقم الهاتف والعنوان
   const deliverySchema = z.object({
@@ -57,21 +78,31 @@ export function DeliveryStep({ initialData = {}, onComplete }) {
     },
   })
 
-  // تحديث قيم الحقول عند وصول بيانات المستخدم
+  // تحديث قيم الحقول عند وصول بيانات المستخدم مع الحفاظ على ما عدّلته المستخدمة
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
-      reset({
-        name: initialData.name || '',
-        phone: initialData.phone || '',
-        governorate: initialData.governorate || 'القاهرة',
-        city: initialData.city || '',
-        address: initialData.address || '',
-        nurseryName: initialData.nurseryName || '',
-        notes: initialData.notes || '',
-        saveAddress: initialData.saveAddress !== undefined ? initialData.saveAddress : true,
-      })
+      reset(
+        {
+          name: initialData.name || '',
+          phone: initialData.phone || '',
+          governorate: initialData.governorate || 'القاهرة',
+          city: initialData.city || '',
+          address: initialData.address || '',
+          nurseryName: initialData.nurseryName || '',
+          notes: initialData.notes || '',
+          saveAddress: initialData.saveAddress !== undefined ? initialData.saveAddress : true,
+        },
+        { keepDirtyValues: true }
+      )
     }
   }, [initialData, reset])
+
+  // مزامنة القيمة الظاهرة في قائمة المحافظة بعد اكتمال تحميل الخيارات من الباك
+  useEffect(() => {
+    if (ratesReady && initialData?.governorate) {
+      setValue('governorate', initialData.governorate, { shouldDirty: false })
+    }
+  }, [ratesReady, initialData?.governorate, setValue])
 
   // تحميل العناوين المحفوظة من حساب العميل إن وجدت
   useEffect(() => {
@@ -104,8 +135,11 @@ export function DeliveryStep({ initialData = {}, onComplete }) {
   }
 
   const onSubmit = (data) => {
+    if (!ratesReady) return
     onComplete(data)
   }
+
+  const govRegister = register('governorate')
 
   return (
     <Card padding="lg" className="shadow-soft">
@@ -188,14 +222,23 @@ export function DeliveryStep({ initialData = {}, onComplete }) {
             id="delivery-governorate"
             label={t('checkout:delivery.governorate')}
             required
+            disabled={!ratesReady}
             error={errors.governorate?.message}
-            {...register('governorate')}
+            {...govRegister}
+            onChange={(e) => {
+              govRegister.onChange(e)
+              onGovernorateChange?.(e.target.value)
+            }}
           >
-            {GOVERNORATES.map((g) => (
-              <option key={g.name} value={g.name}>
-                {isRtl ? g.name : (g.nameEn || g.name)} ({g.shippingRate} {t('common:currency')})
-              </option>
-            ))}
+            {!ratesReady ? (
+              <option value="">{t('common:shipping.loadingRates')}</option>
+            ) : (
+              governorateOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))
+            )}
           </Select>
         </div>
 
@@ -241,11 +284,31 @@ export function DeliveryStep({ initialData = {}, onComplete }) {
           />
         </div>
 
+        {!ratesReady && (
+          <div className="p-3.5 rounded-[16px] bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs text-amber-800 dark:text-amber-300">
+            <div className="flex items-center gap-2 font-bold">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{t('common:shipping.loadingRates')}</span>
+            </div>
+            {shippingError && !isShippingLoading && (
+              <button
+                type="button"
+                onClick={retryShipping}
+                className="inline-flex items-center gap-1 font-bold text-brand-orange-text dark:text-brand-orange hover:underline shrink-0 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{t('common:actions.retry')}</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* زر المتابعة للخطوة التالية */}
         <div className="pt-4 border-t border-surface-border flex justify-end">
           <Button
             type="submit"
             size="lg"
+            disabled={!ratesReady}
             className="w-full sm:w-auto font-bold whitespace-nowrap shadow-soft px-8"
             endIcon={
               isRtl ? (

@@ -15,6 +15,7 @@ import { LocalizedText } from '../../components/ui/LocalizedText'
 import { PriceTag } from '../../components/ui/PriceTag'
 import { ProductImage } from '../../components/ui/ProductImage'
 import { Spinner } from '../../components/ui/Spinner'
+import { getGovernorateName } from '../../config/constants'
 import { useLanguage } from '../../context/LanguageContext'
 import { pickLocaleText } from '../../utils'
 
@@ -27,8 +28,11 @@ export function ReviewStep({
   paymentData = {},
   items = [],
   subtotal = 0,
-  shippingRate = 0,
+  shippingRate = null,
   grandTotal = 0,
+  isShippingLoading = false,
+  shippingError = null,
+  isShippingReady = true,
   onSubmitOrder,
   onBack,
   isSubmitting = false,
@@ -88,7 +92,7 @@ export function ReviewStep({
           <div>
             <span className="text-text-muted block text-[11px]">المحافظة والمركز:</span>
             <span className="font-bold text-text-main">
-              {deliveryData.governorate} - {deliveryData.city}
+              {getGovernorateName(deliveryData.governorate, language) || deliveryData.governorate} - {deliveryData.city}
             </span>
           </div>
 
@@ -212,11 +216,25 @@ export function ReviewStep({
           </div>
           <div className="flex items-center justify-between text-text-muted">
             <span>{t('checkout:orderSummary.shipping')}</span>
-            <PriceTag amount={shippingRate} size="sm" />
+            {shippingRate !== null && shippingRate !== undefined ? (
+              <PriceTag amount={shippingRate} size="sm" />
+            ) : (
+              <span className="text-xs font-bold text-text-muted">
+                {isShippingLoading || shippingError
+                  ? t('common:shipping.loadingRates')
+                  : t('common:shipping.selectGovHint')}
+              </span>
+            )}
           </div>
           <div className="pt-2 border-t border-surface-border flex items-baseline justify-between font-bold text-text-main">
             <span>{t('checkout:orderSummary.total')}</span>
-            <PriceTag amount={grandTotal} size="md" />
+            {shippingRate !== null && shippingRate !== undefined ? (
+              <PriceTag amount={grandTotal} size="md" />
+            ) : (
+              <span className="text-xs font-bold text-text-muted">
+                {isShippingLoading || shippingError ? t('common:shipping.loadingRates') : '—'}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -249,7 +267,7 @@ export function ReviewStep({
         <Button
           type="button"
           onClick={onSubmitOrder}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !isShippingReady || shippingRate === null}
           size="lg"
           className="w-full sm:w-auto font-bold whitespace-nowrap shadow-soft px-8"
           startIcon={isSubmitting ? <Spinner size="sm" /> : <Send className="w-4 h-4" />}

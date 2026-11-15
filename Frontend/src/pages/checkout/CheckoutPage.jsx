@@ -6,16 +6,16 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Spinner } from '../../components/ui/Spinner'
 import { Stepper } from '../../components/ui/Stepper'
-import { GOVERNORATES } from '../../config/constants'
 import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { CheckoutErrorBoundary } from '../../features/checkout/CheckoutErrorBoundary'
 import { CheckoutSummaryCard } from '../../features/checkout/CheckoutSummaryCard'
 import { DeliveryStep } from '../../features/checkout/DeliveryStep'
 import { PaymentStep } from '../../features/checkout/PaymentStep'
 import { ReviewStep } from '../../features/checkout/ReviewStep'
+import { getGovernorateOptions, useShippingRates } from '../../hooks/useShippingRates'
 import { orderService } from '../../services/orderService'
-import { settingsService } from '../../services/settingsService'
 import { userService } from '../../services/userService'
 import { getFriendlyError } from '../../utils'
 
@@ -23,6 +23,7 @@ const CHECKOUT_STORAGE_KEY = 'lh_checkout_flow_state'
 
 export default function CheckoutPage() {
   const { t } = useTranslation(['checkout', 'common', 'cart'])
+  const { isRtl } = useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth()
@@ -61,7 +62,7 @@ export default function CheckoutPage() {
     screenshotPreview: savedFlow?.payment?.screenshotPreview || null,
   }))
 
-  const [shippingRates, setShippingRates] = useState(null)
+  const shipping = useShippingRates({ revalidate: true })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
@@ -71,25 +72,6 @@ export default function CheckoutPage() {
       navigate(`/login?next=${encodeURIComponent('/checkout')}`, { replace: true })
     }
   }, [isAuthLoading, isAuthenticated, navigate])
-
-  // جلب أسعار الشحن المحدثة من الخدمة
-  useEffect(() => {
-    let isMounted = true
-    async function loadRates() {
-      try {
-        const rates = await settingsService.getShippingRates()
-        if (isMounted && rates) {
-          setShippingRates(rates)
-        }
-      } catch (err) {
-        console.warn('Failed to load shipping rates:', err)
-      }
-    }
-    loadRates()
-    return () => {
-      isMounted = false
-    }
-  }, [])
 
   // مزامنة حالة الخطوة والبيانات مع sessionStorage للاستمرار عند التحديث
   useEffect(() => {
@@ -124,24 +106,24 @@ export default function CheckoutPage() {
     }
   }, [step, deliveryData, paymentData])
 
-  // حساب تكلفة الشحن والإجمالي النهائي
-  const currentGov = GOVERNORATES.find((g) => g.name === deliveryData.governorate)
-  const shippingRate = (() => {
-    if (!currentGov) return 40
-    if (shippingRates && shippingRates[currentGov.zoneId] !== undefined) {
-      return shippingRates[currentGov.zoneId]
-    }
-    return currentGov.shippingRate || 40
-  })()
+  // حساب تكلفة الشحن والإجمالي النهائي ديناميكياً من أسعار الباك
+  const isShippingReady = shipping.isLoaded && !shipping.isLoading && !shipping.error
+  const governorateOptions = isShippingReady
+    ? getGovernorateOptions(shipping, isRtl ? 'ar' : 'en', { currencyLabel: t('common:currency') })
+    : []
+  const shippingRate = isShippingReady ? shipping.getRateForGov(deliveryData.governorate) : null
+  const grandTotal = shippingRate !== null ? subtotal + shippingRate : subtotal
 
-  const grandTotal = subtotal + shippingRate
-
-  // خطوات المعالج الثلاث
+  // التعامل مع إكمال الخطوة 1
   const stepsConfig = [
     { label: t('checkout:steps.delivery') },
     { label: t('checkout:steps.payment') },
     { label: t('checkout:steps.review') },
   ]
+
+  const handleGovernorateChange = (gov) => {
+    setDeliveryData((prev) => ({ ...prev, governorate: gov }))
+  }
 
   // التعامل مع إكمال الخطوة 1
   const handleDeliveryComplete = (data) => {
@@ -271,6 +253,11 @@ export default function CheckoutPage() {
             {step === 0 && (
               <DeliveryStep
                 initialData={deliveryData}
+                governorateOptions={governorateOptions}
+                isShippingLoading={shipping.isLoading}
+                shippingError={shipping.error}
+                onRetryShipping={shipping.refresh}
+                onGovernorateChange={handleGovernorateChange}
                 onComplete={handleDeliveryComplete}
               />
             )}
@@ -295,6 +282,9 @@ export default function CheckoutPage() {
                 subtotal={subtotal}
                 shippingRate={shippingRate}
                 grandTotal={grandTotal}
+                isShippingLoading={shipping.isLoading}
+                shippingError={shipping.error}
+                isShippingReady={isShippingReady}
                 onSubmitOrder={handleFinalSubmit}
                 onBack={() => {
                   setStep(1)
@@ -313,6 +303,8 @@ export default function CheckoutPage() {
             items={items}
             subtotal={subtotal}
             shippingRate={shippingRate}
+            isShippingLoading={shipping.isLoading}
+            shippingError={shipping.error}
             grandTotal={grandTotal}
             governorate={deliveryData.governorate}
             className="shadow-soft"

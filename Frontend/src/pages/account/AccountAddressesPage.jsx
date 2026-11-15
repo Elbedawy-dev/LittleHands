@@ -53,9 +53,7 @@ export default function AccountAddressesPage() {
 
   const governorateOptions = GOVERNORATES.map((g) => ({
     value: g.name,
-    label: isEn
-      ? `${g.nameEn || g.name} (Shipping EGP ${g.shippingRate})`
-      : `${g.name} (الشحن ${g.shippingRate} ج.م)`,
+    label: isEn ? g.nameEn || g.name : g.name,
   }))
 
   const fetchAddresses = async () => {

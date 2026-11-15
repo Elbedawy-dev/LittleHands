@@ -4,3 +4,9 @@ export { useFormat } from './useFormat'
 export { useMediaQuery } from './useMediaQuery'
 export { usePrivateReceipt } from './usePrivateReceipt'
 export { useScrollLock } from './useScrollLock'
+export {
+  useShippingRates,
+  getGovernorateOptions,
+  getShippingRateForGovernorate,
+  normalizeShippingRatesPayload,
+} from './useShippingRates'

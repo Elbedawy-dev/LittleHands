@@ -161,5 +161,11 @@
     "confirmDialogDefaultCancel": "إلغاء",
     "connection_error": "تعذر الاتصال بالخادم",
     "connection_error_desc": "يرجى التحقق من اتصالك بالإنترنت ثم إعادة المحاولة."
+  },
+  "shipping": {
+    "loadingRates": "جارٍ تحميل أسعار الشحن...",
+    "loadFailed": "تعذر تحميل أسعار الشحن حالياً، يرجى إعادة المحاولة.",
+    "selectGovHint": "اختاري المحافظة لحساب الشحن",
+    "chooseFromList": "اختاري من القائمة"
   }
 }

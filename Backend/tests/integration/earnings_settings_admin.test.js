@@ -3,7 +3,7 @@ import request from 'supertest'
 import mongoose from 'mongoose'
 import { createApp } from '../../src/app.js'
 import { authedAgent } from '../helpers/authedAgent.js'
-import { createUser, createOrder } from '../helpers/factories.js'
+import { createUser, createOrder, createProduct } from '../helpers/factories.js'
 import { Payout } from '../../src/db/models/Payout.js'
 import { Order } from '../../src/db/models/Order.js'
 import { Setting } from '../../src/db/models/Setting.js'
@@ -543,6 +543,56 @@ describe('B4: earnings, settings, admin', () => {
       const audit = await AuditLog.findOne({ action: 'SHIPPING_RATES_UPDATED' }).sort({ createdAt: -1 })
       expect(audit.meta.before).toBeTruthy()
       expect(audit.meta.after).toHaveLength(2)
+    })
+
+    it('B1: unified delta_canal = 10 EGP is exposed in meta.governorates and applied to orders', async () => {
+      const { agent: admin } = await authedAgent(app, 'admin')
+      const { agent: customer } = await authedAgent(app, 'customer', { emailVerified: true })
+      const seller = await createUser({ role: 'seller', status: 'active' })
+      const product = await createProduct({ sellerId: seller._id, price: 200, stock: 5 })
+
+      const updateRes = await admin.put('/api/v1/admin/settings/shipping-rates').send({
+        delta_canal: 10,
+      })
+      expect(updateRes.status).toBe(200)
+      expect(updateRes.body.data.delta_canal).toBe(10)
+      expect(updateRes.body.meta.governorates).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'كفر الشيخ',
+            nameEn: 'Kafr El Sheikh',
+            zoneId: 'delta_canal',
+            price: 10,
+          }),
+        ])
+      )
+
+      const ratesRes = await request(app).get('/api/v1/settings/shipping-rates')
+      expect(ratesRes.status).toBe(200)
+      expect(ratesRes.body.data.delta_canal).toBe(10)
+      const kafr = ratesRes.body.meta.governorates.find((g) => g.name === 'كفر الشيخ')
+      expect(kafr).toEqual({
+        name: 'كفر الشيخ',
+        nameEn: 'Kafr El Sheikh',
+        zoneId: 'delta_canal',
+        price: 10,
+      })
+
+      const orderRes = await customer.post('/api/v1/orders').send({
+        items: [{ productId: product._id.toString(), qty: 2 }],
+        delivery: {
+          name: 'حضانة النور',
+          phone: '01099887766',
+          governorate: 'كفر الشيخ',
+          city: 'دسوق',
+          address: 'شارع الجيش مبنى 4',
+          nurseryName: 'حضانة النور',
+        },
+      })
+      expect(orderRes.status).toBe(201)
+      expect(orderRes.body.data.shipping).toBe(10)
+      expect(orderRes.body.data.subtotal).toBe(400)
+      expect(orderRes.body.data.total).toBe(410)
     })
   })
 })

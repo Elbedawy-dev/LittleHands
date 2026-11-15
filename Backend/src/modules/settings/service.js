@@ -6,6 +6,7 @@ import {
   mapSettingsDTO,
   toAdminSettingsDTO,
   toPublicSettingsDTO,
+  toShippingGovernoratesDTO,
   toShippingRatesMap,
   toShippingZonesDTO,
 } from './dto.js'
@@ -72,12 +73,13 @@ export const settingsService = {
     return toPublicSettingsDTO(await getSettingsDoc())
   },
 
-  /** Price map by zone id + full zone list (for admin screens). */
+  /** Price map by zone id + full zone & governorate lists. */
   async getShippingRates() {
     const doc = await getSettingsDoc()
     return {
       rates: toShippingRatesMap(doc.shippingRates),
       zones: toShippingZonesDTO(doc.shippingRates),
+      governorates: toShippingGovernoratesDTO(doc.shippingRates),
     }
   },
 
@@ -148,7 +150,11 @@ export const settingsService = {
     await doc.save()
     const after = toShippingZonesDTO(doc.shippingRates)
     await audit.log(actorId, 'SHIPPING_RATES_UPDATED', 'Setting', doc._id.toString(), { before, after }, ip)
-    return { rates: toShippingRatesMap(doc.shippingRates), zones: after }
+    return {
+      rates: toShippingRatesMap(doc.shippingRates),
+      zones: after,
+      governorates: toShippingGovernoratesDTO(doc.shippingRates),
+    }
   },
 }
 

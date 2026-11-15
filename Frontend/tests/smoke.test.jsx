@@ -22,6 +22,7 @@ import {
 import {
   toShippingRatesMap,
   toShippingZonesDTO,
+  toShippingGovernoratesDTO,
   toPublicSettingsDTO,
   toAdminSettingsDTO,
 } from '../../Backend/src/modules/settings/dto.js'
@@ -375,7 +376,10 @@ function createSmokeAdapter(role, fixtures) {
       return makeResponse(
         config,
         toShippingRatesMap(rawSettings.shippingRates),
-        { zones: toShippingZonesDTO(rawSettings.shippingRates) }
+        {
+          zones: toShippingZonesDTO(rawSettings.shippingRates),
+          governorates: toShippingGovernoratesDTO(rawSettings.shippingRates),
+        }
       )
     }
     if (cleanUrl === '/catalog/categories') {

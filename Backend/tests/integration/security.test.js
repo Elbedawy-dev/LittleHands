@@ -3,6 +3,7 @@ import request from 'supertest'
 import jwt from 'jsonwebtoken'
 import { createApp } from '../../src/app.js'
 import { authedAgent } from '../helpers/authedAgent.js'
+import { createUser } from '../helpers/factories.js'
 
 describe('Security Middlewares & Error Envelope', () => {
   const app = createApp()
@@ -62,21 +63,24 @@ describe('Security Middlewares & Error Envelope', () => {
   })
 
   it('verifies authentication cookies carry httpOnly and sameSite flags', async () => {
+    const email = `cookies_${Date.now()}@nursery.eg`
+    await createUser({
+      name: 'أمن الكوكيز',
+      email,
+      phone: '01012345679',
+      emailVerified: true,
+    })
+
     const res = await request(app)
-      .post('/api/v1/auth/register')
+      .post('/api/v1/auth/login')
       .set('X-Requested-With', 'lh-web')
       .set('Origin', 'http://localhost:5173')
       .send({
-        name: 'أمن الكوكيز',
-        email: `cookies_${Date.now()}@nursery.eg`,
-        phone: '01012345679',
-        password: 'Password123!',
-        governorate: 'القاهرة',
-        city: 'المعادي',
-        address: 'شارع 1',
+        identifier: email,
+        password: 'TestPass123!',
       })
 
-    expect(res.status).toBe(201)
+    expect(res.status).toBe(200)
     const setCookie = res.headers['set-cookie']
     expect(setCookie).toBeDefined()
 

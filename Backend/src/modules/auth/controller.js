@@ -6,17 +6,11 @@ import { created, ok } from '../../utils/response.js'
 
 export const authController = {
   register: asyncHandler(async (req, res) => {
-    const result = await authService.register(req.body, {
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    })
-
-    res.cookie('lh_at', result.accessToken, getCookieOptions('access'))
-    res.cookie('lh_rt', result.refreshToken, getCookieOptions('refresh'))
+    const result = await authService.register(req.body)
 
     return created(res, {
-      user: toAuthUserDTO(result.user),
-      token: result.accessToken,
+      email: result.email,
+      requiresVerification: true,
     })
   }),
 
@@ -92,11 +86,24 @@ export const authController = {
       code: req.body.code,
       user: req.user,
       email: req.body.email,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     })
-    return ok(res, {
+
+    if (result.accessToken && result.refreshToken) {
+      res.cookie('lh_at', result.accessToken, getCookieOptions('access'))
+      res.cookie('lh_rt', result.refreshToken, getCookieOptions('refresh'))
+    }
+
+    const responseData = {
       verified: true,
       user: toAuthUserDTO(result.user),
-    })
+    }
+    if (result.accessToken) {
+      responseData.token = result.accessToken
+    }
+
+    return ok(res, responseData)
   }),
 
   resendCode: asyncHandler(async (req, res) => {

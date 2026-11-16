@@ -75,7 +75,6 @@ export function AuthProvider({ children }) {
 
   const register = async (data) => {
     const res = await authService.register(data)
-    setUser(res.user)
     return res
   }
 

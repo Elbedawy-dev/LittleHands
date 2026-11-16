@@ -9,6 +9,7 @@ import { Order } from '../../src/db/models/Order.js'
 import { Setting } from '../../src/db/models/Setting.js'
 import { OtpCode } from '../../src/db/models/OtpCode.js'
 import { Notification } from '../../src/db/models/Notification.js'
+import { User } from '../../src/db/models/User.js'
 import { email } from '../../src/infra/email/index.js'
 import { jobs } from '../../src/jobs/index.js'
 
@@ -80,35 +81,32 @@ describe('End-to-End User Flow & Financial Reconciliation', () => {
         address: 'شارع النصر 10',
       })
     expect(regRes.status).toBe(201)
-    const customerUser = regRes.body.data.user
+    expect(regRes.body.data).toEqual({
+      email: 'mariam@nursery.eg',
+      requiresVerification: true,
+    })
+    expect(regRes.headers['set-cookie']).toBeUndefined()
+    const customerUser = await User.findOne({ email: 'mariam@nursery.eg' })
+    expect(customerUser).toBeTruthy()
     expect(customerUser.emailVerified).toBe(false)
     expect(email.getCaptured().some((e) => e.to === 'mariam@nursery.eg' && e.templateKey === 'verify-email')).toBe(true)
 
-    // Customer authenticated agent
+    // Customer agent starts unauthenticated (no cookies until OTP verification succeeds)
     const customerAgent = request.agent(app)
     customerAgent.set('X-Requested-With', 'lh-web')
     customerAgent.set('Origin', 'http://localhost:5173')
-    const cookies = regRes.headers['set-cookie']
-    if (cookies) customerAgent.set('Cookie', cookies)
 
-    // 2. Customer verifies email with OTP
-    const otpDoc = await OtpCode.findOne({ userId: customerUser.id }).sort({ createdAt: -1 })
+    // 2. Customer verifies email with OTP (opens session cookies)
+    const otpDoc = await OtpCode.findOne({ userId: customerUser._id }).sort({ createdAt: -1 })
     expect(otpDoc).toBeDefined()
 
-    // Query plain code from event or DB verification
-    const verifyRes = await customerAgent
+    otpDoc.codeHash = (await import('../../src/utils/crypto.js')).sha256('654321')
+    await otpDoc.save()
+    const validVerifyRes = await customerAgent
       .post('/api/v1/auth/verify-email')
-      .send({ email: 'mariam@nursery.eg', code: '123456' })
-    // If test code random, verify OTP code hash matching
-    if (verifyRes.status === 400) {
-      // Direct set for testing verify flow
-      otpDoc.codeHash = (await import('../../src/utils/crypto.js')).sha256('654321')
-      await otpDoc.save()
-      const validVerifyRes = await customerAgent
-        .post('/api/v1/auth/verify-email')
-        .send({ email: 'mariam@nursery.eg', code: '654321' })
-      expect(validVerifyRes.status).toBe(200)
-    }
+      .send({ email: 'mariam@nursery.eg', code: '654321' })
+    expect(validVerifyRes.status).toBe(200)
+    expect(validVerifyRes.headers['set-cookie']).toBeDefined()
 
     // 3. Products in stock
     const p1 = await createProduct({

@@ -20,7 +20,10 @@ export function StickyMobileBar({ product, onAddToCart }) {
   const productName = pickLocale(product.name, language).text
 
   return (
-    <div className="md:hidden fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] inset-x-0 z-30 bg-surface/95 backdrop-blur-md border-t border-surface-border px-4 py-3 shadow-soft-lg flex items-center justify-between gap-3">
+    <div
+      data-testid="sticky-mobile-bar"
+      className="md:hidden fixed bottom-[calc(var(--mobile-tabbar-h)+env(safe-area-inset-bottom))] inset-x-0 z-30 bg-surface/95 backdrop-blur-md border-t border-surface-border px-4 py-3 shadow-soft-lg flex items-center justify-between gap-3"
+    >
       <div className="flex flex-col text-start overflow-hidden min-w-0 pe-2">
         <span className="text-[11px] font-semibold text-text-muted truncate max-w-[165px]" data-user-content="true">
           {productName}

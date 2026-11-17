@@ -41,6 +41,7 @@
   --border-focus: #ff8a3d;
   --text-main: #2b2233;
   --text-muted: #72627a;
+  --mobile-tabbar-h: 72px;
 }
 
 .dark {

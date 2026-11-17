@@ -14,7 +14,7 @@ export function PublicLayout() {
       <Navbar />
 
       {/* منطقة المحتوى مع هامش سفلي للموبايل لتفادي تداخل شريط التبويب */}
-      <main className="flex-1 pb-20 md:pb-0">
+      <main className="flex-1 pb-[calc(var(--mobile-tabbar-h)+0.75rem+env(safe-area-inset-bottom))] md:pb-0">
         <Outlet />
       </main>
 

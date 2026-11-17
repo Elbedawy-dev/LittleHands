@@ -1,21 +1,12 @@
 import {
   Bell,
-  CreditCard,
-  FolderTree,
   Home,
-  LayoutDashboard,
   LogOut,
-  MessageSquare,
   Moon,
-  Package,
-  Settings,
   ShoppingBag,
   Sun,
-  User,
-  Users,
-  Wallet,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -24,10 +15,14 @@ import { useLanguage } from '../../context/LanguageContext'
 import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
 import { NotificationsDropdown } from '../../features/notifications/NotificationsDropdown'
-import { paymentService } from '../../services/paymentService'
 import { cn, getDisplayName, isInSection } from '../../utils'
 import { Avatar } from '../ui/Avatar'
 import { Logo } from '../ui/Logo'
+import {
+  getAdminNavItems,
+  getSellerNavItems,
+  usePendingPaymentsCount,
+} from './dashboardNav'
 import { MobileTopBar } from './MobileTopBar'
 
 export function DashboardLayout({ role: propRole }) {
@@ -42,51 +37,13 @@ export function DashboardLayout({ role: propRole }) {
 
   const currentRole = propRole || userRole || 'seller'
   const [notifOpen, setNotifOpen] = useState(false)
-  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0)
+  const pendingPaymentsCount = usePendingPaymentsCount(currentRole)
   const bellBtnRef = useRef(null)
 
-  // جلب عدد مدفوعات فودافون كاش المعلقة للإدارة
-  useEffect(() => {
-    if (currentRole === 'admin') {
-      paymentService
-        .getPayments({ status: 'pending' })
-        .then((res) => setPendingPaymentsCount(res.length))
-        .catch(() => {})
-    }
-  }, [currentRole, pathname])
-
-  // عناصر لوحة تحكم البائعة
-  const sellerNav = [
-    { href: '/seller', labelKey: 'nav:seller.dashboard', icon: <LayoutDashboard className="w-5 h-5" />, exact: true },
-    { href: '/seller/products', labelKey: 'nav:seller.products', icon: <Package className="w-5 h-5" /> },
-    { href: '/seller/orders', labelKey: 'nav:seller.orders', icon: <ShoppingBag className="w-5 h-5" /> },
-    { href: '/seller/custom-requests', labelKey: 'nav:seller.customRequests', icon: <MessageSquare className="w-5 h-5" /> },
-    { href: '/seller/earnings', labelKey: 'nav:seller.earnings', icon: <Wallet className="w-5 h-5" /> },
-    { href: '/seller/profile', labelKey: 'nav:seller.profile', icon: <User className="w-5 h-5" /> },
-    { href: '/seller/notifications', labelKey: 'nav:seller.notifications', icon: <Bell className="w-5 h-5" /> },
-  ]
-
-  // عناصر لوحة تحكم الإدارة
-  const adminNav = [
-    { href: '/admin', labelKey: 'nav:admin.dashboard', icon: <LayoutDashboard className="w-5 h-5" />, exact: true },
-    {
-      href: '/admin/payments',
-      labelKey: 'nav:admin.payments',
-      icon: <CreditCard className="w-5 h-5" />,
-      badge: pendingPaymentsCount > 0 ? pendingPaymentsCount : null,
-      badgeColor: 'bg-rose-600 text-white',
-    },
-    { href: '/admin/orders', labelKey: 'nav:admin.orders', icon: <ShoppingBag className="w-5 h-5" /> },
-    { href: '/admin/products', labelKey: 'nav:admin.products', icon: <Package className="w-5 h-5" /> },
-    { href: '/admin/sellers', labelKey: 'nav:admin.sellers', icon: <Wallet className="w-5 h-5" /> },
-    { href: '/admin/customers', labelKey: 'nav:admin.customers', icon: <Users className="w-5 h-5" /> },
-    { href: '/admin/categories', labelKey: 'nav:admin.categories', icon: <FolderTree className="w-5 h-5" /> },
-    { href: '/admin/custom-requests', labelKey: 'nav:admin.customRequests', icon: <MessageSquare className="w-5 h-5" /> },
-    { href: '/admin/notifications', labelKey: 'nav:admin.notifications', icon: <Bell className="w-5 h-5" /> },
-    { href: '/admin/settings', labelKey: 'nav:admin.settings', icon: <Settings className="w-5 h-5" /> },
-  ]
-
-  const navItems = currentRole === 'admin' ? adminNav : sellerNav
+  const navItems =
+    currentRole === 'admin'
+      ? getAdminNavItems({ pendingCount: pendingPaymentsCount })
+      : getSellerNavItems()
 
   const isItemActive = (item) => {
     if (item.exact) return pathname === item.href

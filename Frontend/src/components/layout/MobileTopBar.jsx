@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   Bell,
+  Home,
   LogOut,
   Menu,
   Moon,
@@ -22,6 +23,11 @@ import { useScrollLock } from '../../hooks/useScrollLock'
 import { cn, getDisplayName, isInSection } from '../../utils'
 import { Avatar } from '../ui/Avatar'
 import { Logo } from '../ui/Logo'
+import {
+  getAdminNavItems,
+  getSellerNavItems,
+  usePendingPaymentsCount,
+} from './dashboardNav'
 
 /**
  * MobileTopBar
@@ -93,37 +99,46 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
   // Display name extraction
   const displayName = user ? getDisplayName(user, language) : ''
 
+  const currentRole = user?.role
+  const isAdminFallback =
+    !Array.isArray(drawerContent) && (isInSection(pathname, '/admin') || currentRole === 'admin')
+  const isSellerFallback =
+    !Array.isArray(drawerContent) &&
+    !isAdminFallback &&
+    (isInSection(pathname, '/seller') || currentRole === 'seller')
+  const pendingPaymentsCount = usePendingPaymentsCount(isAdminFallback ? 'admin' : null)
+
   // Build default drawer links based on role / route if drawerContent not passed
   const getDrawerLinks = () => {
     if (Array.isArray(drawerContent)) return drawerContent
 
-    const currentRole = user?.role
+    const mapDashboardItem = (item) => ({
+      href: item.href,
+      label: t(item.labelKey),
+      icon: item.icon,
+      exact: item.exact,
+      badge: item.badge,
+      badgeColor: item.badgeColor,
+    })
 
-    if (isInSection(pathname, '/admin') || currentRole === 'admin') {
+    const returnToStoreItem = {
+      href: '/',
+      label: t('nav:backToStore', 'الرجوع إلى المتجر'),
+      icon: <Home className="w-5 h-5" />,
+      isReturnToStore: true,
+    }
+
+    if (isAdminFallback) {
       return [
-        { href: '/admin', label: t('nav:admin.dashboard', 'لوحة التحكم'), exact: true },
-        { href: '/admin/payments', label: t('nav:admin.payments', 'مدفوعات فودافون كاش') },
-        { href: '/admin/orders', label: t('nav:admin.orders', 'الطلبات') },
-        { href: '/admin/products', label: t('nav:admin.products', 'المنتجات') },
-        { href: '/admin/sellers', label: t('nav:admin.sellers', 'البائعات والأرباح') },
-        { href: '/admin/customers', label: t('nav:admin.customers', 'العملاء') },
-        { href: '/admin/categories', label: t('nav:admin.categories', 'التصنيفات') },
-        { href: '/admin/notifications', label: t('nav:admin.notifications', 'الإشعارات') },
-        { href: '/admin/settings', label: t('nav:admin.settings', 'الإعدادات') },
-        { href: '/', label: t('nav:backToStore', 'الرجوع إلى المتجر'), isReturnToStore: true },
+        ...getAdminNavItems({ pendingCount: pendingPaymentsCount }).map(mapDashboardItem),
+        returnToStoreItem,
       ]
     }
 
-    if (isInSection(pathname, '/seller') || currentRole === 'seller') {
+    if (isSellerFallback) {
       return [
-        { href: '/seller', label: t('nav:seller.dashboard', 'لوحة التحكم'), exact: true },
-        { href: '/seller/products', label: t('nav:seller.products', 'منتجاتي') },
-        { href: '/seller/orders', label: t('nav:seller.orders', 'طلباتي') },
-        { href: '/seller/custom-requests', label: t('nav:seller.customRequests', 'الطلبات الخاصة') },
-        { href: '/seller/earnings', label: t('nav:seller.earnings', 'أرباحي') },
-        { href: '/seller/profile', label: t('nav:seller.profile', 'ملفي الشخصي') },
-        { href: '/seller/notifications', label: t('nav:seller.notifications', 'الإشعارات') },
-        { href: '/', label: t('nav:backToStore', 'الرجوع إلى المتجر'), isReturnToStore: true },
+        ...getSellerNavItems().map(mapDashboardItem),
+        returnToStoreItem,
       ]
     }
 
@@ -137,7 +152,8 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
 
   const links = getDrawerLinks()
 
-  const isLinkActive = (href, exact) => {
+  const isLinkActive = (href, exact, isReturnToStore) => {
+    if (isReturnToStore) return false
     if (exact || href === '/') return pathname === href
     return isInSection(pathname, href)
   }
@@ -305,7 +321,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                     {/* Nav Links */}
                     <div className="p-3 space-y-1" data-testid="mobile-drawer-links">
                       {links.map((link) => {
-                        const active = isLinkActive(link.href, link.exact)
+                        const active = isLinkActive(link.href, link.exact, link.isReturnToStore)
                         return (
                           <Link
                             key={link.href}
@@ -315,11 +331,12 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                               'flex items-center justify-between px-4 py-2.5 rounded-2xl text-sm font-bold transition-colors select-none',
                               active
                                 ? 'bg-brand-orange text-white shadow-soft font-black'
-                                : 'text-text-main hover:bg-surface-subtle',
-                              link.isReturnToStore && 'border border-surface-border text-text-muted hover:text-text-main'
+                                : link.isReturnToStore
+                                  ? 'border border-surface-border text-text-muted hover:text-text-main hover:bg-surface-subtle'
+                                  : 'text-text-main hover:bg-surface-subtle'
                             )}
                           >
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-3">
                               {link.icon && <span className="shrink-0">{link.icon}</span>}
                               <span>{link.label}</span>
                             </div>

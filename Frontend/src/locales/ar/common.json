@@ -215,5 +215,9 @@
     "accountDeleted": "تم حذف الحساب بنجاح",
     "notificationDeleted": "تم حذف الإشعار",
     "notificationsCleared": "تم مسح الإشعارات بنجاح"
+  },
+  "orderTimeline": {
+    "proofSubmitted": "تم إرسال إثبات الدفع",
+    "proofResubmitted": "تمت إعادة إرسال إثبات الدفع"
   }
 }

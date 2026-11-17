@@ -179,23 +179,32 @@ export function AdminOrderDrawer({
           </div>
         }
       >
-        <div className="p-6 space-y-6 overflow-y-auto overscroll-contain modal-scrollbar max-h-[calc(100vh-140px)]">
+        <div className="p-6 space-y-6 min-w-0" data-testid="admin-order-drawer-content">
           {/* شريط الحالة والتحكم السريع بالحالة وحذف الطلب */}
-          <div className="p-4 rounded-2xl bg-surface-subtle border border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="text-xs text-text-muted block mb-1">
-                {t('orders.drawer.statusUpdate')}
-              </span>
-              <StatusBadge status={order.status} size="md" />
-            </div>
+          <div
+            className="p-4 rounded-2xl bg-surface-subtle border border-surface-border space-y-2.5"
+            data-testid="admin-order-status-bar"
+          >
+            <span className="text-xs text-text-muted block">
+              {t('orders.drawer.statusUpdate')}
+            </span>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="flex-1 sm:w-52">
+            <div className="flex flex-wrap sm:flex-row sm:flex-nowrap items-center justify-between gap-2.5">
+              <div className="order-1 shrink-0" data-testid="admin-order-status-badge-wrap">
+                <StatusBadge status={order.status} size="md" />
+              </div>
+
+              <div
+                className="order-3 sm:order-2 w-full sm:w-44 sm:ms-auto min-w-0"
+                data-testid="admin-order-status-select-wrap"
+              >
                 <Select
                   id="admin-order-status-selector"
                   value={order.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
                   disabled={isUpdatingStatus}
+                  containerClassName="mb-0"
+                  className="h-10 text-xs sm:text-sm"
                 >
                   {Object.entries(ORDER_STATUS).map(([key, cfg]) => (
                     <option key={key} value={key}>
@@ -206,34 +215,36 @@ export function AdminOrderDrawer({
               </div>
 
               {onDeleteOrder && (
-                canDelete ? (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="sm"
-                    onClick={() => onDeleteOrder(order)}
-                    startIcon={<Trash2 className="w-4 h-4" />}
-                    className="shrink-0"
-                  >
-                    {t('orders.delete.action')}
-                  </Button>
-                ) : (
-                  <Tooltip content={t('orders.delete.disabledTooltip')} position="bottom">
-                    <span tabIndex={0} className="inline-flex shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled
-                        startIcon={<Trash2 className="w-4 h-4" />}
-                        className="text-rose-400 dark:text-rose-500/50 border-surface-border"
-                        aria-label={t('orders.delete.disabledTooltip')}
-                      >
-                        {t('orders.delete.action')}
-                      </Button>
-                    </span>
-                  </Tooltip>
-                )
+                <div className="order-2 sm:order-3 shrink-0" data-testid="admin-order-delete-wrap">
+                  {canDelete ? (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      onClick={() => onDeleteOrder(order)}
+                      startIcon={<Trash2 className="w-4 h-4" />}
+                      className="shrink-0"
+                    >
+                      {t('orders.delete.action')}
+                    </Button>
+                  ) : (
+                    <Tooltip content={t('orders.delete.disabledTooltip')} position="bottom">
+                      <span tabIndex={0} className="inline-flex shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          startIcon={<Trash2 className="w-4 h-4" />}
+                          className="shrink-0 text-rose-400 dark:text-rose-500/50 border-surface-border"
+                          aria-label={t('orders.delete.disabledTooltip')}
+                        >
+                          {t('orders.delete.action')}
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -340,7 +351,7 @@ export function AdminOrderDrawer({
           </div>
 
           {/* جدول توزيع العمولة 20% وصافي مستحقات البائعة 80% (Commission Breakdown) */}
-          <div className="rounded-2xl border border-surface-border bg-surface p-4 space-y-3">
+          <div className="rounded-2xl border border-surface-border bg-surface p-4 space-y-3 min-w-0">
             <div>
               <h4 className="font-heading font-black text-sm text-text-main">
                 {t('orders.drawer.commissionTable.title')}
@@ -350,8 +361,14 @@ export function AdminOrderDrawer({
               </p>
             </div>
 
-            <div className="overflow-x-auto overscroll-contain modal-scrollbar">
-              <table className="w-full text-xs text-start border-collapse">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label={t('orders.drawer.commissionTable.title')}
+              data-testid="admin-order-commission-scroll"
+              className="w-full max-w-full overflow-x-auto overscroll-contain modal-scrollbar"
+            >
+              <table className="w-full min-w-[520px] text-xs text-start border-collapse">
                 <thead>
                   <tr className="border-b border-surface-border bg-surface-subtle/50 text-text-muted">
                     <th className="py-2.5 px-3 text-start font-bold">{t('orders.drawer.commissionTable.item')}</th>

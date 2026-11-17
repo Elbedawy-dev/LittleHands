@@ -298,28 +298,29 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                   role="dialog"
                   aria-modal="true"
                   aria-label={t('nav:openMenu', 'القائمة الرئيسية')}
-                  className="relative z-10 w-[min(86vw,320px)] h-full bg-surface text-text-main shadow-float flex flex-col justify-between border-e border-surface-border overflow-hidden left-0"
+                  className="relative z-10 w-[min(86vw,320px)] h-full bg-surface text-text-main shadow-float flex flex-col border-e border-surface-border overflow-hidden left-0"
                   dir={language === 'ar' ? 'rtl' : 'ltr'}
                   data-testid="mobile-drawer-panel"
                 >
-                  {/* Upper scrollable section */}
-                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scrollbar">
-                    {/* Header: Logo mark + brand name (single line) + Close X button */}
-                    <div className="p-4 flex items-center justify-between border-b border-surface-border">
-                      <Logo asLink to="/" variant="full" size="sm" onClick={() => setDrawerOpen(false)} />
-                      <button
-                        type="button"
-                        onClick={() => setDrawerOpen(false)}
-                        className="p-2 rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors cursor-pointer"
-                        aria-label={t('common:actions.close', 'إغلاق')}
-                        data-testid="mobile-drawer-close"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
+                  {/* Header: Logo mark + brand name (single line) + Close X button */}
+                  <div className="p-4 flex items-center justify-between border-b border-surface-border shrink-0">
+                    <Logo asLink to="/" variant="full" size="sm" onClick={() => setDrawerOpen(false)} />
+                    <button
+                      type="button"
+                      onClick={() => setDrawerOpen(false)}
+                      className="p-2 rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors cursor-pointer"
+                      aria-label={t('common:actions.close', 'إغلاق')}
+                      data-testid="mobile-drawer-close"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
 
-                    {/* Nav Links */}
-                    <div className="p-3 space-y-1" data-testid="mobile-drawer-links">
+                  {/* Nav Links (only scrollable region) */}
+                  <div
+                    className="p-3 space-y-1 flex-[0_1_auto] min-h-0 overflow-y-auto overscroll-contain modal-scrollbar"
+                    data-testid="mobile-drawer-links"
+                  >
                       {links.map((link) => {
                         const active = isLinkActive(link.href, link.exact, link.isReturnToStore)
                         return (
@@ -353,13 +354,12 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                           </Link>
                         )
                       })}
-                    </div>
+                  </div>
 
-                    {/* Divider */}
+                  {/* Appearance and Language row (fixed directly under links, no empty gap) */}
+                  <div className="shrink-0">
                     <div className="border-t border-surface-border mx-3" />
-
-                    {/* Appearance and Language row (DIRECTLY under the links, no empty gap) */}
-                    <div className="p-3" data-testid="mobile-drawer-appearance-row">
+                    <div className="p-3 shrink-0" data-testid="mobile-drawer-appearance-row">
                       <div className="p-2.5 rounded-2xl bg-surface-subtle border border-surface-border/60 flex items-center justify-between gap-2">
                         <span className="text-xs font-bold text-text-muted">
                           {t('nav:appearanceAndLang', 'المظهر واللغة')}
@@ -407,7 +407,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                   </div>
 
                   {/* Bottom section: login/register for guests, logout for signed-in users */}
-                  <div className="p-4 border-t border-surface-border bg-surface shrink-0 pb-safe" data-testid="mobile-drawer-bottom">
+                  <div className="p-4 border-t border-surface-border bg-surface shrink-0 mt-auto pb-safe" data-testid="mobile-drawer-bottom">
                     {isAuthenticated && user ? (
                       <button
                         type="button"

@@ -215,5 +215,9 @@
     "accountDeleted": "Account deleted successfully",
     "notificationDeleted": "Notification deleted",
     "notificationsCleared": "Notifications cleared successfully"
+  },
+  "orderTimeline": {
+    "proofSubmitted": "Proof submitted",
+    "proofResubmitted": "Proof resubmitted"
   }
 }

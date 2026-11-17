@@ -95,9 +95,10 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       // تسجيل العميل حصراً بصلاحية 'customer'
-      await register({
+      const cleanEmail = formData.email.trim().toLowerCase()
+      const res = await register({
         name: formData.name.trim(),
-        email: formData.email.trim().toLowerCase(),
+        email: cleanEmail,
         phone: formData.phone.trim(),
         password: formData.password, 
         role: 'customer',
@@ -107,7 +108,8 @@ export default function RegisterPage() {
       })
 
       // الانتقال المباشر لصفحة تأكيد البريد الإلكتروني
-      navigate('/verify-email', { replace: true })
+      const targetEmail = res?.email || cleanEmail
+      navigate(`/verify-email?email=${encodeURIComponent(targetEmail)}`, { replace: true })
     } catch (err) {
       setFormError(getFriendlyError(err, t))
     } finally {

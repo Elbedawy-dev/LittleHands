@@ -47,9 +47,9 @@ const inFlightRefreshes = new Map()
 
 export const authService = {
   /**
-   * Register a new customer
+   * Register a new customer (or update an existing unverified customer)
    */
-  async register(data, { ip = '', userAgent = '' } = {}) {
+  async register(data) {
     const cleanEmail = (data.email || '').trim().toLowerCase()
     const cleanPhone = normalizeEgyptianPhone(data.phone)
 
@@ -57,12 +57,20 @@ export const authService = {
       throw new AppError('FORBIDDEN', 403, 'Sellers cannot register through public registration')
     }
 
-    const emailTaken = await User.findOne({ email: cleanEmail })
-    if (emailTaken) {
+    const existingByEmail = await User.findOne({ email: cleanEmail })
+    if (
+      existingByEmail &&
+      (existingByEmail.role !== 'customer' ||
+        existingByEmail.emailVerified ||
+        existingByEmail.status !== 'active')
+    ) {
       throw new AppError('EMAIL_EXISTS', 409)
     }
 
-    const phoneTaken = await User.findOne({ phone: cleanPhone })
+    const phoneConflictQuery = existingByEmail
+      ? { phone: cleanPhone, _id: { $ne: existingByEmail._id } }
+      : { phone: cleanPhone }
+    const phoneTaken = await User.findOne(phoneConflictQuery)
     if (phoneTaken) {
       throw new AppError('PHONE_EXISTS', 409)
     }
@@ -72,24 +80,45 @@ export const authService = {
 
     const accountType = data.accountType === 'kindergarten' ? 'nursery' : data.accountType || 'parent'
 
-    const newUser = await User.create({
-      name: data.name.trim(),
-      email: cleanEmail,
-      phone: cleanPhone,
-      passwordHash,
-      role: 'customer',
-      accountType,
-      nurseryName: data.nurseryName ? data.nurseryName.trim() : '',
-      governorate: data.governorate ? data.governorate.trim() : 'القاهرة',
-      city: data.city ? data.city.trim() : '',
-      address: data.address ? data.address.trim() : '',
-      emailVerified: false,
-      status: 'active',
-    })
+    let targetUser = existingByEmail
+    if (targetUser) {
+      targetUser.name = data.name.trim()
+      targetUser.phone = cleanPhone
+      targetUser.passwordHash = passwordHash
+      targetUser.accountType = accountType
+      targetUser.nurseryName = data.nurseryName ? data.nurseryName.trim() : ''
+      targetUser.governorate = data.governorate ? data.governorate.trim() : 'القاهرة'
+      targetUser.city = data.city ? data.city.trim() : ''
+      targetUser.address = data.address ? data.address.trim() : ''
+      targetUser.emailVerified = false
+      targetUser.failedLoginCount = 0
+      targetUser.lockUntil = null
+      await targetUser.save()
+
+      await OtpCode.updateMany(
+        { userId: targetUser._id, purpose: 'verify_email', usedAt: null },
+        { usedAt: new Date() }
+      )
+    } else {
+      targetUser = await User.create({
+        name: data.name.trim(),
+        email: cleanEmail,
+        phone: cleanPhone,
+        passwordHash,
+        role: 'customer',
+        accountType,
+        nurseryName: data.nurseryName ? data.nurseryName.trim() : '',
+        governorate: data.governorate ? data.governorate.trim() : 'القاهرة',
+        city: data.city ? data.city.trim() : '',
+        address: data.address ? data.address.trim() : '',
+        emailVerified: false,
+        status: 'active',
+      })
+    }
 
     const plainCode = randomCode()
     await OtpCode.create({
-      userId: newUser._id,
+      userId: targetUser._id,
       purpose: 'verify_email',
       codeHash: sha256(plainCode),
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
@@ -97,27 +126,13 @@ export const authService = {
     })
 
     eventBus.emit(EVENT_TYPES.USER_REGISTERED, {
-      user: newUser,
+      user: targetUser,
       code: plainCode,
     })
 
-    const accessToken = generateAccessToken(newUser)
-    const refreshToken = generateRefreshToken()
-    const family = randomToken(16)
-
-    await RefreshToken.create({
-      userId: newUser._id,
-      tokenHash: sha256(refreshToken),
-      family,
-      expiresAt: new Date(Date.now() + (env.REFRESH_TTL_DAYS || 7) * 24 * 60 * 60 * 1000),
-      ip,
-      userAgent,
-    })
-
     return {
-      user: newUser,
-      accessToken,
-      refreshToken,
+      email: targetUser.email,
+      requiresVerification: true,
       plainCode,
     }
   },
@@ -164,6 +179,16 @@ export const authService = {
     }
     if (user.status === 'suspended') {
       throw new AppError('ACCOUNT_SUSPENDED', 403)
+    }
+
+    // Require email verification for customers before opening a session
+    if (user.role === 'customer' && !user.emailVerified) {
+      if (user.failedLoginCount || user.lockUntil) {
+        user.failedLoginCount = 0
+        user.lockUntil = null
+        await user.save()
+      }
+      throw new AppError('EMAIL_NOT_VERIFIED', 403, { email: user.email })
     }
 
     // Reset lockout counters on success
@@ -281,7 +306,8 @@ export const authService = {
   /**
    * Verify email via 6-digit OTP code
    */
-  async verifyEmail({ code, user, email }) {
+  async verifyEmail({ code, user, email, ip = '', userAgent = '' }) {
+    const hasSession = Boolean(user)
     let targetUser = user
     if (!targetUser && email) {
       targetUser = await User.findOne({ email: email.trim().toLowerCase() })
@@ -294,6 +320,13 @@ export const authService = {
       const dummyHash = sha256('000000')
       crypto.timingSafeEqual(Buffer.from(candidateHash, 'hex'), Buffer.from(dummyHash, 'hex'))
       throw new AppError('INVALID_CODE', 400)
+    }
+
+    if (targetUser.status === 'deleted') {
+      throw new AppError('ACCOUNT_DELETED', 403, 'هذا الحساب تم حذفه')
+    }
+    if (targetUser.status === 'suspended') {
+      throw new AppError('ACCOUNT_SUSPENDED', 403)
     }
 
     const otp = await OtpCode.findOne({
@@ -330,6 +363,28 @@ export const authService = {
 
     targetUser.emailVerified = true
     await targetUser.save()
+
+    if (!hasSession && targetUser.role === 'customer') {
+      const accessToken = generateAccessToken(targetUser)
+      const refreshToken = generateRefreshToken()
+      const family = randomToken(16)
+
+      await RefreshToken.create({
+        userId: targetUser._id,
+        tokenHash: sha256(refreshToken),
+        family,
+        expiresAt: new Date(Date.now() + (env.REFRESH_TTL_DAYS || 7) * 24 * 60 * 60 * 1000),
+        ip,
+        userAgent,
+      })
+
+      return {
+        verified: true,
+        user: targetUser,
+        accessToken,
+        refreshToken,
+      }
+    }
 
     return { verified: true, user: targetUser }
   },

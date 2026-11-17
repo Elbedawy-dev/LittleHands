@@ -33,33 +33,43 @@ describe('Auth & Users Module Integration Tests (Prompt B1)', () => {
 
     expect(regRes.status).toBe(201)
     expect(regRes.body.success).toBe(true)
-    expect(regRes.body.data.user.email).toBe(email)
-    expect(regRes.body.data.user.role).toBe('customer')
-    expect(regRes.body.data.user.emailVerified).toBe(false)
-    expect(regRes.body.data.user).not.toHaveProperty('passwordHash')
+    expect(regRes.body.data).toEqual({ email, requiresVerification: true })
+    expect(regRes.headers['set-cookie']).toBeUndefined()
 
-    // Find OTP code in DB
+    // Find OTP code in DB; no refresh token or session exists before verification
     const userDoc = await User.findOne({ email })
     expect(userDoc).toBeTruthy()
+    expect(userDoc.emailVerified).toBe(false)
+    expect(await RefreshToken.countDocuments({ userId: userDoc._id })).toBe(0)
+
+    const meBeforeVerify = await request(app).get('/api/v1/auth/me')
+    expect(meBeforeVerify.status).toBe(401)
+
     const otpDoc = await OtpCode.findOne({ userId: userDoc._id, purpose: 'verify_email', usedAt: null })
     expect(otpDoc).toBeTruthy()
 
-    // 2. Verify Email using cookies from register
-    const regCookies = regRes.headers['set-cookie']
-    // We can find the plain code or test verification directly
-    // Since we know codeHash = sha256(code), let's find the plain code or set code
+    // 2. Verify Email by email without session -> opens session cookies + returns user & token
     const testCode = '654321'
     otpDoc.codeHash = sha256(testCode)
     await otpDoc.save()
 
     const verifyRes = await request(app)
       .post('/api/v1/auth/verify-email')
-      .set('Cookie', regCookies)
       .set('X-Requested-With', 'lh-web')
-      .send({ code: testCode })
+      .send({ email, code: testCode })
 
     expect(verifyRes.status).toBe(200)
     expect(verifyRes.body.data.verified).toBe(true)
+    expect(verifyRes.body.data.user.email).toBe(email)
+    expect(verifyRes.body.data.user.emailVerified).toBe(true)
+    expect(verifyRes.body.data.token).toBeTruthy()
+    const verifyCookies = verifyRes.headers['set-cookie']
+    expect(verifyCookies).toBeDefined()
+    expect(verifyCookies.some((c) => c.startsWith('lh_at='))).toBe(true)
+    expect(verifyCookies.some((c) => c.startsWith('lh_rt='))).toBe(true)
+
+    const meAfterVerify = await request(app).get('/api/v1/auth/me').set('Cookie', verifyCookies)
+    expect(meAfterVerify.status).toBe(200)
 
     const updatedUser = await User.findById(userDoc._id)
     expect(updatedUser.emailVerified).toBe(true)
@@ -532,5 +542,218 @@ describe('Auth & Users Module Integration Tests (Prompt B1)', () => {
     expect(sellerRes.status).toBe(200)
     expect(sellerRes.body.data.user.seller.displayName.ar).toBe('ورشة الخيوط الملونة')
     expect(sellerRes.body.data.user.seller.payoutWallet).toBe('01011223355')
+  })
+
+  it('blocks login for unverified customer (by email or phone) with 403 EMAIL_NOT_VERIFIED and email details without opening session', async () => {
+    const email = 'unverified_login@test.eg'
+    const phone = '01066554433'
+    const password = 'Password123!'
+
+    const regRes = await request(app)
+      .post('/api/v1/auth/register')
+      .set('X-Requested-With', 'lh-web')
+      .send({
+        name: 'عميلة غير مفعلة',
+        email,
+        phone,
+        password,
+        governorate: 'القاهرة',
+      })
+    expect(regRes.status).toBe(201)
+    expect(regRes.headers['set-cookie']).toBeUndefined()
+
+    const userDoc = await User.findOne({ email })
+
+    // Login with email -> 403 EMAIL_NOT_VERIFIED + details.email, no cookies
+    const emailLogin = await request(app)
+      .post('/api/v1/auth/login')
+      .set('X-Requested-With', 'lh-web')
+      .send({ identifier: email, password })
+    expect(emailLogin.status).toBe(403)
+    expect(emailLogin.body.error.code).toBe('EMAIL_NOT_VERIFIED')
+    expect(emailLogin.body.error.details).toEqual({ email })
+    expect(emailLogin.headers['set-cookie']).toBeUndefined()
+    expect(await RefreshToken.countDocuments({ userId: userDoc._id })).toBe(0)
+
+    // Login with phone -> 403 EMAIL_NOT_VERIFIED + details.email, no cookies
+    const phoneLogin = await request(app)
+      .post('/api/v1/auth/login')
+      .set('X-Requested-With', 'lh-web')
+      .send({ identifier: phone, password })
+    expect(phoneLogin.status).toBe(403)
+    expect(phoneLogin.body.error.code).toBe('EMAIL_NOT_VERIFIED')
+    expect(phoneLogin.body.error.details).toEqual({ email })
+    expect(phoneLogin.headers['set-cookie']).toBeUndefined()
+
+    // Sellers and admins are unaffected and have emailVerified=true
+    const seller = await createUser({ role: 'seller', email: 'seller_login_ok@test.eg' })
+    expect(seller.emailVerified).toBe(true)
+    const sellerLogin = await request(app)
+      .post('/api/v1/auth/login')
+      .set('X-Requested-With', 'lh-web')
+      .send({ identifier: seller.email, password: 'TestPass123!' })
+    expect(sellerLogin.status).toBe(200)
+    expect(sellerLogin.headers['set-cookie']).toBeDefined()
+  })
+
+  it('re-registering an unverified customer email updates details, invalidates old OTP, and checks phone conflict only against other accounts', async () => {
+    const email = 'reregister_unverified@test.eg'
+    const phone = '01077889900'
+    const otherUser = await createUser({ phone: '01077889911' })
+
+    // Initial register
+    const firstRes = await request(app)
+      .post('/api/v1/auth/register')
+      .set('X-Requested-With', 'lh-web')
+      .send({
+        name: 'اسم أول',
+        email,
+        phone,
+        password: 'FirstPassword123!',
+        accountType: 'parent',
+        governorate: 'القاهرة',
+      })
+    expect(firstRes.status).toBe(201)
+    expect(firstRes.body.data).toEqual({ email, requiresVerification: true })
+    expect(firstRes.headers['set-cookie']).toBeUndefined()
+
+    const userDoc = await User.findOne({ email })
+    const firstOtp = await OtpCode.findOne({ userId: userDoc._id, purpose: 'verify_email', usedAt: null })
+    const oldCode = '111222'
+    firstOtp.codeHash = sha256(oldCode)
+    await firstOtp.save()
+
+    // Trying to re-register with a phone belonging to another account -> 409 PHONE_EXISTS
+    const phoneConflictRes = await request(app)
+      .post('/api/v1/auth/register')
+      .set('X-Requested-With', 'lh-web')
+      .send({
+        name: 'اسم تاني',
+        email,
+        phone: otherUser.phone,
+        password: 'SecondPassword123!',
+      })
+    expect(phoneConflictRes.status).toBe(409)
+    expect(phoneConflictRes.body.error.code).toBe('PHONE_EXISTS')
+
+    // Re-register same unverified email with same phone and updated fields -> 201, no EMAIL_EXISTS
+    const secondRes = await request(app)
+      .post('/api/v1/auth/register')
+      .set('X-Requested-With', 'lh-web')
+      .send({
+        name: 'اسم محدث',
+        email,
+        phone,
+        password: 'SecondPassword123!',
+        accountType: 'kindergarten',
+        nurseryName: 'حضانة النور',
+        governorate: 'الجيزة',
+      })
+    expect(secondRes.status).toBe(201)
+    expect(secondRes.body.data).toEqual({ email, requiresVerification: true })
+    expect(secondRes.headers['set-cookie']).toBeUndefined()
+
+    const updatedDoc = await User.findById(userDoc._id)
+    expect(updatedDoc.name).toBe('اسم محدث')
+    expect(updatedDoc.accountType).toBe('nursery')
+    expect(updatedDoc.nurseryName).toBe('حضانة النور')
+    expect(updatedDoc.governorate).toBe('الجيزة')
+
+    // Old OTP was invalidated
+    const refreshedFirstOtp = await OtpCode.findById(firstOtp._id)
+    expect(refreshedFirstOtp.usedAt).toBeTruthy()
+    const oldOtpRes = await request(app)
+      .post('/api/v1/auth/verify-email')
+      .set('X-Requested-With', 'lh-web')
+      .send({ email, code: oldCode })
+    expect(oldOtpRes.status).toBe(400)
+    expect(oldOtpRes.body.error.code).toBe('INVALID_CODE')
+    expect(oldOtpRes.headers['set-cookie']).toBeUndefined()
+    expect(await RefreshToken.countDocuments({ userId: userDoc._id })).toBe(0)
+
+    // New OTP verifies and opens session; login with new password works afterwards
+    const newOtp = await OtpCode.findOne({ userId: userDoc._id, purpose: 'verify_email', usedAt: null }).sort({ createdAt: -1 })
+    const newCode = '333444'
+    newOtp.codeHash = sha256(newCode)
+    await newOtp.save()
+
+    const verifyRes = await request(app)
+      .post('/api/v1/auth/verify-email')
+      .set('X-Requested-With', 'lh-web')
+      .send({ email, code: newCode })
+    expect(verifyRes.status).toBe(200)
+    expect(verifyRes.body.data.verified).toBe(true)
+    expect(verifyRes.body.data.token).toBeTruthy()
+    expect(verifyRes.headers['set-cookie']).toBeDefined()
+
+    // Re-registering an already verified customer email -> 409 EMAIL_EXISTS
+    const verifiedConflict = await request(app)
+      .post('/api/v1/auth/register')
+      .set('X-Requested-With', 'lh-web')
+      .send({
+        name: 'محاولة تالتة',
+        email,
+        phone: '01077889922',
+        password: 'ThirdPassword123!',
+      })
+    expect(verifiedConflict.status).toBe(409)
+    expect(verifiedConflict.body.error.code).toBe('EMAIL_EXISTS')
+
+    // Login works with updated password
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .set('X-Requested-With', 'lh-web')
+      .send({ identifier: email, password: 'SecondPassword123!' })
+    expect(loginRes.status).toBe(200)
+  })
+
+  it('verify-email with wrong code does not verify or open session, and authenticated verify-email does not reissue cookies', async () => {
+    const email = 'verify_wrong_code@test.eg'
+    await request(app)
+      .post('/api/v1/auth/register')
+      .set('X-Requested-With', 'lh-web')
+      .send({
+        name: 'عميلة تحقق',
+        email,
+        phone: '01044332211',
+        password: 'Password123!',
+      })
+
+    const userDoc = await User.findOne({ email })
+    const otpDoc = await OtpCode.findOne({ userId: userDoc._id, purpose: 'verify_email', usedAt: null })
+    otpDoc.codeHash = sha256('987654')
+    await otpDoc.save()
+
+    const wrongRes = await request(app)
+      .post('/api/v1/auth/verify-email')
+      .set('X-Requested-With', 'lh-web')
+      .send({ email, code: '000111' })
+    expect(wrongRes.status).toBe(400)
+    expect(wrongRes.body.error.code).toBe('INVALID_CODE')
+    expect(wrongRes.headers['set-cookie']).toBeUndefined()
+    expect(await RefreshToken.countDocuments({ userId: userDoc._id })).toBe(0)
+    expect((await User.findById(userDoc._id)).emailVerified).toBe(false)
+
+    // Authenticated session verify-email only verifies without setting new cookies or token
+    const { agent, user: authedUnverified } = await authedAgent(app, 'customer', {
+      email: 'authed_verify@test.eg',
+      emailVerified: false,
+    })
+    await OtpCode.create({
+      userId: authedUnverified._id,
+      purpose: 'verify_email',
+      codeHash: sha256('246810'),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      attempts: 0,
+    })
+
+    const authedVerifyRes = await agent
+      .post('/api/v1/auth/verify-email')
+      .send({ code: '246810' })
+    expect(authedVerifyRes.status).toBe(200)
+    expect(authedVerifyRes.body.data.verified).toBe(true)
+    expect(authedVerifyRes.body.data.token).toBeUndefined()
+    expect(authedVerifyRes.headers['set-cookie']).toBeUndefined()
+    expect(await RefreshToken.countDocuments({ userId: authedUnverified._id })).toBe(0)
   })
 })

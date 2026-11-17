@@ -1,5 +1,5 @@
 import { orderService } from './service.js'
-import { toOrderDTO } from './dto.js'
+import { resolveOrderSellerNamesMap, toOrderDTO } from './dto.js'
 import { asyncHandler } from '../../utils/asyncHandler.js'
 import { ok, created, paginated } from '../../utils/response.js'
 
@@ -32,7 +32,9 @@ export const orderController = {
    */
   getOrder: asyncHandler(async (req, res) => {
     const order = await orderService.getOrder(req.params.id, req.user)
-    return ok(res, toOrderDTO(order, req.user.role, req.user._id))
+    const sellerNamesMap =
+      req.user.role === 'admin' ? await resolveOrderSellerNamesMap(order) : null
+    return ok(res, toOrderDTO(order, req.user.role, req.user._id, sellerNamesMap))
   }),
 
   /**
@@ -84,7 +86,8 @@ export const orderController = {
       page,
       pageSize,
     })
-    const mapped = items.map((o) => toOrderDTO(o, 'admin'))
+    const sellerNamesMap = await resolveOrderSellerNamesMap(items)
+    const mapped = items.map((o) => toOrderDTO(o, 'admin', null, sellerNamesMap))
     return paginated(res, { items: mapped, total, page, pageSize })
   }),
 
@@ -97,7 +100,8 @@ export const orderController = {
       req.body.status,
       req.user
     )
-    return ok(res, toOrderDTO(order, 'admin'))
+    const sellerNamesMap = await resolveOrderSellerNamesMap(order)
+    return ok(res, toOrderDTO(order, 'admin', null, sellerNamesMap))
   }),
 
   /**
@@ -109,7 +113,9 @@ export const orderController = {
       req.body ? req.body.reason : undefined,
       req.user
     )
-    return ok(res, toOrderDTO(order, req.user.role, req.user._id))
+    const sellerNamesMap =
+      req.user.role === 'admin' ? await resolveOrderSellerNamesMap(order) : null
+    return ok(res, toOrderDTO(order, req.user.role, req.user._id, sellerNamesMap))
   }),
 
   /**
@@ -117,7 +123,8 @@ export const orderController = {
    */
   refundOrder: asyncHandler(async (req, res) => {
     const order = await orderService.refundOrder(req.params.id, req.body, req.user)
-    return ok(res, toOrderDTO(order, 'admin'))
+    const sellerNamesMap = await resolveOrderSellerNamesMap(order)
+    return ok(res, toOrderDTO(order, 'admin', null, sellerNamesMap))
   }),
 
   /**

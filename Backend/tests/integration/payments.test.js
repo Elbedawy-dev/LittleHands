@@ -53,8 +53,10 @@ describe('Payments Module Integration Tests', () => {
       expect(orderData.payment.transferredAmount).toBe(250)
       expect(orderData.payment.reference).toBe('VF-998877')
       expect(orderData.payment.status).toBe('pending')
-      // Customer must NOT see risk flags
+      // Customer must NOT see risk flags or sellerName enrichment
       expect(orderData.payment.flags).toBeUndefined()
+      expect(orderData.items[0]).not.toHaveProperty('sellerName')
+      expect(orderData.items[0]).not.toHaveProperty('sellerNameEn')
 
       // Verify payment document in DB
       const dbPayment = await Payment.findOne({ orderId: order._id })
@@ -162,6 +164,8 @@ describe('Payments Module Integration Tests', () => {
       const confirmRes = await adminAgent.post(`/api/v1/payments/admin/${order._id}/confirm`)
       expect(confirmRes.status).toBe(200)
       expect(confirmRes.body.data.status).toBe('payment_confirmed')
+      expect(confirmRes.body.data.items[0].sellerName).toBe('البائعة الأولى')
+      expect(confirmRes.body.data.items[0].sellerNameEn).toBe('First Seller')
 
       const updatedPayment = await Payment.findOne({ orderId: order._id })
       expect(updatedPayment.status).toBe('confirmed')
@@ -186,6 +190,8 @@ describe('Payments Module Integration Tests', () => {
       })
       expect(rejectRes.status).toBe(200)
       expect(rejectRes.body.data.status).toBe('payment_rejected')
+      expect(rejectRes.body.data.items[0].sellerName).toBe('البائعة الأولى')
+      expect(rejectRes.body.data.items[0].sellerNameEn).toBe('First Seller')
 
       const updatedPayment = await Payment.findOne({ orderId: order._id })
       expect(updatedPayment.status).toBe('rejected')

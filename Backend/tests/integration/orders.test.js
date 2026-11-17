@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import mongoose from 'mongoose'
 import { createApp } from '../../src/app.js'
 import { authedAgent } from '../helpers/authedAgent.js'
 import { createUser, createProduct, createOrder } from '../helpers/factories.js'
@@ -845,6 +846,101 @@ describe('Orders Module Integration Tests', () => {
 
       const dbOrder = await Order.findById(order._id)
       expect(dbOrder.hiddenBySellers.map((id) => id.toString())).not.toContain(seller2._id.toString())
+    })
+  })
+
+  describe('Admin Order Seller Name Enrichment (F2)', () => {
+    it('includes sellerName and sellerNameEn in admin order responses only, and returns empty string for deleted sellers', async () => {
+      const { agent: customerAgent, user: customer } = await authedAgent(app, 'customer')
+      const { agent: sellerAgent, user: seller } = await authedAgent(app, 'seller', {
+        name: 'فاطمة حسن',
+        seller: {
+          displayName: { ar: 'ورشة الإبداع التربوي', en: 'Creative Edu Workshop' },
+          bio: { ar: 'نبذة', en: 'Bio' },
+          stages: ['nursery'],
+          materials: ['felt'],
+          payoutWallet: '01012345678',
+        },
+      })
+      const deletedSeller = await createUser({
+        role: 'seller',
+        status: 'deleted',
+        name: 'حساب محذوف',
+      })
+      const { agent: adminAgent } = await authedAgent(app, 'admin')
+
+      const order = await createOrder({
+        customerId: customer._id,
+        sellerId: seller._id,
+        status: 'pending_payment',
+        items: [
+          {
+            productId: new mongoose.Types.ObjectId(),
+            name: { ar: 'لوحة الحروف', en: 'Letters Board' },
+            qty: 1,
+            unitPrice: 120,
+            sellerId: seller._id,
+            commissionRate: 0.2,
+            commissionAmount: 24,
+            sellerNet: 96,
+          },
+          {
+            productId: new mongoose.Types.ObjectId(),
+            name: { ar: 'بطاقات الأرقام', en: 'Number Cards' },
+            qty: 1,
+            unitPrice: 80,
+            sellerId: deletedSeller._id,
+            commissionRate: 0.2,
+            commissionAmount: 16,
+            sellerNet: 64,
+          },
+        ],
+      })
+
+      // Admin list endpoint
+      const adminListRes = await adminAgent.get('/api/v1/orders/admin')
+      expect(adminListRes.status).toBe(200)
+      const adminListOrder = adminListRes.body.data.items.find((o) => o.id === order._id.toString())
+      expect(adminListOrder.items[0].sellerName).toBe('ورشة الإبداع التربوي')
+      expect(adminListOrder.items[0].sellerNameEn).toBe('Creative Edu Workshop')
+      expect(adminListOrder.items[1].sellerName).toBe('')
+      expect(adminListOrder.items[1].sellerNameEn).toBe('')
+
+      // Admin details endpoints (/orders/admin/:id and /orders/:id)
+      const adminDetailRes = await adminAgent.get(`/api/v1/orders/admin/${order._id}`)
+      expect(adminDetailRes.status).toBe(200)
+      expect(adminDetailRes.body.data.items[0].sellerName).toBe('ورشة الإبداع التربوي')
+      expect(adminDetailRes.body.data.items[0].sellerNameEn).toBe('Creative Edu Workshop')
+      expect(adminDetailRes.body.data.items[1].sellerName).toBe('')
+
+      const adminSharedDetailRes = await adminAgent.get(`/api/v1/orders/${order._id}`)
+      expect(adminSharedDetailRes.status).toBe(200)
+      expect(adminSharedDetailRes.body.data.items[0].sellerName).toBe('ورشة الإبداع التربوي')
+
+      // Admin status update endpoint
+      const statusRes = await adminAgent
+        .patch(`/api/v1/orders/admin/${order._id}/status`)
+        .send({ status: 'payment_confirmed' })
+      expect(statusRes.status).toBe(200)
+      expect(statusRes.body.data.items[0].sellerName).toBe('ورشة الإبداع التربوي')
+      expect(statusRes.body.data.items[1].sellerName).toBe('')
+
+      // Customer endpoints must NOT expose sellerName or sellerNameEn
+      const custListRes = await customerAgent.get('/api/v1/orders/my')
+      expect(custListRes.status).toBe(200)
+      expect(custListRes.body.data.items[0].items[0]).not.toHaveProperty('sellerName')
+      expect(custListRes.body.data.items[0].items[0]).not.toHaveProperty('sellerNameEn')
+
+      const custDetailRes = await customerAgent.get(`/api/v1/orders/${order._id}`)
+      expect(custDetailRes.status).toBe(200)
+      expect(custDetailRes.body.data.items[0]).not.toHaveProperty('sellerName')
+      expect(custDetailRes.body.data.items[0]).not.toHaveProperty('sellerNameEn')
+
+      // Seller endpoints must NOT expose sellerName or sellerNameEn
+      const sellerListRes = await sellerAgent.get('/api/v1/orders/seller')
+      expect(sellerListRes.status).toBe(200)
+      expect(sellerListRes.body.data.items[0].items[0]).not.toHaveProperty('sellerName')
+      expect(sellerListRes.body.data.items[0].items[0]).not.toHaveProperty('sellerNameEn')
     })
   })
 })

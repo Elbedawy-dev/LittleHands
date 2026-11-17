@@ -1,9 +1,10 @@
 import { AlertCircle, ArrowRight, CheckCircle2, RotateCcw, ShieldCheck } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { OTPInput } from '../../components/ui/OTPInput'
+import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import { authService } from '../../services/authService'
 import { getFriendlyError } from '../../utils'
@@ -13,7 +14,7 @@ export default function VerifyEmailPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const next = searchParams.get('next') || '/account'
-  const { user, refreshUser } = useAuth()
+  const { user, isLoading, refreshUser } = useAuth()
 
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,8 +22,34 @@ export default function VerifyEmailPage() {
   const [countdown, setCountdown] = useState(60)
   const [resending, setResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
+  const hasAutoResentRef = useRef(false)
 
   const targetEmail = user?.email || searchParams.get('email') || ''
+  const shouldResend = searchParams.get('resend') === '1'
+
+  useEffect(() => {
+    if (!shouldResend || !targetEmail || hasAutoResentRef.current) return
+    hasAutoResentRef.current = true
+    let active = true
+
+    authService
+      .resendCode({ email: targetEmail })
+      .then(() => {
+        if (!active) return
+        setResendSuccess(true)
+        setCountdown(60)
+      })
+      .catch((err) => {
+        if (!active) return
+        const status = err?.response?.status
+        if (status === 429 || err?.code === 'TOO_MANY_REQUESTS') return
+        setError(getFriendlyError(err, t))
+      })
+
+    return () => {
+      active = false
+    }
+  }, [shouldResend, targetEmail, t])
 
   // عداد تنازلي لإعادة إرسال الرمز
   useEffect(() => {
@@ -34,6 +61,18 @@ export default function VerifyEmailPage() {
     }
     return () => clearInterval(timer)
   }, [countdown])
+
+  if (!targetEmail && isLoading) {
+    return (
+      <div className="py-12 flex justify-center">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  if (!targetEmail) {
+    return <Navigate to="/register" replace />
+  }
 
   const handleVerify = async (e) => {
     e.preventDefault()
@@ -109,7 +148,7 @@ export default function VerifyEmailPage() {
       {resendSuccess && (
         <div className="mb-6 p-3 rounded-[16px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-center gap-1.5">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>تم إعادة إرسال الرمز بنجاح! تفقد بريدك الوارد.</span>
+          <span>{t('verifyResendSuccess', 'تم إعادة إرسال الرمز بنجاح! تفقدي بريدكِ الوارد.')}</span>
         </div>
       )}
 
@@ -135,9 +174,9 @@ export default function VerifyEmailPage() {
         <div className="p-3.5 rounded-2xl bg-surface border border-surface-border flex items-center justify-between text-xs max-w-sm mx-auto shadow-xs">
           <span className="text-text-muted">
             {countdown > 0 ? (
-              <>{t('resendAvailableIn', 'إعادة الإرسال متاحة خلال:')} <strong className="font-mono text-text-main font-bold">{countdown}</strong> ث</>
+              <>{t('resendAvailableIn', 'إعادة الإرسال متاحة خلال:')} <strong className="font-mono text-text-main font-bold">{countdown}</strong> {t('verifyReset.secondsUnit', 'ث')}</>
             ) : (
-              'لم يصلكِ الرمز بعد؟'
+              t('verifyReset.didNotReceive', 'لم يصلكِ الرمز بعد؟')
             )}
           </span>
 

@@ -24,8 +24,19 @@ export function translateReason(code, fallback, isEn) {
   return fallback || code
 }
 
+function translateKnownProofNote(rawNote, t) {
+  const normalized = String(rawNote || '').trim().toLowerCase()
+  if (normalized === 'proof submitted') {
+    return t('orderTimeline.proofSubmitted')
+  }
+  if (normalized === 'proof resubmitted') {
+    return t('orderTimeline.proofResubmitted')
+  }
+  return ''
+}
+
 export function OrderTimeline({ timeline = [] }) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation('common')
   const isEn = i18n.language === 'en'
   const { formatDateTime } = useFormat()
 
@@ -33,11 +44,26 @@ export function OrderTimeline({ timeline = [] }) {
     return null
   }
 
+  // طي الخطوات المتتالية ذات نفس الحالة في عنصر واحد مع إرفاق ملاحظات إثبات الدفع المترجمة
+  const visibleEntries = []
+  timeline.forEach((entry) => {
+    const rawNote = entry.note || entry.description || ''
+    const prev = visibleEntries[visibleEntries.length - 1]
+    if (prev && entry.status && prev.entry.status === entry.status) {
+      const proofNote = translateKnownProofNote(rawNote, t)
+      if (proofNote && !prev.subNotes.includes(proofNote)) {
+        prev.subNotes.push(proofNote)
+      }
+      return
+    }
+    visibleEntries.push({ entry, subNotes: [] })
+  })
+
   return (
     <div className="py-2">
       <div className="relative ps-6 border-s-2 border-brand-orange/30 space-y-6">
-        {timeline.map((entry, index) => {
-          const isLatest = index === timeline.length - 1
+        {visibleEntries.map(({ entry, subNotes }, index) => {
+          const isLatest = index === visibleEntries.length - 1
           const statusConfig = ORDER_STATUS[entry.status] || {
             label: entry.status,
             labelEn: entry.status,
@@ -46,9 +72,11 @@ export function OrderTimeline({ timeline = [] }) {
             ? (statusConfig.labelEn || statusConfig.label)
             : statusConfig.label
 
-          const note = translateReason(
+          const rawNote = entry.note || entry.description || ''
+          const proofNote = translateKnownProofNote(rawNote, t)
+          const note = proofNote || translateReason(
             entry.reasonCode || entry.rejectReasonCode || entry.cancelReasonCode,
-            entry.note || entry.description || '',
+            rawNote,
             isEn
           )
 
@@ -81,6 +109,19 @@ export function OrderTimeline({ timeline = [] }) {
                   <p className="text-xs text-text-muted mt-0.5 leading-relaxed bg-surface-subtle/50 px-2.5 py-1 rounded-lg border border-surface-border/50 inline-block">
                     {note}
                   </p>
+                )}
+
+                {subNotes.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {subNotes.map((subNote, subIdx) => (
+                      <p
+                        key={subIdx}
+                        className="text-xs text-text-muted leading-relaxed bg-surface-subtle/50 px-2.5 py-1 rounded-lg border border-surface-border/50 inline-block"
+                      >
+                        {subNote}
+                      </p>
+                    ))}
+                  </div>
                 )}
 
                 {timeVal && (

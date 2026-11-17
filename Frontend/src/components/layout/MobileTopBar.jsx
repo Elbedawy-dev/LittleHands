@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   Bell,
+  Home,
   LogOut,
   Menu,
   Moon,
@@ -22,6 +23,11 @@ import { useScrollLock } from '../../hooks/useScrollLock'
 import { cn, getDisplayName, isInSection } from '../../utils'
 import { Avatar } from '../ui/Avatar'
 import { Logo } from '../ui/Logo'
+import {
+  getAdminNavItems,
+  getSellerNavItems,
+  usePendingPaymentsCount,
+} from './dashboardNav'
 
 /**
  * MobileTopBar
@@ -93,37 +99,46 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
   // Display name extraction
   const displayName = user ? getDisplayName(user, language) : ''
 
+  const currentRole = user?.role
+  const isAdminFallback =
+    !Array.isArray(drawerContent) && (isInSection(pathname, '/admin') || currentRole === 'admin')
+  const isSellerFallback =
+    !Array.isArray(drawerContent) &&
+    !isAdminFallback &&
+    (isInSection(pathname, '/seller') || currentRole === 'seller')
+  const pendingPaymentsCount = usePendingPaymentsCount(isAdminFallback ? 'admin' : null)
+
   // Build default drawer links based on role / route if drawerContent not passed
   const getDrawerLinks = () => {
     if (Array.isArray(drawerContent)) return drawerContent
 
-    const currentRole = user?.role
+    const mapDashboardItem = (item) => ({
+      href: item.href,
+      label: t(item.labelKey),
+      icon: item.icon,
+      exact: item.exact,
+      badge: item.badge,
+      badgeColor: item.badgeColor,
+    })
 
-    if (isInSection(pathname, '/admin') || currentRole === 'admin') {
+    const returnToStoreItem = {
+      href: '/',
+      label: t('nav:backToStore', 'الرجوع إلى المتجر'),
+      icon: <Home className="w-5 h-5" />,
+      isReturnToStore: true,
+    }
+
+    if (isAdminFallback) {
       return [
-        { href: '/admin', label: t('nav:admin.dashboard', 'لوحة التحكم'), exact: true },
-        { href: '/admin/payments', label: t('nav:admin.payments', 'مدفوعات فودافون كاش') },
-        { href: '/admin/orders', label: t('nav:admin.orders', 'الطلبات') },
-        { href: '/admin/products', label: t('nav:admin.products', 'المنتجات') },
-        { href: '/admin/sellers', label: t('nav:admin.sellers', 'البائعات والأرباح') },
-        { href: '/admin/customers', label: t('nav:admin.customers', 'العملاء') },
-        { href: '/admin/categories', label: t('nav:admin.categories', 'التصنيفات') },
-        { href: '/admin/notifications', label: t('nav:admin.notifications', 'الإشعارات') },
-        { href: '/admin/settings', label: t('nav:admin.settings', 'الإعدادات') },
-        { href: '/', label: t('nav:backToStore', 'الرجوع إلى المتجر'), isReturnToStore: true },
+        ...getAdminNavItems({ pendingCount: pendingPaymentsCount }).map(mapDashboardItem),
+        returnToStoreItem,
       ]
     }
 
-    if (isInSection(pathname, '/seller') || currentRole === 'seller') {
+    if (isSellerFallback) {
       return [
-        { href: '/seller', label: t('nav:seller.dashboard', 'لوحة التحكم'), exact: true },
-        { href: '/seller/products', label: t('nav:seller.products', 'منتجاتي') },
-        { href: '/seller/orders', label: t('nav:seller.orders', 'طلباتي') },
-        { href: '/seller/custom-requests', label: t('nav:seller.customRequests', 'الطلبات الخاصة') },
-        { href: '/seller/earnings', label: t('nav:seller.earnings', 'أرباحي') },
-        { href: '/seller/profile', label: t('nav:seller.profile', 'ملفي الشخصي') },
-        { href: '/seller/notifications', label: t('nav:seller.notifications', 'الإشعارات') },
-        { href: '/', label: t('nav:backToStore', 'الرجوع إلى المتجر'), isReturnToStore: true },
+        ...getSellerNavItems().map(mapDashboardItem),
+        returnToStoreItem,
       ]
     }
 
@@ -137,7 +152,8 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
 
   const links = getDrawerLinks()
 
-  const isLinkActive = (href, exact) => {
+  const isLinkActive = (href, exact, isReturnToStore) => {
+    if (isReturnToStore) return false
     if (exact || href === '/') return pathname === href
     return isInSection(pathname, href)
   }
@@ -282,30 +298,31 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                   role="dialog"
                   aria-modal="true"
                   aria-label={t('nav:openMenu', 'القائمة الرئيسية')}
-                  className="relative z-10 w-[min(86vw,320px)] h-full bg-surface text-text-main shadow-float flex flex-col justify-between border-e border-surface-border overflow-hidden left-0"
+                  className="relative z-10 w-[min(86vw,320px)] h-full bg-surface text-text-main shadow-float flex flex-col border-e border-surface-border overflow-hidden left-0"
                   dir={language === 'ar' ? 'rtl' : 'ltr'}
                   data-testid="mobile-drawer-panel"
                 >
-                  {/* Upper scrollable section */}
-                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scrollbar">
-                    {/* Header: Logo mark + brand name (single line) + Close X button */}
-                    <div className="p-4 flex items-center justify-between border-b border-surface-border">
-                      <Logo asLink to="/" variant="full" size="sm" onClick={() => setDrawerOpen(false)} />
-                      <button
-                        type="button"
-                        onClick={() => setDrawerOpen(false)}
-                        className="p-2 rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors cursor-pointer"
-                        aria-label={t('common:actions.close', 'إغلاق')}
-                        data-testid="mobile-drawer-close"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
+                  {/* Header: Logo mark + brand name (single line) + Close X button */}
+                  <div className="p-4 flex items-center justify-between border-b border-surface-border shrink-0">
+                    <Logo asLink to="/" variant="full" size="sm" onClick={() => setDrawerOpen(false)} />
+                    <button
+                      type="button"
+                      onClick={() => setDrawerOpen(false)}
+                      className="p-2 rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors cursor-pointer"
+                      aria-label={t('common:actions.close', 'إغلاق')}
+                      data-testid="mobile-drawer-close"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
 
-                    {/* Nav Links */}
-                    <div className="p-3 space-y-1" data-testid="mobile-drawer-links">
+                  {/* Nav Links (only scrollable region) */}
+                  <div
+                    className="p-3 space-y-1 flex-[0_1_auto] min-h-0 overflow-y-auto overscroll-contain modal-scrollbar"
+                    data-testid="mobile-drawer-links"
+                  >
                       {links.map((link) => {
-                        const active = isLinkActive(link.href, link.exact)
+                        const active = isLinkActive(link.href, link.exact, link.isReturnToStore)
                         return (
                           <Link
                             key={link.href}
@@ -315,11 +332,12 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                               'flex items-center justify-between px-4 py-2.5 rounded-2xl text-sm font-bold transition-colors select-none',
                               active
                                 ? 'bg-brand-orange text-white shadow-soft font-black'
-                                : 'text-text-main hover:bg-surface-subtle',
-                              link.isReturnToStore && 'border border-surface-border text-text-muted hover:text-text-main'
+                                : link.isReturnToStore
+                                  ? 'border border-surface-border text-text-muted hover:text-text-main hover:bg-surface-subtle'
+                                  : 'text-text-main hover:bg-surface-subtle'
                             )}
                           >
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-3">
                               {link.icon && <span className="shrink-0">{link.icon}</span>}
                               <span>{link.label}</span>
                             </div>
@@ -336,13 +354,12 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                           </Link>
                         )
                       })}
-                    </div>
+                  </div>
 
-                    {/* Divider */}
+                  {/* Appearance and Language row (fixed directly under links, no empty gap) */}
+                  <div className="shrink-0">
                     <div className="border-t border-surface-border mx-3" />
-
-                    {/* Appearance and Language row (DIRECTLY under the links, no empty gap) */}
-                    <div className="p-3" data-testid="mobile-drawer-appearance-row">
+                    <div className="p-3 shrink-0" data-testid="mobile-drawer-appearance-row">
                       <div className="p-2.5 rounded-2xl bg-surface-subtle border border-surface-border/60 flex items-center justify-between gap-2">
                         <span className="text-xs font-bold text-text-muted">
                           {t('nav:appearanceAndLang', 'المظهر واللغة')}
@@ -390,7 +407,7 @@ export function MobileTopBar({ drawerContent, user: propUser }) {
                   </div>
 
                   {/* Bottom section: login/register for guests, logout for signed-in users */}
-                  <div className="p-4 border-t border-surface-border bg-surface shrink-0 pb-safe" data-testid="mobile-drawer-bottom">
+                  <div className="p-4 border-t border-surface-border bg-surface shrink-0 mt-auto pb-safe" data-testid="mobile-drawer-bottom">
                     {isAuthenticated && user ? (
                       <button
                         type="button"

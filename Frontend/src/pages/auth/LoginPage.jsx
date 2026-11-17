@@ -66,6 +66,20 @@ export default function LoginPage() {
         navigate(nextUrl, { replace: true })
       }
     } catch (err) {
+      const errorCode = err?.response?.data?.error?.code || err?.code
+      if (errorCode === 'EMAIL_NOT_VERIFIED') {
+        const serverEmail = err?.response?.data?.error?.details?.email
+        const cleanId = identifier.trim()
+        const fallbackEmail = cleanId.includes('@') ? cleanId.toLowerCase() : ''
+        const targetEmail = serverEmail || fallbackEmail
+        if (targetEmail) {
+          const nextParam = searchParams.get('next')
+            ? `&next=${encodeURIComponent(searchParams.get('next'))}`
+            : ''
+          navigate(`/verify-email?email=${encodeURIComponent(targetEmail)}&resend=1${nextParam}`)
+          return
+        }
+      }
       setFormError(getFriendlyError(err, t))
     } finally {
       setLoading(false)

@@ -131,7 +131,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-36 lg:pb-12">
+    <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-[calc(var(--mobile-tabbar-h)+5.5rem+env(safe-area-inset-bottom))] md:pb-24 lg:pb-12">
       {/* رأس الصفحة مع زر تفريغ السلة */}
       <PageHeader
         title={t('cart:title')}
@@ -310,7 +310,7 @@ export default function CartPage() {
             </div>
 
             {/* حقل اسم الحضانة وملاحظات التخصيص */}
-            <div className="space-y-3">
+            <div className="flex flex-col gap-5" data-testid="cart-nursery-fields">
               <Input
                 id="cart-nursery-name"
                 label={t('cart:summary.nurseryLabel')}
@@ -327,6 +327,7 @@ export default function CartPage() {
                 value={cartNotes}
                 onChange={(e) => setCartNotes(e.target.value)}
                 rows={2}
+                containerClassName="mb-0"
                 className="text-xs"
               />
             </div>
@@ -400,7 +401,10 @@ export default function CartPage() {
       </div>
 
       {/* شريط الإجراءات الثابت للموبايل (يعلو شريط التنقل السفلي) */}
-      <div className="lg:hidden fixed bottom-16 start-0 end-0 z-30 bg-surface/95 backdrop-blur-md border-t border-surface-border p-3 sm:p-4 shadow-float transition-colors">
+      <div
+        data-testid="cart-mobile-sticky-bar"
+        className="lg:hidden fixed bottom-[calc(var(--mobile-tabbar-h)+env(safe-area-inset-bottom))] md:bottom-0 start-0 end-0 z-30 bg-surface/95 backdrop-blur-md border-t border-surface-border px-4 py-3 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-float transition-colors"
+      >
         <div className="max-w-[1280px] mx-auto flex items-center justify-between gap-4">
           <div className="flex flex-col text-start">
             <span className="text-[11px] text-text-muted font-medium">

@@ -149,6 +149,7 @@
       "statusUpdate": "Update Order Status",
       "statusUpdateSuccess": "Order status updated successfully",
       "items": "Ordered Teaching Aids",
+      "unknownSeller": "Unknown seller",
       "commissionTable": {
         "title": "Commission & Net Earnings Breakdown",
         "description": "Calculation of fixed platform commission (20%) and seller net earnings (80%) per teaching aid",

@@ -1,6 +1,6 @@
 import { paymentService } from './service.js'
 import { toPaymentDTO } from './dto.js'
-import { toOrderDTO } from '../orders/dto.js'
+import { resolveOrderSellerNamesMap, toOrderDTO } from '../orders/dto.js'
 import { asyncHandler } from '../../utils/asyncHandler.js'
 import { ok, paginated } from '../../utils/response.js'
 
@@ -52,7 +52,8 @@ export const paymentController = {
     const { order, payment } = await paymentService.confirmPayment(targetId, req.user)
     const orderObj = order.toObject ? order.toObject() : { ...order }
     orderObj.payment = payment
-    return ok(res, toOrderDTO(orderObj, 'admin'))
+    const sellerNamesMap = await resolveOrderSellerNamesMap(orderObj)
+    return ok(res, toOrderDTO(orderObj, 'admin', null, sellerNamesMap))
   }),
 
   /**
@@ -63,7 +64,8 @@ export const paymentController = {
     const { order, payment } = await paymentService.rejectPayment(targetId, req.body, req.user)
     const orderObj = order.toObject ? order.toObject() : { ...order }
     orderObj.payment = payment
-    return ok(res, toOrderDTO(orderObj, 'admin'))
+    const sellerNamesMap = await resolveOrderSellerNamesMap(orderObj)
+    return ok(res, toOrderDTO(orderObj, 'admin', null, sellerNamesMap))
   }),
 
   /**

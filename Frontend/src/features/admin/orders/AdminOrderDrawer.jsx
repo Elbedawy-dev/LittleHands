@@ -64,21 +64,24 @@ export function AdminOrderDrawer({
 
   const orderItems = Array.isArray(order.items) ? order.items : []
   const canDelete = ADMIN_DELETABLE_STATUSES.includes(order.status)
+  const unknownSellerLabel = t('orders.drawer.unknownSeller', 'بائعة غير معروفة')
 
   // بناء خريطة أسماء البائعات المترجمة
   const sellerNamesMap = orderItems.reduce((acc, it) => {
     if (it.sellerId) {
+      const resolvedName = getDisplayName(
+        {
+          id: it.sellerId,
+          sellerId: it.sellerId,
+          name: it.sellerName,
+          nameEn: it.sellerNameEn,
+          displayName: it.sellerDisplayName,
+        },
+        i18n.language
+      )
       acc[it.sellerId] =
-        getDisplayName(
-          {
-            id: it.sellerId,
-            sellerId: it.sellerId,
-            name: it.sellerName,
-            nameEn: it.sellerNameEn,
-            displayName: it.sellerDisplayName,
-          },
-          i18n.language
-        ) || it.sellerId
+        (resolvedName && resolvedName !== it.sellerId ? resolvedName : '') ||
+        unknownSellerLabel
     }
     return acc
   }, {})
@@ -96,7 +99,7 @@ export function AdminOrderDrawer({
     const salePrice = item.unitPrice * item.qty
     const { commission, net } = calcCommission(salePrice)
     const sellerTitle =
-      sellerNamesMap[item.sellerId] || item.sellerId || ''
+      sellerNamesMap[item.sellerId] || unknownSellerLabel
 
     return {
       ...item,
@@ -299,7 +302,7 @@ export function AdminOrderDrawer({
                 className="rounded-2xl border border-surface-border bg-surface overflow-hidden"
               >
                 <div className="px-4 py-2.5 bg-surface-subtle border-b border-surface-border flex items-center justify-between text-xs font-bold text-text-main">
-                  <span>{sellerNamesMap[sellerId] || sellerId}</span>
+                  <span>{sellerNamesMap[sellerId] || unknownSellerLabel}</span>
                   <span className="text-text-muted">
                     {t('orders.table.itemCount', { count: items.length })}
                   </span>

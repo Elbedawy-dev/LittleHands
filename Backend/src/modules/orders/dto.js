@@ -1,12 +1,57 @@
+import mongoose from 'mongoose'
+import { User } from '../../db/models/User.js'
+
 /**
  * Order DTO Mapper
  * Enforces role-based response shaping and privacy:
  * - Customer: No commission fields, no seller net earnings.
  * - Seller: Only her own items; delivery masked until payment is confirmed; NO payment data.
- * - Admin: Full access including per-item commission and payment flags/history.
+ * - Admin: Full access including per-item commission, seller names, and payment flags/history.
  */
 
-export function toOrderItemDTO(item, viewerRole = 'customer', viewerSellerId = null) {
+export async function resolveOrderSellerNamesMap(ordersInput) {
+  const orders = Array.isArray(ordersInput) ? ordersInput : ordersInput ? [ordersInput] : []
+  const sellerIds = new Set()
+
+  for (const order of orders) {
+    const items = Array.isArray(order?.items) ? order.items : []
+    for (const item of items) {
+      const rawId = item?.sellerId?._id || item?.sellerId?.id || item?.sellerId
+      const idStr = rawId?.toString ? rawId.toString() : rawId ? String(rawId) : ''
+      if (idStr && mongoose.isValidObjectId(idStr)) {
+        sellerIds.add(idStr)
+      }
+    }
+  }
+
+  const sellerNamesMap = new Map()
+  if (sellerIds.size === 0) {
+    return sellerNamesMap
+  }
+
+  const sellers = await User.find({
+    _id: { $in: Array.from(sellerIds) },
+    status: { $ne: 'deleted' },
+  })
+    .select('_id name seller.displayName')
+    .lean()
+
+  for (const seller of sellers) {
+    const idStr = seller._id?.toString ? seller._id.toString() : String(seller._id)
+    const sellerName = (seller.seller?.displayName?.ar || seller.name || '').trim()
+    const sellerNameEn = (seller.seller?.displayName?.en || '').trim()
+    sellerNamesMap.set(idStr, { sellerName, sellerNameEn })
+  }
+
+  return sellerNamesMap
+}
+
+export function toOrderItemDTO(
+  item,
+  viewerRole = 'customer',
+  viewerSellerId = null,
+  sellerNamesMap = null
+) {
   if (!item) return null
   const it = item.toObject ? item.toObject() : { ...item }
 
@@ -25,7 +70,34 @@ export function toOrderItemDTO(item, viewerRole = 'customer', viewerSellerId = n
     viewerSellerId.toString() === base.sellerId
   const isAdmin = viewerRole === 'admin'
 
-  if (isAdmin || isSellerItem) {
+  if (isAdmin) {
+    const resolved =
+      sellerNamesMap instanceof Map
+        ? sellerNamesMap.get(base.sellerId)
+        : sellerNamesMap && typeof sellerNamesMap === 'object'
+          ? sellerNamesMap[base.sellerId]
+          : null
+
+    const fallbackName = !sellerNamesMap
+      ? typeof it.sellerName === 'string'
+        ? it.sellerName.trim()
+        : (it.sellerName?.ar || '').trim()
+      : ''
+    const fallbackNameEn = !sellerNamesMap
+      ? (it.sellerNameEn || (typeof it.sellerName === 'object' ? it.sellerName?.en : '') || '').trim()
+      : ''
+
+    return {
+      ...base,
+      sellerName: resolved ? resolved.sellerName : fallbackName,
+      sellerNameEn: resolved ? resolved.sellerNameEn : fallbackNameEn,
+      commissionRate: it.commissionRate,
+      commissionAmount: it.commissionAmount,
+      sellerNet: it.sellerNet,
+    }
+  }
+
+  if (isSellerItem) {
     return {
       ...base,
       commissionRate: it.commissionRate,
@@ -37,7 +109,12 @@ export function toOrderItemDTO(item, viewerRole = 'customer', viewerSellerId = n
   return base
 }
 
-export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) {
+export function toOrderDTO(
+  order,
+  viewerRole = 'customer',
+  viewerUserId = null,
+  sellerNamesMap = null
+) {
   if (!order) return null
   const o = order.toObject ? order.toObject() : { ...order }
 
@@ -73,7 +150,9 @@ export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) 
     }
   }
 
-  const mappedItems = items.map((it) => toOrderItemDTO(it, viewerRole, viewerUserId))
+  const mappedItems = items.map((it) =>
+    toOrderItemDTO(it, viewerRole, viewerUserId, sellerNamesMap)
+  )
 
   const dto = {
     id: orderId,
@@ -221,6 +300,7 @@ export function toOrderDTO(order, viewerRole = 'customer', viewerUserId = null) 
 }
 
 export default {
+  resolveOrderSellerNamesMap,
   toOrderItemDTO,
   toOrderDTO,
 }

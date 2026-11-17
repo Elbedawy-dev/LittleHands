@@ -219,5 +219,11 @@
   "orderTimeline": {
     "proofSubmitted": "Proof submitted",
     "proofResubmitted": "Proof resubmitted"
+  },
+  "consent": {
+    "ariaLabel": "Cookie consent",
+    "message": "We use analytics cookies to understand and improve how the site is used, without any personal data. Do you accept?",
+    "accept": "Accept",
+    "decline": "Decline"
   }
 }

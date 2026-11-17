@@ -32,8 +32,32 @@ export function isTrackablePath(pathname = '') {
   )
 }
 
+// ---------- موافقة الكوكيز ----------
+export const CONSENT_KEY = 'lh_analytics_consent'
+export const CONSENT_GRANTED = 'granted'
+export const CONSENT_DENIED = 'denied'
+
+export function getAnalyticsConsent() {
+  try {
+    const value = localStorage.getItem(CONSENT_KEY)
+    return value === CONSENT_GRANTED || value === CONSENT_DENIED ? value : null
+  } catch {
+    return null
+  }
+}
+
+export function setAnalyticsConsent(granted) {
+  try {
+    localStorage.setItem(CONSENT_KEY, granted ? CONSENT_GRANTED : CONSENT_DENIED)
+  } catch {
+    // التخزين غير متاح — القرار يسري على الجلسة الحالية فقط
+  }
+}
+
 export function initGA() {
   if (!ENABLED || initialized || typeof window === 'undefined') return
+  // لا تحميل لـ gtag.js ولا أي حدث قبل موافقة صريحة
+  if (getAnalyticsConsent() !== CONSENT_GRANTED) return
   initialized = true
 
   window.dataLayer = window.dataLayer || []

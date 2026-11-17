@@ -136,6 +136,7 @@ export function MiniCartDrawer({ open, onClose }) {
                               <QuantityStepper
                                 value={item.qty}
                                 onChange={(q) => updateQty(item.productId, q)}
+                                max={item.stockCount ?? 50}
                                 size="sm"
                               />
                             </div>

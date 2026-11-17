@@ -225,9 +225,9 @@ export default function CartPage() {
                         <QuantityStepper
                           value={item.qty}
                           onChange={(q) => updateQty(item.productId, q)}
+                          max={item.stockCount ?? 50}
                           size="md"
                         />
-
                         <div className="text-end min-w-[75px] sm:min-w-[90px]">
                           <span className="text-[10px] text-text-muted block sm:hidden">
                             {t('cart:totalPrice')}

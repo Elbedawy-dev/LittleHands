@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { getProductStockMeta } from '../utils/productStock'
 
 const CartContext = createContext({
   items: [],
@@ -32,13 +33,20 @@ export function CartProvider({ children }) {
   }, [items])
 
   const addItem = (product, qty = 1) => {
+    const { stockCount } = getProductStockMeta(product)
+    if (stockCount === 0) return
+
     setItems((prev) => {
       const existingIndex = prev.findIndex((i) => i.productId === product.id)
       if (existingIndex > -1) {
         const next = [...prev]
+        const existing = next[existingIndex]
+        const cap = stockCount ?? existing.stockCount ?? null
+        const mergedQty = existing.qty + qty
         next[existingIndex] = {
-          ...next[existingIndex],
-          qty: next[existingIndex].qty + qty,
+          ...existing,
+          stockCount: cap,
+          qty: cap !== null ? Math.min(mergedQty, cap) : mergedQty,
         }
         return next
       }
@@ -49,7 +57,8 @@ export function CartProvider({ children }) {
           name: product.name,
           price: product.price,
           unitPrice: product.price,
-          qty,
+          qty: stockCount !== null ? Math.min(qty, stockCount) : qty,
+          stockCount,
           sellerId: product.sellerId || '',
           sellerName: product.sellerName || '',
           sellerNameEn: product.sellerNameEn || '',
@@ -70,7 +79,11 @@ export function CartProvider({ children }) {
       return
     }
     setItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, qty } : i))
+      prev.map((i) => {
+        if (i.productId !== productId) return i
+        const cap = typeof i.stockCount === 'number' ? i.stockCount : Infinity
+        return { ...i, qty: Math.min(qty, cap) }
+      })
     )
   }
 

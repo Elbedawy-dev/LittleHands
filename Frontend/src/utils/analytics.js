@@ -15,6 +15,23 @@ export function isAnalyticsEnabled() {
   return ENABLED
 }
 
+// مسارات لا تُتبع إطلاقًا (لوحات الأدمن/البائعات وصفحات الحسابات)
+const EXCLUDED_PATH_PREFIXES = [
+  '/admin',
+  '/seller',
+  '/login',
+  '/register',
+  '/verify-email',
+  '/reset-password',
+  '/forgot-password',
+]
+
+export function isTrackablePath(pathname = '') {
+  return !EXCLUDED_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+}
+
 export function initGA() {
   if (!ENABLED || initialized || typeof window === 'undefined') return
   initialized = true

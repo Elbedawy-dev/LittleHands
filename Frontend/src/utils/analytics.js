@@ -63,3 +63,34 @@ export function trackEvent(name, params = {}) {
   if (!ENABLED || !initialized || typeof window.gtag !== 'function' || !name) return
   window.gtag('event', name, params)
 }
+
+// ---------- ecommerce helpers (بدون أي بيانات شخصية) ----------
+export const ANALYTICS_CURRENCY = 'EGP'
+
+// name يجب أن يُمرّر كنص جاهز (pickLocaleText(name, 'en')) من مكان الاستدعاء
+export function toAnalyticsItem({ id, name, price, qty = 1 } = {}) {
+  return {
+    item_id: id ? String(id) : undefined,
+    item_name: typeof name === 'string' ? name : '',
+    price: Number(price) || 0,
+    quantity: Number(qty) || 1,
+  }
+}
+
+export function trackPurchase({ transactionId, value, items = [] }) {
+  if (!ENABLED || !initialized || !transactionId) return
+  // منع تكرار purchase عند تحديث صفحة النجاح في نفس الجلسة
+  const key = `lh_ga_purchase_${transactionId}`
+  try {
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+  } catch {
+    // sessionStorage غير متاح — نكمل بدون منع التكرار
+  }
+  trackEvent('purchase', {
+    transaction_id: String(transactionId),
+    value: Number(value) || 0,
+    currency: ANALYTICS_CURRENCY,
+    items,
+  })
+}

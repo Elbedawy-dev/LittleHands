@@ -19,6 +19,7 @@ import { useLanguage } from '../../context/LanguageContext'
 import { useFormat } from '../../hooks/useFormat'
 import { orderService } from '../../services/orderService'
 import { pickLocaleText } from '../../utils'
+import { toAnalyticsItem, trackPurchase } from '../../utils/analytics'
 
 /**
  * صفحة نجاح تسجيل الطلب ورفع إيصال فودافون كاش
@@ -44,6 +45,20 @@ export default function OrderSuccessPage() {
           const res = await orderService.getOrder(number)
           if (isMounted && res) {
             setOrder(res)
+            trackPurchase({
+              transactionId: res.number || number,
+              value: res.total,
+              items: Array.isArray(res.items)
+                ? res.items.map((it) =>
+                    toAnalyticsItem({
+                      id: it.productId || (typeof it.product === 'string' ? it.product : it.product?.id || it.product?._id),
+                      name: pickLocaleText(it.name, 'en'),
+                      price: it.unitPrice,
+                      qty: it.qty,
+                    })
+                  )
+                : [],
+            })
           }
         }
       } catch (err) {

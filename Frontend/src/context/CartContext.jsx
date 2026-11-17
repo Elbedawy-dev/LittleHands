@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { getProductStockMeta } from '../utils/productStock'
+import { ANALYTICS_CURRENCY, toAnalyticsItem, trackEvent } from '../utils/analytics'
+import { pickLocaleText } from '../utils'
 
 const CartContext = createContext({
   items: [],
@@ -35,6 +37,19 @@ export function CartProvider({ children }) {
   const addItem = (product, qty = 1) => {
     const { stockCount } = getProductStockMeta(product)
     if (stockCount === 0) return
+
+    trackEvent('add_to_cart', {
+      currency: ANALYTICS_CURRENCY,
+      value: (Number(product.price) || 0) * qty,
+      items: [
+        toAnalyticsItem({
+          id: product.id,
+          name: pickLocaleText(product.name, 'en'),
+          price: product.price,
+          qty,
+        }),
+      ],
+    })
 
     setItems((prev) => {
       const existingIndex = prev.findIndex((i) => i.productId === product.id)

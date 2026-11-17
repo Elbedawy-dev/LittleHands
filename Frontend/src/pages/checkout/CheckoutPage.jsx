@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -16,7 +16,8 @@ import { PaymentStep } from '../../features/checkout/PaymentStep'
 import { ReviewStep } from '../../features/checkout/ReviewStep'
 import { getGovernorateOptions, useShippingRates } from '../../hooks/useShippingRates'
 import { orderService } from '../../services/orderService'
-import { getFriendlyError } from '../../utils'
+import { getFriendlyError, pickLocaleText } from '../../utils'
+import { ANALYTICS_CURRENCY, toAnalyticsItem, trackEvent } from '../../utils/analytics'
 
 const CHECKOUT_STORAGE_KEY = 'lh_checkout_flow_state'
 
@@ -87,6 +88,25 @@ export default function CheckoutPage() {
       navigate(`/login?next=${encodeURIComponent('/checkout')}`, { replace: true })
     }
   }, [isAuthLoading, isAuthenticated, navigate])
+
+  // GA4: begin_checkout مرة واحدة عند دخول صفحة الدفع (بدون بيانات شخصية)
+  const beginCheckoutSentRef = useRef(false)
+  useEffect(() => {
+    if (beginCheckoutSentRef.current || isAuthLoading || !isAuthenticated || items.length === 0) return
+    beginCheckoutSentRef.current = true
+    trackEvent('begin_checkout', {
+      currency: ANALYTICS_CURRENCY,
+      value: subtotal,
+      items: items.map((i) =>
+        toAnalyticsItem({
+          id: i.productId,
+          name: pickLocaleText(i.name, 'en'),
+          price: i.unitPrice ?? i.price,
+          qty: i.qty,
+        })
+      ),
+    })
+  }, [isAuthLoading, isAuthenticated, items, subtotal])
 
   // مزامنة حالة الخطوة والبيانات مع sessionStorage للاستمرار عند التحديث
   useEffect(() => {

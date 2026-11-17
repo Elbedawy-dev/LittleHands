@@ -15,6 +15,8 @@ import { ProductInfo } from '../../features/storefront/ProductInfo'
 import { ProductTabs } from '../../features/storefront/ProductTabs'
 import { StickyMobileBar } from '../../features/storefront/StickyMobileBar'
 import { catalogService } from '../../services/catalogService'
+import { ANALYTICS_CURRENCY, toAnalyticsItem, trackEvent } from '../../utils/analytics'
+import { pickLocaleText } from '../../utils'
 
 /**
  * صفحة تفاصيل الوسيلة التعليمية (ProductDetailsPage)
@@ -39,6 +41,15 @@ export default function ProductDetailsPage() {
       .getProduct(id)
       .then(async (data) => {
         setProduct(data)
+        if (data) {
+          trackEvent('view_item', {
+            currency: ANALYTICS_CURRENCY,
+            value: Number(data.price) || 0,
+            items: [
+              toAnalyticsItem({ id: data.id, name: pickLocaleText(data.name, 'en'), price: data.price }),
+            ],
+          })
+        }
         // جلب الوسائل التعليمية المشابهة
         try {
           const related = await catalogService.getRelatedProducts(data.id, 4)

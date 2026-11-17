@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom'
+import { AnalyticsTracker } from '../components/layout/AnalyticsTracker'
+import { CookieConsentBanner } from '../components/layout/CookieConsentBanner'
 import { AuthLayout } from '../components/layout/AuthLayout'
 import { DashboardLayout } from '../components/layout/DashboardLayout'
 import { PublicLayout } from '../components/layout/PublicLayout'
@@ -114,7 +116,9 @@ function RootLayout() {
   return (
     <>
       <ScrollToTop />
+      <AnalyticsTracker />
       <Outlet />
+      <CookieConsentBanner />
     </>
   )
 }

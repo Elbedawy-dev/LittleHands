@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { useAuth } from './AuthContext'
 import { getProductStockMeta } from '../utils/productStock'
 import { ANALYTICS_CURRENCY, toAnalyticsItem, trackEvent } from '../utils/analytics'
 import { pickLocaleText } from '../utils'
@@ -14,25 +15,68 @@ const CartContext = createContext({
   clearCart: () => {},
 })
 
-const CART_KEY = 'lh_cart_v1'
+const CART_PREFIX = 'lh_cart_v1'
+const GUEST_KEY = `${CART_PREFIX}:guest`
 
-export function CartProvider({ children }) {
-  const [items, setItems] = useState(() => {
-    try {
-      const stored = localStorage.getItem(CART_KEY)
-      return stored ? JSON.parse(stored) : []
-    } catch {
-      return []
+const readCart = (key) => {
+  try {
+    const stored = localStorage.getItem(key)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+const mergeCarts = (base, extra) => {
+  const out = [...base]
+  extra.forEach((g) => {
+    const i = out.findIndex((x) => x.productId === g.productId)
+    if (i === -1) {
+      out.push(g)
+    } else {
+      const cap = typeof out[i].stockCount === 'number' ? out[i].stockCount : Infinity
+      out[i] = { ...out[i], qty: Math.min(out[i].qty + g.qty, cap) }
     }
   })
+  return out
+}
 
+export function CartProvider({ children }) {
+  const { user, isLoading } = useAuth()
+  const cartKey = `${CART_PREFIX}:${user?.id || 'guest'}`
+
+  const [items, setItems] = useState([])
+  const [loadedKey, setLoadedKey] = useState(null)
+
+  // تحميل سلة الحساب الحالي (ودمج سلة الزائر عند تسجيل الدخول)
   useEffect(() => {
+    if (isLoading) return
+    let next = readCart(cartKey)
+    if (cartKey !== GUEST_KEY) {
+      const guest = readCart(GUEST_KEY)
+      if (guest.length) {
+        next = mergeCarts(next, guest)
+        try {
+          localStorage.setItem(cartKey, JSON.stringify(next))
+          localStorage.removeItem(GUEST_KEY)
+        } catch (e) {
+          console.warn('Failed to merge guest cart:', e)
+        }
+      }
+    }
+    setItems(next)
+    setLoadedKey(cartKey)
+  }, [cartKey, isLoading])
+
+  // حفظ السلة (فقط بعد ما تتحمّل سلة نفس الحساب)
+  useEffect(() => {
+    if (loadedKey !== cartKey) return
     try {
-      localStorage.setItem(CART_KEY, JSON.stringify(items))
+      localStorage.setItem(cartKey, JSON.stringify(items))
     } catch (e) {
       console.warn('Failed to persist cart:', e)
     }
-  }, [items])
+  }, [items, loadedKey, cartKey])
 
   const addItem = (product, qty = 1) => {
     const { stockCount } = getProductStockMeta(product)
